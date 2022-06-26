@@ -155,6 +155,44 @@ class Bcreate:
         # drop whole repeatableGroup name="ObjObjectNumberGrp
         newM.dropRepeatableGroup(name="ObjObjectNumberGrp")
         newM.toFile(path="template.debug.xml")
+        # why do these rpG prevent successful record creation?
+        newM._dropFieldsByName(
+            element="repeatableGroup", name="ObjAcquisitionNotesGrp"
+        )  # Problem
+        newM._dropFieldsByName(
+            element="repeatableGroup", name="ObjEditorNotesGrp"
+        )  # Problem
+        newM._dropFieldsByName(
+            element="repeatableGroup", name="ObjMaterialTechniqueGrp"
+        )  # Problem
+        newM._dropFieldsByName(
+            element="repeatableGroup", name="ObjCurrentLocationGrp"
+        )  # Problem
+
+        # what gives?
+        # newM._dropFields(element="composite") # create works with composite
+        # newM._dropFields(element="repeatableGroup") # create works without any rpG, so error must be in those
+        # T1 doesnt work without T1
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjObjectTitleGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjOtherNumberGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjGeograficGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjDimAllGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjAcquisitionDateGrp")
+        # works without T2, T3, T4
+        # T2 doesn't work without T2
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjAcquisitionMethodGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjNumberObjectsGrp") # Anzahl/Teile?
+        # do we want to copy SMB-Digital Freigabe?
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjPublicationGrp") # Freigabe
+        # T3 doesnt work without T3
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjIconographyGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjResponsibleGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjSystematicGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjTechnicalTermGrp")
+        # T4 doesnt work without T4
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjOwnerRef")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjPerAssociationRef")
+
         # fake is a minimal record for testing purposes
         fake = Module()
         objModule = fake.module(name="Object")
