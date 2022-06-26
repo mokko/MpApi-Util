@@ -22,6 +22,7 @@ CLI INTERFACE
 import configparser
 import copy
 from lxml import etree
+import logging
 from mpapi.module import Module
 from mpapi.client import MpApi
 
@@ -42,29 +43,39 @@ class Bcreate:
     def __init__(
         self, *, baseURL: str, confFN: str, job: str, pw: str, user: str
     ) -> None:
-        if not Path(confFN).exists():
-            raise SyntaxError("ERROR: Config file not found!")
-        config = configparser.ConfigParser()
-        config.read(
-            confFN, "UTF-8"
-        )  # at the moment expecting: templateID, mask, src_dir
-        conf = config[job]  # dies gracefully on error
+
         self.api = MpApi(baseURL=baseURL, user=user, pw=pw)
+        conf = self._initConf(confFN=confFN, job=job)
+        self._initLog()
+
+        print(conf)
         m = self.setTemplate(mtype="Object", ID=conf["templateID"])  # Object-only atm
 
         srcP = Path(conf["src_dir"])
-        # recursive scan needed in production?
+        count_files = 0
+        count_alreadyTaken = 0
+        logging.info(f"mask {conf['mask']}")
+        logging.info(f"dir {conf['src_dir']}")
         print(f"***About to scan dir '{conf['src_dir']}' with mask '{conf['mask']}'")
         for p in Path(srcP).rglob(conf["mask"]):
             print(f"{p}")
             identNr = self._xtractIdentNr(name=p.stem)
             r = self.identExists(nr=identNr)
-            print(f"\tchecking if '{identNr}' exists in RIA")
+            print(f"   checking if '{identNr}' exists in RIA")
             if r:
+                count_alreadyTaken += 1
                 print(f"\texists already, we won't touch it; exists {r} times")
+                logging.warning(f"identNr '{identNr}' exists already {r} times in RIA")
             else:
                 # print(f"{p} {identNr} DOES NOT exist")
                 self.createObject(identNr=identNr)
+            count_files += 1
+        logging.info(
+            f"bcreate found {count_files} files fitting mask (looking recursively)"
+        )
+        logging.info(
+            f"of those {count_alreadyTaken} have an identNr that already exists in RIA"
+        )
 
     def createObject(self, *, identNr: str):
         """
@@ -78,70 +89,76 @@ class Bcreate:
         2. sanitize the xml, so it has the upload form required by RIA
         3. fill in identNr
         4. createRecord
+
+        <application xmlns="http://www.zetcom.com/ria/ws/module">
+            <modules>
+                <module name="Address">
+                    <moduleItem>
+                        <dataField name="AdrPostcodeTxt">
+                            <value>12345</value>
+                        </dataField>
+                        <dataField name="AdrSurNameTxt">
+                            <value>Muster</value>
+                        </dataField>
+                        <dataField name="AdrStreetTxt">
+                          <value>Köpenickerstr. 154</value>
+                        </dataField>
+                        <dataField name="AdrCityTxt">
+                          <value>Berlin</value>
+                        </dataField>
+                        <dataField name="AdrForeNameTxt">
+                          <value>Max</value>
+                        </dataField>
+                        <dataField name="AdrCountryTxt">
+                          <value>Germany</value>
+                        </dataField>
+                        <dataField dataType="Varchar" name="AdrCountyTxt">
+                          <value>Berlin</value>
+                        </dataField>
+                        <vocabularyReference name="AdrSendEmailVoc">
+                          <vocabularyReferenceItem id="30891" />
+                        </vocabularyReference>
+                        <vocabularyReference name="AdrSendPostVoc">
+                          <vocabularyReferenceItem id="30891" />
+                        </vocabularyReference>
+                        <repeatableGroup name="AdrContactGrp">
+                          <repeatableGroupItem>
+                            <dataField name="ValueTxt">
+                              <value>max.muster@gmail.com</value>
+                            </dataField>
+                            <vocabularyReference name="TypeVoc">
+                              <vocabularyReferenceItem id="30152" />
+                            </vocabularyReference>
+                          </repeatableGroupItem>
+                          <repeatableGroupItem>
+                            <dataField name="ValueTxt">
+                              <value>(555)555-5555</value>
+                            </dataField>
+                            <vocabularyReference name="TypeVoc">
+                              <vocabularyReferenceItem id="30150" />
+                            </vocabularyReference>
+                          </repeatableGroupItem>
+                        </repeatableGroup>
+                        <moduleReference name="AdrAddressGroupRef">
+                            <moduleReferenceItem moduleItemId="12011" />
+                        </moduleReference>
+                    </moduleItem>
+                </module>
+            </modules>
+        </application>
         """
-        print(f"About to create object for identNr {identNr}")
+
+        print(f"\tabout to create object")
         newM = copy.deepcopy(self.template)
         # todo: changeIdentNr
-
-        r = self.api.createItem2(mtype="Object", data=newM)
-
-        xml = """
-            <application xmlns="http://www.zetcom.com/ria/ws/module">
-                <modules>
-                    <module name="Address">
-                        <moduleItem>
-                            <dataField name="AdrPostcodeTxt">
-                                <value>12345</value>
-                            </dataField>
-                            <dataField name="AdrSurNameTxt">
-                                <value>Muster</value>
-                            </dataField>
-                            <dataField name="AdrStreetTxt">
-                              <value>Köpenickerstr. 154</value>
-                            </dataField>
-                            <dataField name="AdrCityTxt">
-                              <value>Berlin</value>
-                            </dataField>
-                            <dataField name="AdrForeNameTxt">
-                              <value>Max</value>
-                            </dataField>
-                            <dataField name="AdrCountryTxt">
-                              <value>Germany</value>
-                            </dataField>
-                            <dataField dataType="Varchar" name="AdrCountyTxt">
-                              <value>Berlin</value>
-                            </dataField>
-                            <vocabularyReference name="AdrSendEmailVoc">
-                              <vocabularyReferenceItem id="30891" />
-                            </vocabularyReference>
-                            <vocabularyReference name="AdrSendPostVoc">
-                              <vocabularyReferenceItem id="30891" />
-                            </vocabularyReference>
-                            <repeatableGroup name="AdrContactGrp">
-                              <repeatableGroupItem>
-                                <dataField name="ValueTxt">
-                                  <value>max.muster@gmail.com</value>
-                                </dataField>
-                                <vocabularyReference name="TypeVoc">
-                                  <vocabularyReferenceItem id="30152" />
-                                </vocabularyReference>
-                              </repeatableGroupItem>
-                              <repeatableGroupItem>
-                                <dataField name="ValueTxt">
-                                  <value>(555)555-5555</value>
-                                </dataField>
-                                <vocabularyReference name="TypeVoc">
-                                  <vocabularyReferenceItem id="30150" />
-                                </vocabularyReference>
-                              </repeatableGroupItem>
-                            </repeatableGroup>
-                            <moduleReference name="AdrAddressGroupRef">
-                                <moduleReferenceItem moduleItemId="12011" />
-                            </moduleReference>
-                        </moduleItem>
-                    </module>
-                </modules>
-            </application>"""
+        # fake is a minimal record for testing purposes
+        fake = Module()
+        objModule = fake.module(name="Object")
+        item = m.moduleItem(parent=objModule)
+        # r = self.api.createItem2(mtype="Object", data=newM)
+        r = self.api.createItem2(mtype="Object", data=fake)
+        print(r)
+        raise SyntaxError("STOP HERE PURPOSEFULLY")
 
     def identExists(self, *, nr) -> int:
         s = Search(module="Object", limit=-1, offset=0)
@@ -173,11 +190,30 @@ class Bcreate:
         if len(m) > 1:
             raise SyntaxError("ERROR: Upload xml has >1 items")
         # print (m)
+        logging.info(f"template Object {ID}")
         self.template = m
 
     #
     # privates
     #
+
+    def _initConf(self, *, confFN, job):
+        if not Path(confFN).exists():
+            raise SyntaxError("ERROR: Config file not found!")
+        config = configparser.ConfigParser()
+        config.read(
+            confFN, "UTF-8"
+        )  # at the moment expecting: templateID, mask, src_dir
+        return config[job]  # dies gracefully on error
+
+    def _initLog(self):
+        logging.basicConfig(
+            datefmt="%Y%m%d %I:%M:%S %p",
+            filename="bcreate.log",
+            filemode="w",  # a =append?
+            level=logging.INFO,
+            format="%(asctime)s: %(message)s",
+        )
 
     def _xtractIdentNr(self, *, name: str) -> str:
         return name
