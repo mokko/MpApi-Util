@@ -157,23 +157,3 @@ class Rename:
             self.cache[str(absp)] = str(absp.name)
         # print (self.cache)
 
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(
-        description='Rename tool using an Excel spreadsheet for manual check and documentation')
-    parser.add_argument('-s', '--src', help='Scan source directory')
-    parser.add_argument('-d', '--dst', help='destination directory')
-    parser.add_argument('-x', '--xsl', required=True, help='Excel file path')
-    parser.add_argument('-e', '--execute', action='store_true', 
-        help='Execute the copy prepared in the specified Excel file')
-    args = parser.parse_args()
-
-    r = Ren()
-    if args.src:
-        # let's use the dictionary cache if, and only if, we need to find the jpg sisters
-        # of the tifs
-        # r.mk_cache(start_dir=src_dir)
-        r.scan(src_dir=args.src, dest_dir = args.dst, xls_fn=args.xsl)
-    elif args.execute:
-        r.execute(xls_fn=args.xsl)
-
