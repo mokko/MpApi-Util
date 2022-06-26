@@ -151,12 +151,17 @@ class Bcreate:
         print(f"\tabout to create object")
         newM = copy.deepcopy(self.template)
         # todo: changeIdentNr
+        newM._dropFieldsByName(element="dataField", name="ObjObjectNumberTxt")
+        # drop whole repeatableGroup name="ObjObjectNumberGrp
+        newM.dropRepeatableGroup(name="ObjObjectNumberGrp")
+        newM.toFile(path="template.debug.xml")
         # fake is a minimal record for testing purposes
         fake = Module()
         objModule = fake.module(name="Object")
-        item = m.moduleItem(parent=objModule)
+        item = fake.moduleItem(parent=objModule)
+        # create works with fake Module although no identNr created2955378
         # r = self.api.createItem2(mtype="Object", data=newM)
-        r = self.api.createItem2(mtype="Object", data=fake)
+        r = self.api.createItem2(mtype="Object", data=newM)
         print(r)
         raise SyntaxError("STOP HERE PURPOSEFULLY")
 
@@ -186,7 +191,7 @@ class Bcreate:
 
         m.clean()
         m.uploadForm()
-        m.toFile(path="template.debug.xml")
+        # m.toFile(path="template.debug.xml")
         if len(m) > 1:
             raise SyntaxError("ERROR: Upload xml has >1 items")
         # print (m)
