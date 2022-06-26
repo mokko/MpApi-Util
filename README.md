@@ -6,8 +6,9 @@ du (i.e. download/upload)
 		I am working on a script that can download data from RIA via the API to Excel 
 		where it be manually edited and the uploaded again via the API.
 
-bkp (from Bokop)
-bkp-ren Rename some files on the disk according to a pattern using an Excel doc as 
+
+rename.py  
+		Rename some files on the disk according to a pattern using an Excel doc as 
 		intermediary step for manual proof reading.
 		Where to we place the configuration information? In a plugin? Perhaps we 
 		start with a quick and dirty version where we write the configuration in the 
@@ -25,7 +26,7 @@ bkp-ren Rename some files on the disk according to a pattern using an Excel doc 
 		column C: new name
 		column D: target directory
 
-bkp-create 
+bcreate.py 
 		for every file matching a specific pattern, 
 		- extract a identNr from file name
 		- check if record with this identNr exists already

@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "MpApi-Util"
+name = "MpApi.Util"
 authors = [{name = "Maurice Mengel", email = "mauricemengel@gmail.com"}]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -12,10 +12,11 @@ dynamic = ["version", "description"]
 keywords = ["museum", "museumPlus", "api client"]
 # datetime should be included in Python
 # flit?
+#requires-python = 3.9.1 
 dependencies = [
-	"dateutil", 
+	#"dateutil", 
 	"flit",
-    "lxml",
+	"lxml >=4.8.0", #pathlike objects
 	"openpyxl",
     "requests >=2.6",
 	"typing_extensions",
@@ -25,6 +26,10 @@ test = [
     "pytest >=2.7.3",
 ]
 
+[project.urls]
+Home = "https://github.com/mokko/MpApi-Util"
+
 [project.scripts]
-du = 'mpapi-util:du'
-bkp ='mpapi-util:bkp'
+du = 'MpApi.Util:du'
+rename ='MpApi.Util:rename'
+bcreate = 'MpApi.Util:bcreate'

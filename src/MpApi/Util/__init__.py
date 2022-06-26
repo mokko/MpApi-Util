@@ -1,0 +1,38 @@
+"""Higer-level tools for MpApi, the unofficial MuseumPlus Client"""
+
+__version__ = "0.0.1"
+credentials = "credentials.py"  # expect credentials in pwd
+
+import argparse
+
+from MpApi.Util.du import Du
+from MpApi.Util.rename import Rename
+from MpApi.Util.bcreate import Bcreate
+from pathlib import Path
+
+if Path(credentials).exists():
+    with open(credentials) as f:
+        exec(f.read())
+
+
+def du():
+    if not Path(credentials).exists():
+        raise ValueError("ERROR: Credentials not found!")
+    parser = argparse.ArgumentParser(
+        description="du - the download/upload tool for mpapi"
+    )
+    parser.add_argument("-c", "--cmd", help="'down' or 'up'", required=True)
+    parser.add_argument("-i", "--input", help="path to Excel sheet", required=True)
+    args = parser.parse_args()
+    du = Du(cmd=args.cmd, Input=args.input, baseURL=baseURL, pw=pw, user=user)
+    
+def rename(): pass
+
+def bcreate(): 
+    parser = argparse.ArgumentParser(
+        description="bcreate - create Object records for assets"
+    )
+    parser.add_argument("-c", "--conf", help="directory to start the search", required=True)
+    parser.add_argument("-j", "--job", help="job from the configuration to execute", required=True)
+    args = parser.parse_args()
+    bc = Bcreate(baseURL=baseURL, confFN=args.conf, job=args.job, pw=pw, user=user)
