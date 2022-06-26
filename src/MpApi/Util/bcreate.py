@@ -24,7 +24,8 @@ import copy
 from lxml import etree
 from mpapi.module import Module
 from mpapi.client import MpApi
-#from mpapi.sar import Sar
+
+# from mpapi.sar import Sar
 from mpapi.search import Search
 from pathlib import Path
 
@@ -36,49 +37,54 @@ NSMAP = {
 
 # Let's put the conf in a py file and simply exec it?
 
+
 class Bcreate:
-    def __init__(self, *, baseURL:str, confFN:str, job:str, pw:str, user:str) -> None:
+    def __init__(
+        self, *, baseURL: str, confFN: str, job: str, pw: str, user: str
+    ) -> None:
         if not Path(confFN).exists():
-            raise SyntaxError ("ERROR: Config file not found!")
+            raise SyntaxError("ERROR: Config file not found!")
         config = configparser.ConfigParser()
-        config.read(confFN, 'UTF-8') # at the moment expecting: templateID, mask, src_dir 
-        conf = config[job] # dies gracefully on error
+        config.read(
+            confFN, "UTF-8"
+        )  # at the moment expecting: templateID, mask, src_dir
+        conf = config[job]  # dies gracefully on error
         self.api = MpApi(baseURL=baseURL, user=user, pw=pw)
-        m = self.setTemplate(mtype="Object", ID=conf["templateID"]) # Object-only atm
+        m = self.setTemplate(mtype="Object", ID=conf["templateID"])  # Object-only atm
 
         srcP = Path(conf["src_dir"])
         # recursive scan needed in production?
-        print (f"***About to scan dir '{conf['src_dir']}' with mask '{conf['mask']}'")
+        print(f"***About to scan dir '{conf['src_dir']}' with mask '{conf['mask']}'")
         for p in Path(srcP).rglob(conf["mask"]):
-            print (f"{p}")
+            print(f"{p}")
             identNr = self._xtractIdentNr(name=p.stem)
             r = self.identExists(nr=identNr)
-            print (f"\tchecking if '{identNr}' exists in RIA")
+            print(f"\tchecking if '{identNr}' exists in RIA")
             if r:
                 print(f"\texists already, we won't touch it; exists {r} times")
             else:
                 # print(f"{p} {identNr} DOES NOT exist")
                 self.createObject(identNr=identNr)
-            
-    def createObject(self, *, identNr:str): 
+
+    def createObject(self, *, identNr: str):
         """
         We want to create a new reord and fill in some data that remains
         consistent. In order to do that, we'll use the same template-based
         mechanism as RIA, i.e. effectively copying the template record to
-        the new record. 
-        
-        Steps 
-        1. get (download) the template record, 
+        the new record.
+
+        Steps
+        1. get (download) the template record,
         2. sanitize the xml, so it has the upload form required by RIA
         3. fill in identNr
         4. createRecord
         """
-        print (f"About to create object for identNr {identNr}")
+        print(f"About to create object for identNr {identNr}")
         newM = copy.deepcopy(self.template)
-        #todo: changeIdentNr
+        # todo: changeIdentNr
 
         r = self.api.createItem2(mtype="Object", data=newM)
-        
+
         xml = """
             <application xmlns="http://www.zetcom.com/ria/ws/module">
                 <modules>
@@ -136,42 +142,42 @@ class Bcreate:
                     </module>
                 </modules>
             </application>"""
-    
+
     def identExists(self, *, nr) -> int:
         s = Search(module="Object", limit=-1, offset=0)
-        #s.AND()
+        # s.AND()
         s.addCriterion(
             field="ObjObjectNumberVrt",
             operator="equalsField",
             value=nr,
         )
         m = self.api.search2(query=s)
-        return len (m)
+        return len(m)
 
-    def setTemplate(self, *, mtype: str, ID: int) -> None: 
+    def setTemplate(self, *, mtype: str, ID: int) -> None:
         """
         Get (download) record with ID from the module mtype.
         Sanitize the xml (upload form) and save to self.templateXml
-        
+
         Perhaps we should save it as ET? Not sure yet
         """
-        
+
         m = self.api.getItem2(mtype=mtype, ID=ID)
-        
+
         if not m:
-            raise SyntaxError (f"ERROR: Template record not found: {mtype} {ID}")
+            raise SyntaxError(f"ERROR: Template record not found: {mtype} {ID}")
 
         m.clean()
         m.uploadForm()
         m.toFile(path="template.debug.xml")
         if len(m) > 1:
-            raise SyntaxError ("ERROR: Upload xml has >1 items")
-        #print (m)       
+            raise SyntaxError("ERROR: Upload xml has >1 items")
+        # print (m)
         self.template = m
 
     #
     # privates
-    #    
+    #
 
     def _xtractIdentNr(self, *, name: str) -> str:
         return name

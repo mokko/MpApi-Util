@@ -45,21 +45,22 @@ src_dir = "M:/MuseumPlus/Produktiv/Multimedia/EM/Südsee-Australien/Archiv TIFF 
 start_no = 666  # -> VIII B 666.tif
 dest_dir = "//pk.de/smb/Mediadaten/Projekte/AKU/MDVOS/data"
 
+
 class Rename:
     def __init__(self) -> None:
         self.cache = {}
         self.lowest_no = start_no
 
     def execute(self, *, xls_fn):
-        self.wb = load_workbook(filename = xls_fn)
+        self.wb = load_workbook(filename=xls_fn)
         self.ws = self.wb.active
         line_count = 2
         for rno in range(2, self.ws.max_row):
             src = self.ws.cell(row=rno, column=3)
             dst = self.ws.cell(row=rno, column=4)
-            print (f"{src} -> {dst}")
-            #copyfile (src, dest)    
-            
+            print(f"{src} -> {dst}")
+            # copyfile (src, dest)
+
     def scan(self, *, src_dir: str, dest_dir: str, xls_fn: str) -> None:
         """
         Scan specified directory for VIII B*.tif recursively, write results
@@ -87,7 +88,7 @@ class Rename:
         cnt = 2
         for p in Path(srcP).rglob(r"VIII B*.tif"):
             self._2xls(count=cnt, path=p, dst=dstP)
-            #for each tif we may want to add the jpg sister
+            # for each tif we may want to add the jpg sister
             cnt += 1
         wb.save(filename=xls_fn)
 
@@ -104,11 +105,11 @@ class Rename:
         new_abs = dstP.joinpath(new_fn)
         self.lowest += 1
         print(f"{absp} -> {new_fn}")
-        self.ws[f"A{count}"] = str(absp.name) # orig name
-        self.ws[f"B{count}"] = new_fn         # new name 
-        self.ws[f"C{count}"] = str(absp)      # orig abs path (unique)
-        self.ws[f"D{count}"] = new_abs        # new absolute path
-        
+        self.ws[f"A{count}"] = str(absp.name)  # orig name
+        self.ws[f"B{count}"] = new_fn  # new name
+        self.ws[f"C{count}"] = str(absp)  # orig abs path (unique)
+        self.ws[f"D{count}"] = new_abs  # new absolute path
+
     def _initXls(self) -> None:
         """
         Just init xls file and first row with headinga
@@ -126,7 +127,7 @@ class Rename:
         """
         Search the self.cache for a needle and return absolute path if needle
         exists or None if it doesn't.
-        
+
         NOT TESTED
         """
 
@@ -156,4 +157,3 @@ class Rename:
             absp = p.resolve()
             self.cache[str(absp)] = str(absp.name)
         # print (self.cache)
-

@@ -25,15 +25,21 @@ def du():
     parser.add_argument("-i", "--input", help="path to Excel sheet", required=True)
     args = parser.parse_args()
     du = Du(cmd=args.cmd, Input=args.input, baseURL=baseURL, pw=pw, user=user)
-    
-def rename(): 
+
+
+def rename():
     parser = argparse.ArgumentParser(
-        description='Rename tool using an Excel spreadsheet for manual check and documentation')
-    parser.add_argument('-s', '--src', help='Scan source directory')
-    parser.add_argument('-d', '--dst', help='destination directory')
-    parser.add_argument('-x', '--xsl', required=True, help='Excel file path')
-    parser.add_argument('-e', '--execute', action='store_true', 
-        help='Execute the copy prepared in the specified Excel file')
+        description="Rename tool using an Excel spreadsheet for manual check and documentation"
+    )
+    parser.add_argument("-s", "--src", help="Scan source directory")
+    parser.add_argument("-d", "--dst", help="destination directory")
+    parser.add_argument("-x", "--xsl", required=True, help="Excel file path")
+    parser.add_argument(
+        "-e",
+        "--execute",
+        action="store_true",
+        help="Execute the copy prepared in the specified Excel file",
+    )
     args = parser.parse_args()
 
     r = Rename()
@@ -41,15 +47,20 @@ def rename():
         # let's use the dictionary cache if, and only if, we need to find the jpg sisters
         # of the tifs
         # r.mk_cache(start_dir=src_dir)
-        r.scan(src_dir=args.src, dest_dir = args.dst, xls_fn=args.xsl)
+        r.scan(src_dir=args.src, dest_dir=args.dst, xls_fn=args.xsl)
     elif args.execute:
         r.execute(xls_fn=args.xsl)
 
-def bcreate(): 
+
+def bcreate():
     parser = argparse.ArgumentParser(
         description="bcreate - create Object records for assets"
     )
-    parser.add_argument("-c", "--conf", help="directory to start the search", required=True)
-    parser.add_argument("-j", "--job", help="job from the configuration to execute", required=True)
+    parser.add_argument(
+        "-c", "--conf", help="directory to start the search", required=True
+    )
+    parser.add_argument(
+        "-j", "--job", help="job from the configuration to execute", required=True
+    )
     args = parser.parse_args()
     bc = Bcreate(baseURL=baseURL, confFN=args.conf, job=args.job, pw=pw, user=user)
