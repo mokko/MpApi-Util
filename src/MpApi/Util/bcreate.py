@@ -87,9 +87,11 @@ class Bcreate:
         Steps
         1. get (download) the template record,
         2. sanitize the xml, so it has the upload form required by RIA
-        3. fill in identNr
+        3. fill in identNr -> TODO
         4. createRecord
 
+        The first two steps happen in setTemplate, the rest here.
+                
         <application xmlns="http://www.zetcom.com/ria/ws/module">
             <modules>
                 <module name="Address">
@@ -151,57 +153,80 @@ class Bcreate:
         print(f"\tabout to create object")
         newM = copy.deepcopy(self.template)
         # todo: changeIdentNr
-        newM._dropFieldsByName(element="dataField", name="ObjObjectNumberTxt")
-        # drop whole repeatableGroup name="ObjObjectNumberGrp
-        newM.dropRepeatableGroup(name="ObjObjectNumberGrp")
+        newM = addIdentNr(m=newM, identNr=identNr)
         newM.toFile(path="template.debug.xml")
-        # why do these rpG prevent successful record creation?
-        newM._dropFieldsByName(
-            element="repeatableGroup", name="ObjAcquisitionNotesGrp"
-        )  # Problem
-        newM._dropFieldsByName(
-            element="repeatableGroup", name="ObjEditorNotesGrp"
-        )  # Problem
-        newM._dropFieldsByName(
-            element="repeatableGroup", name="ObjMaterialTechniqueGrp"
-        )  # Problem
-        newM._dropFieldsByName(
-            element="repeatableGroup", name="ObjCurrentLocationGrp"
-        )  # Problem
 
-        # what gives?
-        # newM._dropFields(element="composite") # create works with composite
-        # newM._dropFields(element="repeatableGroup") # create works without any rpG, so error must be in those
-        # T1 doesnt work without T1
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjObjectTitleGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjOtherNumberGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjGeograficGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjDimAllGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjAcquisitionDateGrp")
-        # works without T2, T3, T4
-        # T2 doesn't work without T2
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjAcquisitionMethodGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjNumberObjectsGrp") # Anzahl/Teile?
-        # do we want to copy SMB-Digital Freigabe?
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjPublicationGrp") # Freigabe
-        # T3 doesnt work without T3
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjIconographyGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjResponsibleGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjSystematicGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjTechnicalTermGrp")
-        # T4 doesnt work without T4
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjOwnerRef")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjPerAssociationRef")
-
-        # fake is a minimal record for testing purposes
-        fake = Module()
-        objModule = fake.module(name="Object")
-        item = fake.moduleItem(parent=objModule)
-        # create works with fake Module although no identNr created2955378
-        # r = self.api.createItem2(mtype="Object", data=newM)
         r = self.api.createItem2(mtype="Object", data=newM)
         print(r)
         raise SyntaxError("STOP HERE PURPOSEFULLY")
+
+    def addIdentNr(self, *, m, identNr):
+        """
+        Assume that 
+        - I dont need or may not have InventarNrSTxt, ModifiedByTxt, ModifiedDateDat,
+        - have to have Part1Txt, Part2Txt, Part3Txt and 
+        - want to have SortLnu
+        <repeatableGroup name="ObjObjectNumberGrp">
+          <repeatableGroupItem>
+            <dataField name="InventarNrSTxt">
+              <value>VIII B 74</value>
+            </dataField>
+            <dataField name="ModifiedByTxt">
+              <value>EM_EM</value>
+            </dataField>
+            <dataField name="ModifiedDateDat">
+              <value>2010-05-07</value>
+            </dataField>
+            <dataField name="Part1Txt">
+              <value>VIII</value>
+            </dataField>
+            <dataField name="Part2Txt">
+              <value> B</value>
+            </dataField>
+            <dataField name="Part3Txt">
+              <value>74</value>
+            </dataField>
+            <dataField name="SortLnu">
+              <value>1</value>
+            </dataField>
+            ...
+            
+            Note the leading spave in Part2!
+
+        <repeatableGroup name="ObjObjectNumberGrp">
+          <repeatableGroupItem>
+            <dataField name="InventarNrSTxt">
+              <value>{identNr}</value>
+            </dataField>
+            <dataField name="Part1Txt">
+              <value>{part1}</value>
+            </dataField>
+            <dataField name="Part2Txt">
+              <value> {part2}</value>
+            </dataField>
+            <dataField name="Part3Txt">
+              <value>{part3}</value>
+            </dataField>
+            <dataField name="SortLnu">
+              <value>1</value>
+            </dataField>
+          </repeatableGroupItem>
+        </repeatableGroup>
+
+        """
+        part1 = identNr.split()[0]
+        part2 = " "+identNr.split()[1]
+        part3 = identNr.split()[2:]
+        print (f"DEBUG:{part1}|{part2}|{part3}|")
+        itemN = m.xpath("/m:application/m:modules/m:module/m:moduleItem[1]")
+        rGrpN = m.repeatableGroup(parent=itemN, name="ObjObjectNumberGrp")
+        grpItemN = m.repeatableGroupItem(parent=rGrpN)
+        m.dataField(parent=grpItemN, name="InventarNrSTxt", value=identNr) # not sure if necessary or even allowed
+        m.dataField(parent=grpItemN, name="Part1Txt", value=part1) 
+        m.dataField(parent=grpItemN, name="Part2Txt", value=part2) 
+        m.dataField(parent=grpItemN, name="Part3Txt", value=part3) 
+        m.dataField(parent=grpItemN, name="SortLNU", value="1")       
+        return m
 
     def identExists(self, *, nr) -> int:
         s = Search(module="Object", limit=-1, offset=0)
@@ -229,7 +254,55 @@ class Bcreate:
 
         m.clean()
         m.uploadForm()
-        # m.toFile(path="template.debug.xml")
+
+        m._dropFieldsByName(element="dataField", name="ObjObjectNumberTxt")
+        # drop whole repeatableGroup name="ObjObjectNumberGrp
+        m.dropRepeatableGroup(name="ObjObjectNumberGrp")
+        # why do these rpG prevent successful record creation?
+        m._dropFieldsByName(
+            element="repeatableGroup", name="ObjAcquisitionNotesGrp"
+        )  # Problem
+        m._dropFieldsByName(
+            element="repeatableGroup", name="ObjEditorNotesGrp"
+        )  # Problem
+        m._dropFieldsByName(
+            element="repeatableGroup", name="ObjMaterialTechniqueGrp"
+        )  # Problem
+        m._dropFieldsByName(
+            element="repeatableGroup", name="ObjCurrentLocationGrp"
+        )  # Problem
+        #m.toFile(path="template.debug.xml")
+
+        # what gives?
+        # newM._dropFields(element="composite") # create works with composite
+        # newM._dropFields(element="repeatableGroup") # create works without any rpG, so error must be in those
+        # T1 doesnt work without T1
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjObjectTitleGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjOtherNumberGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjGeograficGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjDimAllGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjAcquisitionDateGrp")
+        # works without T2, T3, T4
+        # T2 doesn't work without T2
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjAcquisitionMethodGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjNumberObjectsGrp") # Anzahl/Teile?
+        # do we want to copy SMB-Digital Freigabe?
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjPublicationGrp") # Freigabe
+        # T3 doesnt work without T3
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjIconographyGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjResponsibleGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjSystematicGrp")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjTechnicalTermGrp")
+        # T4 doesnt work without T4
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjOwnerRef")
+        # newM._dropFieldsByName(element="repeatableGroup", name="ObjPerAssociationRef")
+
+        # fake is a minimal record for testing purposes
+        #fake = Module()
+        #objModule = fake.module(name="Object")
+        #item = fake.moduleItem(parent=objModule)
+        # create works with fake Module although no identNr created2955378
+
         if len(m) > 1:
             raise SyntaxError("ERROR: Upload xml has >1 items")
         # print (m)
