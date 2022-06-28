@@ -6,18 +6,16 @@ NAME bcreate.py
 	- if does not exist: 
 		- create a new record in RIA 
 		- copy a template record to the new record
-		- fill in this identNr
+		- fill in this identNr and possibly other fields
 		
-	Let's also write initial configuration to program quick-and-dirty style.
-	What is the cli?
-	create -d path/to/dir
-	
-	Eventually we'll want a logger, but that can wait.
-
+CONFIGURATION
+	bcreate-conf.ini
+    
 CLI INTERFACE
-	bcreate 	: just show what you would does
+	bcreate -c conf.ini -j section	
+
+    TODO: make an explicit switch to do any changes
 	bcreate -a	: actually create new records
-		
 """
 import configparser
 import copy
@@ -48,7 +46,7 @@ class Bcreate:
         conf = self._initConf(confFN=confFN, job=job)
         self._initLog()
 
-        print(conf)
+        # print(conf)
         m = self.setTemplate(mtype="Object", ID=conf["templateID"])  # Object-only atm
 
         srcP = Path(conf["src_dir"])
@@ -58,7 +56,7 @@ class Bcreate:
         logging.info(f"dir {conf['src_dir']}")
         print(f"***About to scan dir '{conf['src_dir']}' with mask '{conf['mask']}'")
         for p in Path(srcP).rglob(conf["mask"]):
-            print(f"{p}")
+            print(f"\n{p}")
             identNr = self._xtractIdentNr(name=p.stem)
             r = self.identExists(nr=identNr)
             print(f"   checking if '{identNr}' exists in RIA")
@@ -77,6 +75,75 @@ class Bcreate:
             f"of those {count_alreadyTaken} have an identNr that already exists in RIA"
         )
 
+    def addIdentNr(self, *, data, identNr):
+        """
+        Assume that
+        - I dont need or may not have InventarNrSTxt, ModifiedByTxt, ModifiedDateDat,
+        - have to have Part1Txt, Part2Txt, Part3Txt and
+        - want to have SortLnu
+        <repeatableGroup name="ObjObjectNumberGrp">
+          <repeatableGroupItem>
+            <dataField name="InventarNrSTxt">
+              <value>VIII B 74</value>
+            </dataField>
+            <dataField name="ModifiedByTxt">
+              <value>EM_EM</value>
+            </dataField>
+            <dataField name="ModifiedDateDat">
+              <value>2010-05-07</value>
+            </dataField>
+            <dataField name="Part1Txt">
+              <value>VIII</value>
+            </dataField>
+            <dataField name="Part2Txt">
+              <value> B</value>
+            </dataField>
+            <dataField name="Part3Txt">
+              <value>74</value>
+            </dataField>
+            <dataField name="SortLnu">
+              <value>1</value>
+            </dataField>
+            ...
+
+            Note the leading spave in Part2!
+
+        <repeatableGroup name="ObjObjectNumberGrp">
+          <repeatableGroupItem>
+            <dataField name="InventarNrSTxt">
+              <value>{identNr}</value>
+            </dataField>
+            <dataField name="Part1Txt">
+              <value>{part1}</value>
+            </dataField>
+            <dataField name="Part2Txt">
+              <value> {part2}</value>
+            </dataField>
+            <dataField name="Part3Txt">
+              <value>{part3}</value>
+            </dataField>
+            <dataField name="SortLnu">
+              <value>1</value>
+            </dataField>
+          </repeatableGroupItem>
+        </repeatableGroup>
+
+        """
+        part1 = identNr.split()[0]
+        part2 = " " + identNr.split()[1]
+        part3 = " ".join(identNr.split()[2:])
+        print(f"DEBUG:{part1}|{part2}|{part3}|")
+        itemN = data.xpath("/m:application/m:modules/m:module/m:moduleItem[1]")[0]
+        rGrpN = data.repeatableGroup(parent=itemN, name="ObjObjectNumberGrp")
+        grpItemN = data.repeatableGroupItem(parent=rGrpN)
+        # not sure if necessary or even allowed
+        data.dataField(parent=grpItemN, name="InventarNrSTxt", value=identNr)
+        data.dataField(parent=grpItemN, name="Part1Txt", value=part1)
+        data.dataField(parent=grpItemN, name="Part2Txt", value=part2)
+        data.dataField(parent=grpItemN, name="Part3Txt", value=part3)
+        data.dataField(parent=grpItemN, name="SortLnu", value="1")
+        # return m we change the object in-place
+
     def createObject(self, *, identNr: str):
         """
         We want to create a new reord and fill in some data that remains
@@ -91,7 +158,7 @@ class Bcreate:
         4. createRecord
 
         The first two steps happen in setTemplate, the rest here.
-                
+
         <application xmlns="http://www.zetcom.com/ria/ws/module">
             <modules>
                 <module name="Address">
@@ -150,83 +217,15 @@ class Bcreate:
         </application>
         """
 
-        print(f"\tabout to create object")
         newM = copy.deepcopy(self.template)
-        # todo: changeIdentNr
-        newM = addIdentNr(m=newM, identNr=identNr)
+        # todo: check changeIdentNr
+        self.addIdentNr(data=newM, identNr=identNr)
         newM.toFile(path="template.debug.xml")
 
-        r = self.api.createItem2(mtype="Object", data=newM)
-        print(r)
+        print(f"\tabout to create object")
+        # r = self.api.createItem2(mtype="Object", data=newM)
+        # print(r)
         raise SyntaxError("STOP HERE PURPOSEFULLY")
-
-    def addIdentNr(self, *, m, identNr):
-        """
-        Assume that 
-        - I dont need or may not have InventarNrSTxt, ModifiedByTxt, ModifiedDateDat,
-        - have to have Part1Txt, Part2Txt, Part3Txt and 
-        - want to have SortLnu
-        <repeatableGroup name="ObjObjectNumberGrp">
-          <repeatableGroupItem>
-            <dataField name="InventarNrSTxt">
-              <value>VIII B 74</value>
-            </dataField>
-            <dataField name="ModifiedByTxt">
-              <value>EM_EM</value>
-            </dataField>
-            <dataField name="ModifiedDateDat">
-              <value>2010-05-07</value>
-            </dataField>
-            <dataField name="Part1Txt">
-              <value>VIII</value>
-            </dataField>
-            <dataField name="Part2Txt">
-              <value> B</value>
-            </dataField>
-            <dataField name="Part3Txt">
-              <value>74</value>
-            </dataField>
-            <dataField name="SortLnu">
-              <value>1</value>
-            </dataField>
-            ...
-            
-            Note the leading spave in Part2!
-
-        <repeatableGroup name="ObjObjectNumberGrp">
-          <repeatableGroupItem>
-            <dataField name="InventarNrSTxt">
-              <value>{identNr}</value>
-            </dataField>
-            <dataField name="Part1Txt">
-              <value>{part1}</value>
-            </dataField>
-            <dataField name="Part2Txt">
-              <value> {part2}</value>
-            </dataField>
-            <dataField name="Part3Txt">
-              <value>{part3}</value>
-            </dataField>
-            <dataField name="SortLnu">
-              <value>1</value>
-            </dataField>
-          </repeatableGroupItem>
-        </repeatableGroup>
-
-        """
-        part1 = identNr.split()[0]
-        part2 = " "+identNr.split()[1]
-        part3 = identNr.split()[2:]
-        print (f"DEBUG:{part1}|{part2}|{part3}|")
-        itemN = m.xpath("/m:application/m:modules/m:module/m:moduleItem[1]")
-        rGrpN = m.repeatableGroup(parent=itemN, name="ObjObjectNumberGrp")
-        grpItemN = m.repeatableGroupItem(parent=rGrpN)
-        m.dataField(parent=grpItemN, name="InventarNrSTxt", value=identNr) # not sure if necessary or even allowed
-        m.dataField(parent=grpItemN, name="Part1Txt", value=part1) 
-        m.dataField(parent=grpItemN, name="Part2Txt", value=part2) 
-        m.dataField(parent=grpItemN, name="Part3Txt", value=part3) 
-        m.dataField(parent=grpItemN, name="SortLNU", value="1")       
-        return m
 
     def identExists(self, *, nr) -> int:
         s = Search(module="Object", limit=-1, offset=0)
@@ -271,7 +270,7 @@ class Bcreate:
         m._dropFieldsByName(
             element="repeatableGroup", name="ObjCurrentLocationGrp"
         )  # Problem
-        #m.toFile(path="template.debug.xml")
+        # m.toFile(path="template.debug.xml")
 
         # what gives?
         # newM._dropFields(element="composite") # create works with composite
@@ -298,9 +297,9 @@ class Bcreate:
         # newM._dropFieldsByName(element="repeatableGroup", name="ObjPerAssociationRef")
 
         # fake is a minimal record for testing purposes
-        #fake = Module()
-        #objModule = fake.module(name="Object")
-        #item = fake.moduleItem(parent=objModule)
+        # fake = Module()
+        # objModule = fake.module(name="Object")
+        # item = fake.moduleItem(parent=objModule)
         # create works with fake Module although no identNr created2955378
 
         if len(m) > 1:
