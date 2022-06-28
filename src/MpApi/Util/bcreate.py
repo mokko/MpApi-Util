@@ -137,11 +137,15 @@ class Bcreate:
         rGrpN = data.repeatableGroup(parent=itemN, name="ObjObjectNumberGrp")
         grpItemN = data.repeatableGroupItem(parent=rGrpN)
         # not sure if necessary or even allowed
-        data.dataField(parent=grpItemN, name="InventarNrSTxt", value=identNr)
+        #data.dataField(parent=grpItemN, name="InventarNrSTxt", value=identNr)
         data.dataField(parent=grpItemN, name="Part1Txt", value=part1)
         data.dataField(parent=grpItemN, name="Part2Txt", value=part2)
         data.dataField(parent=grpItemN, name="Part3Txt", value=part3)
         data.dataField(parent=grpItemN, name="SortLnu", value="1")
+        vr = data.vocabularyReference(parent=grpItemN, name="DenominationVoc")
+        data.vocabularyReferenceItem(parent=vr, ID=2737051) # Ident. Nr.
+        mrN = data.moduleReference(parent=grpItemN, name="InvNumberSchemeRef")
+        data.moduleReferenceItem(parent=mrN,moduleItemId="68") # EM-Südsee/Australien VIII B
         # return m we change the object in-place
 
     def createObject(self, *, identNr: str):
@@ -223,8 +227,8 @@ class Bcreate:
         newM.toFile(path="template.debug.xml")
 
         print(f"\tabout to create object")
-        # r = self.api.createItem2(mtype="Object", data=newM)
-        # print(r)
+        r = self.api.createItem2(mtype="Object", data=newM)
+        print(r)
         raise SyntaxError("STOP HERE PURPOSEFULLY")
 
     def identExists(self, *, nr) -> int:
