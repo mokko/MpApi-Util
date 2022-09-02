@@ -2,7 +2,7 @@
 NAME bcreate.py 
 	for every file matching a specific pattern, 
 	- extract a identNr from file name
-	- check if record with this identNr exists already
+	- check if record with this identNr exists already in RIA
 	- if does not exist: 
 		- create a new record in RIA 
 		- copy a template record to the new record
@@ -47,7 +47,9 @@ class Bcreate:
         self._initLog()
 
         # print(conf)
-        m = self.setTemplate(mtype="Object", ID=conf["templateID"])  # Object-only atm
+        self.templateM = self.setTemplate(
+            mtype="Object", ID=conf["templateID"]
+        )  # Object-only atm
 
         srcP = Path(conf["src_dir"])
         count_files = 0
@@ -61,11 +63,12 @@ class Bcreate:
             r = self.identExists(nr=identNr)
             print(f"   checking if '{identNr}' exists in RIA")
             if r:
+                print("\texists")
                 count_alreadyTaken += 1
                 print(f"\texists already, we won't touch it; exists {r} times")
                 logging.warning(f"identNr '{identNr}' exists already {r} times in RIA")
             else:
-                # print(f"{p} {identNr} DOES NOT exist")
+                print(f"{p} {identNr} DOES NOT exist")
                 self.createObject(identNr=identNr)
             count_files += 1
         logging.info(
@@ -133,19 +136,23 @@ class Bcreate:
         part2 = " " + identNr.split()[1]
         part3 = " ".join(identNr.split()[2:])
         print(f"DEBUG:{part1}|{part2}|{part3}|")
+
         itemN = data.xpath("/m:application/m:modules/m:module/m:moduleItem[1]")[0]
+        # assume that ObjObjektNumberGrp exists already, which is a reasonable expectation
+        # only api-created records may have no identNr
         rGrpN = data.repeatableGroup(parent=itemN, name="ObjObjectNumberGrp")
         grpItemN = data.repeatableGroupItem(parent=rGrpN)
-        # not sure if necessary or even allowed
-        #data.dataField(parent=grpItemN, name="InventarNrSTxt", value=identNr)
+        data.dataField(parent=grpItemN, name="InventarNrSTxt", value=identNr)
         data.dataField(parent=grpItemN, name="Part1Txt", value=part1)
         data.dataField(parent=grpItemN, name="Part2Txt", value=part2)
         data.dataField(parent=grpItemN, name="Part3Txt", value=part3)
         data.dataField(parent=grpItemN, name="SortLnu", value="1")
         vr = data.vocabularyReference(parent=grpItemN, name="DenominationVoc")
-        data.vocabularyReferenceItem(parent=vr, ID=2737051) # Ident. Nr.
+        data.vocabularyReferenceItem(parent=vr, ID=2737051)  # Ident. Nr.
         mrN = data.moduleReference(parent=grpItemN, name="InvNumberSchemeRef")
-        data.moduleReferenceItem(parent=mrN,moduleItemId="68") # EM-Südsee/Australien VIII B
+        data.moduleReferenceItem(
+            parent=mrN, moduleItemId="68"
+        )  # EM-Südsee/Australien VIII B
         # return m we change the object in-place
 
     def createObject(self, *, identNr: str):
@@ -161,7 +168,7 @@ class Bcreate:
         3. fill in identNr -> TODO
         4. createRecord
 
-        The first two steps happen in setTemplate, the rest here.
+        The first step happens in setTemplate, the rest here.
 
         <application xmlns="http://www.zetcom.com/ria/ws/module">
             <modules>
@@ -221,13 +228,17 @@ class Bcreate:
         </application>
         """
 
-        newM = copy.deepcopy(self.template)
+        newM = copy.deepcopy(self.templateM)
         # todo: check changeIdentNr
         self.addIdentNr(data=newM, identNr=identNr)
         newM.toFile(path="template.debug.xml")
 
         print(f"\tabout to create object")
         r = self.api.createItem2(mtype="Object", data=newM)
+        # responseM = Module(xml=r.text)
+        # ID = responseM.xpath("/m:application/m:modules/m:module/m:moduleItem/@id")[0]
+        # print ("RESPONSE: id {ID} created")
+        print("RESPONSE")
         print(r)
         raise SyntaxError("STOP HERE PURPOSEFULLY")
 
@@ -245,9 +256,14 @@ class Bcreate:
     def setTemplate(self, *, mtype: str, ID: int) -> None:
         """
         Get (download) record with ID from the module mtype.
-        Sanitize the xml (upload form) and save to self.templateXml
+        Sanitize (=clean) the xml (upload form)
 
-        Perhaps we should save it as ET? Not sure yet
+        Croaks if nothing found
+        Saves Module object to self.template
+
+        Questions
+        - perhaps we should save it as ET? Not sure yet
+        - requirements of upload form are unclear
         """
 
         m = self.api.getItem2(mtype=mtype, ID=ID)
@@ -258,59 +274,11 @@ class Bcreate:
         m.clean()
         m.uploadForm()
 
-        m._dropFieldsByName(element="dataField", name="ObjObjectNumberTxt")
-        # drop whole repeatableGroup name="ObjObjectNumberGrp
-        m.dropRepeatableGroup(name="ObjObjectNumberGrp")
-        # why do these rpG prevent successful record creation?
-        m._dropFieldsByName(
-            element="repeatableGroup", name="ObjAcquisitionNotesGrp"
-        )  # Problem
-        m._dropFieldsByName(
-            element="repeatableGroup", name="ObjEditorNotesGrp"
-        )  # Problem
-        m._dropFieldsByName(
-            element="repeatableGroup", name="ObjMaterialTechniqueGrp"
-        )  # Problem
-        m._dropFieldsByName(
-            element="repeatableGroup", name="ObjCurrentLocationGrp"
-        )  # Problem
-        # m.toFile(path="template.debug.xml")
-
-        # what gives?
-        # newM._dropFields(element="composite") # create works with composite
-        # newM._dropFields(element="repeatableGroup") # create works without any rpG, so error must be in those
-        # T1 doesnt work without T1
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjObjectTitleGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjOtherNumberGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjGeograficGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjDimAllGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjAcquisitionDateGrp")
-        # works without T2, T3, T4
-        # T2 doesn't work without T2
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjAcquisitionMethodGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjNumberObjectsGrp") # Anzahl/Teile?
-        # do we want to copy SMB-Digital Freigabe?
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjPublicationGrp") # Freigabe
-        # T3 doesnt work without T3
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjIconographyGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjResponsibleGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjSystematicGrp")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjTechnicalTermGrp")
-        # T4 doesnt work without T4
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjOwnerRef")
-        # newM._dropFieldsByName(element="repeatableGroup", name="ObjPerAssociationRef")
-
-        # fake is a minimal record for testing purposes
-        # fake = Module()
-        # objModule = fake.module(name="Object")
-        # item = fake.moduleItem(parent=objModule)
-        # create works with fake Module although no identNr created2955378
-
         if len(m) > 1:
             raise SyntaxError("ERROR: Upload xml has >1 items")
         # print (m)
         logging.info(f"template Object {ID}")
-        self.template = m
+        return m
 
     #
     # privates
@@ -335,4 +303,7 @@ class Bcreate:
         )
 
     def _xtractIdentNr(self, *, name: str) -> str:
+        parts = name.split(" ")
+        if len(parts) < 2:
+            raise SyntaxError(f"ERROR: IdentNr has suspicious format... {name}")
         return name
