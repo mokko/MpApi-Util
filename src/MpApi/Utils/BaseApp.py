@@ -50,7 +50,7 @@ class BaseApp:
             print("* Sheet 'conf' exists already")
             ws_conf = wb["conf"]
         else:
-            print("Making new conf sheet")
+            print("* Making new conf sheet")
             ws_conf = wb.create_sheet("conf")
         c = 1
         for name in conf:
