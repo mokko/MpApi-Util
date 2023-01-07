@@ -1,20 +1,32 @@
 """
-Prepare Assets for Upload with regular Bildimport
+Prepare assets for upload with regular Bildimport
 
+With this tool we 
 - recursively scan a directory
 - filter for specific files (e.g. with "-KK" or only *.jpg)
-- parse identNr
-- check for Dublette (assets with the same image/asset file)
-- loopup identNr in RIA
+- extract the identNr from filename
+- check if asset has already been uploaded (sort of Dublette)
+- loopup objId by identNr
+- mark cases where extracted identNr is suspicious
 - write results into spreadsheet
 
-When using this script, editor will need to check
-(1) if identNr algorithm worked as desired
-(2) Dubletten (asset already online). 
-    TODO: Script could move files that already exist online to separate folder
-(3) Cases where multiple objIds were identified
-    The following steps only relate to cases where no objId was identified
-    
+This tool is meant to be used by an editor. The editor runs the script multiple times
+and each time checks the results in the Excel file
+
+(1) write/edit/update configuration (e.g. prepare.ini)
+(2) call the script something like this:
+   $ prepare -p scandisk -c prepare.ini 
+    results are written to excel file whose name is specified in the config file
+(3) examine if identNr have successfully parsed by script
+(4) potentially correct filenames -> delete Excel file and repeat step 3
+(5) identNr is not successfully extracted, contact programmer to revise identNr 
+    extraction logarithm
+(6) run script 2nd time like this
+   $ prepare -p checkria -c prepare.ini
+(7) editor examines results in excel file, specifically the Kandidaten column
+(8) script is run for the third time, creating new records for the files that are marked
+    with x in the Kandidaten column. For those identNr new Objekte-DS are created copying
+    a template with the templateID specified in configuration.
 """
 
 
@@ -25,14 +37,15 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 from pathlib import Path
 import re
-from typing import Any, Optional 
+from typing import Any, Optional
+
 # from MpApi.Util.prepare.scandisk import Scandisk
 # from MpApi.Util.prepare.aea import Aea
 # from mpapi.sar import Sar
 from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.Ria import RiaUtil
 
-#worksheet: openpyxl.worksheet
+# worksheet: openpyxl.worksheet
 
 # NSMAP = {
 #    "m": "http://www.zetcom.com/ria/ws/module",
@@ -42,7 +55,14 @@ from MpApi.Utils.Ria import RiaUtil
 
 class PrepareUpload(BaseApp):
     def __init__(
-        self, *, baseURL: str, conf_fn: str, job: str, user: str, pw: str, limit:int = -1
+        self,
+        *,
+        baseURL: str,
+        conf_fn: str,
+        job: str,
+        user: str,
+        pw: str,
+        limit: int = -1,
     ) -> None:
         self.baseURL = baseURL
         self.conf_fn = Path(conf_fn)
@@ -63,33 +83,32 @@ class PrepareUpload(BaseApp):
         self._conf_to_excel(
             conf=self.conf, wb=self.wb
         )  # overwrites existing conf values
- 
+
         # die if not writable so that user can close it before waste of time
         # should we prevent writing file if it hasn't changed? not for now
-        self._save_excel(path=self.excel_fn) 
+        self._save_excel(path=self.excel_fn)
 
-    def _check_2nd_phase(self):
+    def _if_content(self):
         if self.ws.max_row < 3:  # we assume that scan_disk has run if more than 2 lines
             raise ValueError(
                 f"ERROR: no data found; excel contains {self.ws.max_row} rows!"
             )
-        else:
-            print(f"* Excel has data: {self.ws.max_row} rows")
-        self.client = self._init_client()
+        return True
+        #else:
+        #    print(f"* Excel has data: {self.ws.max_row} rows")
 
-    def _init_sheet(self, workbook: Workbook) -> Any: # openpyxl.worksheet  
+    def _init_sheet(self, workbook: Workbook) -> Any:  # openpyxl.worksheet
         """
         Defines the Excel format of this app. Needs to be specific to app.
         """
         sheet_title = "prepareUpload"
         try:
-            #existing sheet
             ws = workbook[sheet_title]
-        except: # new sheet
+        except:  # new sheet
             ws = self.wb.active
-        else: # if sheet already exists
-            return ws
-        # if this is a new sheet
+        else:  
+            return ws # sheet exists already 
+        #this is a new sheet
 
         ws.title = sheet_title
         ws["A1"] = "Dateiname"
@@ -130,9 +149,10 @@ class PrepareUpload(BaseApp):
         If the cell is empty it still needs to be checked.
 
         """
-        def _per_row(*, row, changed)->bool:
-            filename_cell = row[0] # 0-index
-            uploaded_cell = row[2]  
+
+        def _per_row(*, row, changed) -> bool:
+            filename_cell = row[0]  # 0-index
+            uploaded_cell = row[2]
             print(f"* mulId for filename {c} of {self.ws.max_row-2}")
             if uploaded_cell.value == None:
                 changed = True
@@ -146,18 +166,38 @@ class PrepareUpload(BaseApp):
                     uploaded_cell.value = ", ".join(idL)
             return changed
 
-        self._check_2nd_phase()
+        self._check_content()
+        self.client = self._init_client()
+
         c = 1  # counter; start counting at row 3, so counts the entries more than the rows
         changed = False
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
             changed = _per_row(row=row, changed=changed)
-            #print(f"***{uploaded_cell.value}")
+            # print(f"***{uploaded_cell.value}")
             if self.limit == c:
-                    print ("* Limit reached")
-                    break
+                print("* Limit reached")
+                break
             c += 1
         if changed is True:
             self._save_excel(path=self.excel_fn)
+
+
+    def create_object():
+        """
+        Loop thru excel objId column. Act for rows where candidates = "x" or "X". 
+        For those, create a new object record in RIA using template record mentioned in
+        the configuration (templateID).
+        """
+        try:
+            self.config[templateID]
+        except:
+            raise SyntaxError ("TemplateID not defined in configuration!")
+
+        self._check_content() # dies if no content
+        self.client = self._init_client()
+
+        self._save_excel(path=self.excel_fn)
+
 
     def objId_for_ident(self):
         """
@@ -166,68 +206,66 @@ class PrepareUpload(BaseApp):
         "schon hochgeladen?" = None.
 
         Take ident from Excel, get the objId from RIA and write it back to Excel.
+        
+        TODO: Allow for multiple identNrs separated by '; '
         """
         # currently this unnecessary, but why rely on that?
-        self._check_2nd_phase()
+        self._check_content() # dies if no content
+        self.client = self._init_client()
 
-        def _per_row(*, row, changed):       
+        #c has not been passed here, but still works
+        #that's cool scope, just slightly magic?
+        def _per_row(*, row, changed):
             print(f"* objId for identNr {c} of {self.ws.max_row-2}")
-            ident_cell = row[1]  # in Excel from filename; can have multiple
-            uploaded_cell = row[2]
-            objId_cell = row[3]  # in Excel
+            ident_cell = row[1]    # in Excel from filename; can have multiple
+            uploaded_cell = row[2] # can have multiple 
+            objId_cell = row[3]    # to write into  
+            kandidat_cell = row[4] # to write into
+            
+            # in rare cases identNr_cell might be None
+            # then we cant look up anything
+            if ident_cell.value is None:
+                return changed
+
             if objId_cell.value == None:
                 changed = True
-                for singleNr in ident_cell.value.split(", "):
-                    objIdL = self.client.objId_for_ident(identNr=singleNr)  # from RIA
+                for single in ident_cell.value.split(";"):
+                    ident = single.strip()
+                    objIdL = self.client.objId_for_ident(identNr=ident)
                     if objIdL is None:
                         objId_cell.value = "None"
                     else:
                         objId_cell.value = ", ".join(objIdL)
-                #print(f"***{ident_cell.value} -> {objId_cell.value}")
-            #else:
-            #    print("   already filled in")
+                # print(f"***{ident_cell.value} -> {objId_cell.value}")
             if (
                 uploaded_cell.value == "None"
                 and objId_cell.value == "None"
-                and row[4].value is None
+                and kandidat_cell.value is None
             ):
                 changed = True
                 row[4].value = "x"
             return changed
-            
+
         c = 1  # case counter
         changed = False
         for row in self.ws.iter_rows(min_row=2):  # start at 2nd row
             changed = _per_row(row=row, changed=changed)
             if self.limit == c:
-                print ("* Limit reached")
+                print("* Limit reached")
                 break
             c += 1
-        if changed is True: # let's only save if we changed something
+        if changed is True:  # let's only save if we changed something
             self._save_excel(path=self.excel_fn)
 
     def scan_disk(self):
-        def _per_row(*, c: int, path: Path) -> None:
-            """
-            c: row count
-            specific to this scandisk task of prepare command
+        """
+        Recursively scan a dir (src_dir) for *-KK*. List a files in an Excel file trying 
+        to extract the proper identNr.
 
-            writes to self.ws            
-            """
-            identNr = _extractIdentNr(path=path)
-            self.ws[f"A{c}"] = path.name
-            self.ws[f"B{c}"] = identNr
-            self.ws[f"G{c}"] = str(path)
-
-            red = Font(color="FF0000", size=12)
-
-            if identNr is None:
-                cell = self.ws[f"A{c}"]
-                cell.font = red
-                print (f"WARNING: Likely parsing error when looking for identNr: {identNr}")
-                #raise SyntaxError
-            
-
+        Filenames with suspicious characters (e.g. '-' or ';') are flagged by coloring 
+        them red.
+        """
+    
         def _extractIdentNr(*, path: Path) -> Optional[str]:
             """
             extracts IdentNr (=identifier, Signatur) from filename specifically for KK.
@@ -242,35 +280,49 @@ class PrepareUpload(BaseApp):
             m = re.search(r"([\w ,\.\-]+)\w*-KK", stem)
             # print (m)
             if m:
-                return m.group(1)
+                return m.group(1)        
+
+        def _per_row(*, c: int, path: Path) -> None:
+            """
+            c: row count
+            specific to this scandisk task of prepare command
+
+            writes to self.ws
+            """
+            identNr = _extractIdentNr(path=path)
+            self.ws[f"A{c}"] = path.name
+            self.ws[f"B{c}"] = identNr
+            self.ws[f"G{c}"] = str(path)
+
+            red = Font(color="FF0000")
+
+            if self._suspicious_characters(identNr=identNr):
+                self.ws[f"A{c}"].font = red
+                self.ws[f"B{c}"].font = red
+                print(
+                    f"WARNING: Likely parsing error when looking for identNr: {identNr}"
+                )
+            # If the original files are misnamed, perhaps best to correct them instead of
+            # adapting the parser to errors.
 
         # let's not overwrite or modify file information in Excel if already written
         # 2 lines are getting written by initialization
         if self.ws.max_row > 2:
             raise Exception("Error: Scan dir info already filled in")
-        
+
         src_dir = Path(self.conf["src_dir"])
         print(f"* Scanning source dir: {src_dir}")
 
+        # todo: i am filtering files which have *-KK*; 
+        #maybe I should allow all files???
         c = 3  # start writing in 3rd line
         for path in src_dir.rglob("*-KK*"):
-            print (path)
+            print(path)
             _per_row(c=c, path=path)
             if self.limit == c:
-                print ("* Limit reached")
+                print("* Limit reached")
                 break
             c += 1
-        self._save_excel(path=self.excel_fn)
-
-    def create_object():
-        """
-        Loop thru excel objId column. Act for cases which have "None".
-        For those, create a new object record in RIA using template record
-
-        Where does the template info come from? Prehaps we make another
-        column with the template id and fill that in. Do we typically have
-        the same template for all of them?
-        """
         self._save_excel(path=self.excel_fn)
 
 

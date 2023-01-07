@@ -61,7 +61,12 @@ def prepareUpload():
     args = parser.parse_args()
 
     p = PrepareUpload(
-        baseURL=baseURL, conf_fn=args.conf, job=args.job, limit=args.limit, pw=pw, user=user
+        baseURL=baseURL,
+        conf_fn=args.conf,
+        job=args.job,
+        limit=args.limit,
+        pw=pw,
+        user=user,
     )
     if args.phase == "scandisk":
         p.scan_disk()
