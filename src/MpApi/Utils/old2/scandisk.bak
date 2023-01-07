@@ -1,0 +1,49 @@
+import re
+from pathlib import Path
+import openpyxl
+from typing import Optional
+class Scandisk:
+    def _extractIdentNr(self, *, path:Path) -> Optional[str]:
+        """
+        TODO: We will need multiple identNr parsers so we have to find a way to 
+        configure that. Probably a plugin architecure
+        """
+        stem = str(path).split(".")[0]
+        #stem = path.stem # assuming there is only one suffix
+        #print (stem)
+        m = re.search(r'([\w ,.-]+)\w*-KK', stem)
+        #print (m)
+        if m: 
+            return m.group(1)
+
+    def _info_from_disk(self, *, Dir):
+        """
+        Make this work when excel already filled in
+
+        When info is filled in already, die immediately.
+        
+        """
+        print ("* Scanning source dir: {Dir}")
+        lc = 2 # start writing in 2nd line
+
+        for path in Path(Dir).rglob('*-KK*'):
+            print (path)
+            # if not self.exists_in_excel(path=path):
+            self._per_line(line=lc, path=path)
+            lc += 1
+        self._save_book()
+
+    def _per_line(self, *, line:int, path: Path) -> None:
+        filename = path.name
+        identNr = self._extractIdentNr(path=path)
+
+        ws = self.ws
+        ws[f'A{line}'] = filename
+        ws[f'B{line}'] = identNr
+        ws[f'E{line}'] = str(path)
+
+    def scan_disk(self, *, Dir):
+        if self.ws.max_row > 1:
+            raise Exception ("Error: Scan dir info already filled in")
+        self._info_from_disk(Dir=Dir)
+

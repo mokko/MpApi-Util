@@ -50,7 +50,8 @@ KNOWN LIMITATIONS
 """
 
 from datetime import datetime
-import dateutil.parser
+
+# import dateutil.parser
 from lxml import etree  # type: ignore
 from mpapi.client import MpApi
 from mpapi.sar import Sar

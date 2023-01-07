@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "MpApi.Util"
+name = "MpApi.Utils"
 authors = [{name = "Maurice Mengel", email = "mauricemengel@gmail.com"}]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -30,6 +30,7 @@ test = [
 Home = "https://github.com/mokko/MpApi-Util"
 
 [project.scripts]
-du = 'MpApi.Util:du'
-rename ='MpApi.Util:rename'
-bcreate = 'MpApi.Util:bcreate'
+du = 'MpApi.Utils:du'
+rename ='MpApi.Utils:rename'
+bcreate = 'MpApi.Utils:bcreate'
+prepare = 'MpApi.Utils:prepareUpload'

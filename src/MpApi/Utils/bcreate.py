@@ -23,6 +23,7 @@ from lxml import etree
 import logging
 from mpapi.module import Module
 from mpapi.client import MpApi
+from MpApi.Utils.BaseApp import BaseApp
 
 # from mpapi.sar import Sar
 from mpapi.search import Search
@@ -37,9 +38,9 @@ NSMAP = {
 # Let's put the conf in a py file and simply exec it?
 
 
-class Bcreate:
+class Bcreate(BaseApp):
     def __init__(
-        self, *, baseURL: str, confFN: str, job: str, pw: str, user: str
+        self, *, baseURL: str, conf_fn: str, job: str, pw: str, user: str
     ) -> None:
 
         self.api = MpApi(baseURL=baseURL, user=user, pw=pw)
