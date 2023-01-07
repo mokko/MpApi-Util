@@ -9,6 +9,4 @@ bak/*
 dist/*
 build/*
 sdata/*
-sdata2/*
 test/sdata/*
-src/mypack
