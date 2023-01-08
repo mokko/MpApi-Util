@@ -88,15 +88,6 @@ class PrepareUpload(BaseApp):
         # should we prevent writing file if it hasn't changed? not for now
         self._save_excel(path=self.excel_fn)
 
-    def _if_content(self):
-        if self.ws.max_row < 3:  # we assume that scan_disk has run if more than 2 lines
-            raise ValueError(
-                f"ERROR: no data found; excel contains {self.ws.max_row} rows!"
-            )
-        return True
-        #else:
-        #    print(f"* Excel has data: {self.ws.max_row} rows")
-
     def _init_sheet(self, workbook: Workbook) -> Any:  # openpyxl.worksheet
         """
         Defines the Excel format of this app. Needs to be specific to app.
@@ -133,6 +124,15 @@ class PrepareUpload(BaseApp):
         ws.column_dimensions["G"].width = 100
         return ws
 
+    def _raise_if_no_content(self):
+        if self.ws.max_row < 3:  # we assume that scan_disk has run if more than 2 lines
+            raise ValueError(
+                f"ERROR: no data found; excel contains {self.ws.max_row} rows!"
+            )
+        return True
+        #else:
+        #    print(f"* Excel has data: {self.ws.max_row} rows")
+
     #
     # public
     #
@@ -166,7 +166,7 @@ class PrepareUpload(BaseApp):
                     uploaded_cell.value = ", ".join(idL)
             return changed
 
-        self._check_content()
+        self._raise_if_no_content()
         self.client = self._init_client()
 
         c = 1  # counter; start counting at row 3, so counts the entries more than the rows
@@ -189,14 +189,40 @@ class PrepareUpload(BaseApp):
         the configuration (templateID).
         """
         try:
-            self.config[templateID]
+            self.config[template]
         except:
             raise SyntaxError ("TemplateID not defined in configuration!")
 
-        self._check_content() # dies if no content
-        self.client = self._init_client()
+        tmpl_id, tmpl_type = self.config[template].split()
 
-        self._save_excel(path=self.excel_fn)
+        print(f"***template: {tmpl_id} {tmpl_type}")
+
+        def _per_row(*, row) -> bool:
+            ident_cell = row[1]    # in Excel from filename; can have multiple
+            idents = ident_cell.value.split(";")
+            kandidat_cell = row[4] # to write into
+            candidate = kandidat_cell.value.strip()
+            
+            if candidate == "X" or candidate == "x":
+                objIds = set()
+                for ident in idents:
+                    identNr = ident.strip()
+                    objIds.add(self.client.create_from_template(tid=tmpl_id, ttype=tmpl_type, ident=identNr))
+                kandidat_cell.value = "; ".join(objIds)
+                    
+        self._raise_if_no_content() # dies if no content
+        self.client = self._init_client()
+        c = 1  # counter; start counting at row 3, so counts the entries more than the rows
+        changed = False
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            changed = _per_row(row=row)
+            if self.limit == c:
+                print("* Limit reached")
+                break
+            c += 1
+
+        if changed is True:
+            self._save_excel(path=self.excel_fn)
 
 
     def objId_for_ident(self):
@@ -210,7 +236,7 @@ class PrepareUpload(BaseApp):
         TODO: Allow for multiple identNrs separated by '; '
         """
         # currently this unnecessary, but why rely on that?
-        self._check_content() # dies if no content
+        self._raise_if_no_content() # dies if no content
         self.client = self._init_client()
 
         #c has not been passed here, but still works
