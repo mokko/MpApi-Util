@@ -24,6 +24,7 @@ import logging
 from mpapi.module import Module
 from mpapi.client import MpApi
 from MpApi.Utils.BaseApp import BaseApp
+#from MpApi.Utils.Ria import RiaUtil # not yet used
 
 # from mpapi.sar import Sar
 from mpapi.search import Search
@@ -44,8 +45,10 @@ class Bcreate(BaseApp):
     ) -> None:
 
         self.api = MpApi(baseURL=baseURL, user=user, pw=pw)
-        conf = self._initConf(confFN=confFN, job=job)
-        self._initLog()
+        #not yet used
+        #self.client = RiaUtil(baseURL=baseURL, user=user, pw=pw)
+        self.conf = self._init_conf(path=confFN, job=job)
+        self._init_log()
 
         # print(conf)
         self.templateM = self.setTemplate(
@@ -81,6 +84,7 @@ class Bcreate(BaseApp):
 
     def addIdentNr(self, *, data, identNr):
         """
+
         Assume that
         - I dont need or may not have InventarNrSTxt, ModifiedByTxt, ModifiedDateDat,
         - have to have Part1Txt, Part2Txt, Part3Txt and
@@ -131,8 +135,8 @@ class Bcreate(BaseApp):
             </dataField>
           </repeatableGroupItem>
         </repeatableGroup>
-
         """
+
         part1 = identNr.split()[0]
         part2 = " " + identNr.split()[1]
         part3 = " ".join(identNr.split()[2:])
@@ -285,23 +289,7 @@ class Bcreate(BaseApp):
     # privates
     #
 
-    def _initConf(self, *, confFN, job):
-        if not Path(confFN).exists():
-            raise SyntaxError("ERROR: Config file not found!")
-        config = configparser.ConfigParser()
-        config.read(
-            confFN, "UTF-8"
-        )  # at the moment expecting: templateID, mask, src_dir
-        return config[job]  # dies gracefully on error
 
-    def _initLog(self):
-        logging.basicConfig(
-            datefmt="%Y%m%d %I:%M:%S %p",
-            filename="bcreate.log",
-            filemode="w",  # a =append?
-            level=logging.INFO,
-            format="%(asctime)s: %(message)s",
-        )
 
     def _xtractIdentNr(self, *, name: str) -> str:
         parts = name.split(" ")

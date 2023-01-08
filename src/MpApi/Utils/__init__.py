@@ -1,6 +1,6 @@
 """Higer-level tools for MpApi, the unofficial MuseumPlus Client"""
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 credentials = "credentials.py"  # expect credentials in pwd
 
 import argparse
@@ -12,6 +12,7 @@ from MpApi.Utils.bcreate import Bcreate
 # from MpApi.Util.scandisk import Scandisk #mpapi.util.
 from MpApi.Utils.prepareUpload import PrepareUpload  # mpapi.util.
 from pathlib import Path
+import sys
 
 # we require to run these apps from the a directory which has credentials file
 # not ideal. We could put it User Home dir instead if that bothers us.
@@ -19,19 +20,6 @@ if Path(credentials).exists():
     with open(credentials) as f:
         exec(f.read())
 
-
-def bcreate():
-    parser = argparse.ArgumentParser(
-        description="bcreate - create Object records for assets"
-    )
-    parser.add_argument(
-        "-c", "--conf", help="directory to start the search", required=True
-    )
-    parser.add_argument(
-        "-j", "--job", help="job from the configuration to execute", required=True
-    )
-    args = parser.parse_args()
-    bc = Bcreate(baseURL=baseURL, confFN=args.conf, job=args.job, pw=pw, user=user)
 
 
 def du():
@@ -46,20 +34,58 @@ def du():
     du = Du(cmd=args.cmd, Input=args.input, baseURL=baseURL, pw=pw, user=user)
 
 
-def prepareUpload():
-    # src = "M:\MuseumPlus\Produktiv\Multimedia\EM\Südsee-Australien\Karteikarten\Australien_Wettengel"
-
-    parser = argparse.ArgumentParser(description="prepare for asset upload")
+def bcreate():
+    parser = argparse.ArgumentParser(
+        description="bcreate - create Object records for assets"
+    )
     parser.add_argument(
-        "-c", "--conf", help="path to config file", default="prepare.ini"
+        "-c", "--conf", help="location of configuration file", default="bcreate.ini"
+    )
+    parser.add_argument(
+        "-j", "--job", help="job from the configuration to execute", default="test"
+    )
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
+    args = parser.parse_args()
+
+    if args.version:
+        print (f"Version: {__version__}")
+        sys.exit(0)
+
+    if not args.conf or not args.job:
+        raise SyntaxError ("-p parameter and -j job name required!")
+
+    if not baseURL or not user or not pw:
+        raise SyntaxError ("Missing user baseURL or pw. Are you in the right dir?")
+
+    bc = Bcreate(baseURL=baseURL, confFN=args.conf, job=args.job, pw=pw, user=user)
+
+
+def prepareUpload():
+    parser = argparse.ArgumentParser(description="prepare - prepare for asset upload")
+    parser.add_argument(
+        "-c", "--conf", help="location of configuration file", default="prepare.ini"
     )
     parser.add_argument("-j", "--job", help="job inside config file", default="test")
     parser.add_argument("-l", "--limit", help="stop after number of items", default=-1)
     parser.add_argument(
-        "-p", "--phase", help="phase to run (scandir, checkria, create)", required=True
+        "-p", "--phase", help="phase to run (scandir, checkria, create)", 
+        choices = ['scandisk','checkria', 'createobjects']
     )
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
+
     args = parser.parse_args()
 
+    if args.version:
+        print (f"Version: {__version__}")
+        sys.exit(0)
+
+    if not args.phase:
+        raise SyntaxError ("-p parameter required!")
+        
     p = PrepareUpload(
         baseURL=baseURL,
         conf_fn=args.conf,
@@ -73,10 +99,8 @@ def prepareUpload():
     elif args.phase == "checkria":
         p.asset_exists_already()
         p.objId_for_ident()
-    elif args.phase == "create":  # create new objects in RIA
+    elif args.phase == "createobjects":  
         p.create_objects()
-    else:
-        raise ValueError(f"ERROR: Unknown phase {args.phase}")
 
 
 def rename():

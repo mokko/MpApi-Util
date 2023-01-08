@@ -124,8 +124,9 @@ class PrepareUpload(BaseApp):
         ws.column_dimensions["G"].width = 100
         return ws
 
-    def _raise_if_no_content(self):
-        if self.ws.max_row < 3:  # we assume that scan_disk has run if more than 2 lines
+    def _raise_if_excel_has_no_content(self):
+        # assuming that after scandisk excel has to have more than 2 lines
+        if self.ws.max_row < 3:  
             raise ValueError(
                 f"ERROR: no data found; excel contains {self.ws.max_row} rows!"
             )
@@ -166,7 +167,7 @@ class PrepareUpload(BaseApp):
                     uploaded_cell.value = ", ".join(idL)
             return changed
 
-        self._raise_if_no_content()
+        self._raise_if_excel_has_no_content()
         self.client = self._init_client()
 
         c = 1  # counter; start counting at row 3, so counts the entries more than the rows
@@ -182,23 +183,13 @@ class PrepareUpload(BaseApp):
             self._save_excel(path=self.excel_fn)
 
 
-    def create_object():
+    def create_objects(self):
         """
         Loop thru excel objId column. Act for rows where candidates = "x" or "X". 
         For those, create a new object record in RIA using template record mentioned in
         the configuration (templateID).
         """
-        try:
-            self.config[template]
-        except:
-            raise SyntaxError ("TemplateID not defined in configuration!")
-
-        tmpl_type, tmpl_id = self.config[template].split() # do i need to strip?
-        tmpl_type = tmpl_type.strip()
-        tmpl_id = tmpl_id.strip()
-        print(f"***template: {tmpl_id} {tmpl_type}")
-
-        def _per_row(*, row, changed) -> bool:
+        def _per_row(*, row, changed, template) -> bool:
             ident_cell = row[1]    # in Excel from filename; can have multiple
             if ident_cell.value is None:
                 # without a identNr we cant fill in a identNr in template
@@ -208,23 +199,37 @@ class PrepareUpload(BaseApp):
                 
             identL = ident_cell.value.split(";")
             candidate_cell = row[4] # to write into
-            cand_str = candidate_cell.value.strip()
-            
-            if cand_str == "X" or cand_str == "x":
-                objIds = set()
-                for ident in identL:
-                    identNr = ident.strip()
-                    objIds.add(self.client.create_from_template(tid=tmpl_id, ttype=tmpl_type, ident=identNr))
-                    changed = True
-                candidate_cell.value = "; ".join(objIds)
+            if candidate_cell.value is not None:
+                cand_str = candidate_cell.value.strip()
+                if cand_str == "X" or cand_str == "x":
+                    objIds = set()
+                    for ident in identL:
+                        identNr = ident.strip()
+                        objIds.add(self.client.create_from_template(template=template, identNr=identNr))
+                        changed = True
+                    candidate_cell.value = "; ".join(objIds)
             return changed
+
+        try:
+            self.conf['template']
+        except:
+            raise SyntaxError ("Config value 'template' not defined!")
+
+        ttype, tid = self.conf['template'].split() # do i need to strip?
+        ttype = ttype.strip()
+        tid = tid.strip()
+        print(f"***template: {ttype} {tid}")
                     
-        self._raise_if_no_content() 
+        self._raise_if_excel_has_no_content() 
         self.client = self._init_client()
+        #we want the same template for all records
+        templateM = self.client.get_template(ID=tid, mtype=ttype)
+        #templateM.toFile(path="debug.template.xml")
+
         c = 1  # counter; start counting at row 3, so counts the entries more than the rows
         changed = False
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            changed = _per_row(row=row, changed=changed)
+            changed = _per_row(row=row, changed=changed, template=templateM)
             if self.limit == c:
                 print("* Limit reached")
                 break
@@ -244,8 +249,8 @@ class PrepareUpload(BaseApp):
         
         TODO: Allow for multiple identNrs separated by '; '
         """
-        # currently this unnecessary, but why rely on that?
-        self._raise_if_no_content() # dies if no content
+        # currently this is unnecessary, but why rely on that?
+        self._raise_if_excel_has_no_content() 
         self.client = self._init_client()
 
         #c has not been passed here, but still works

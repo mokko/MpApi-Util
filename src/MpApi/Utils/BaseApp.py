@@ -84,10 +84,10 @@ class BaseApp:
         Given a file path for an excel file, return the respective workbook
         or make a new one if the file doesn't exist.
         """
+        # let's avoid side effects, although we're not doing this everywhere
         if path.exists():
             # print (f"* Loading existing excel: '{data_fn}'")
             return load_workbook(path)
-            # let's avoid side effects
             # self.wb = load_workbook(path)
         else:
             # print (f"* Starting new excel: '{data_fn}'")
