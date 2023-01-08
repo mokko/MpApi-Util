@@ -193,29 +193,38 @@ class PrepareUpload(BaseApp):
         except:
             raise SyntaxError ("TemplateID not defined in configuration!")
 
-        tmpl_id, tmpl_type = self.config[template].split()
-
+        tmpl_type, tmpl_id = self.config[template].split() # do i need to strip?
+        tmpl_type = tmpl_type.strip()
+        tmpl_id = tmpl_id.strip()
         print(f"***template: {tmpl_id} {tmpl_type}")
 
-        def _per_row(*, row) -> bool:
+        def _per_row(*, row, changed) -> bool:
             ident_cell = row[1]    # in Excel from filename; can have multiple
-            idents = ident_cell.value.split(";")
-            kandidat_cell = row[4] # to write into
-            candidate = kandidat_cell.value.strip()
+            if ident_cell.value is None:
+                # without a identNr we cant fill in a identNr in template
+                # should not happen, that identNr is empty and cadinate = x
+                # maybe log this case?
+                return changed 
+                
+            identL = ident_cell.value.split(";")
+            candidate_cell = row[4] # to write into
+            cand_str = candidate_cell.value.strip()
             
-            if candidate == "X" or candidate == "x":
+            if cand_str == "X" or cand_str == "x":
                 objIds = set()
-                for ident in idents:
+                for ident in identL:
                     identNr = ident.strip()
                     objIds.add(self.client.create_from_template(tid=tmpl_id, ttype=tmpl_type, ident=identNr))
-                kandidat_cell.value = "; ".join(objIds)
+                    changed = True
+                candidate_cell.value = "; ".join(objIds)
+            return changed
                     
-        self._raise_if_no_content() # dies if no content
+        self._raise_if_no_content() 
         self.client = self._init_client()
         c = 1  # counter; start counting at row 3, so counts the entries more than the rows
         changed = False
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            changed = _per_row(row=row)
+            changed = _per_row(row=row, changed=changed)
             if self.limit == c:
                 print("* Limit reached")
                 break
@@ -246,7 +255,7 @@ class PrepareUpload(BaseApp):
             ident_cell = row[1]    # in Excel from filename; can have multiple
             uploaded_cell = row[2] # can have multiple 
             objId_cell = row[3]    # to write into  
-            kandidat_cell = row[4] # to write into
+            candidate_cell = row[4] # to write into
             
             # in rare cases identNr_cell might be None
             # then we cant look up anything
@@ -261,15 +270,15 @@ class PrepareUpload(BaseApp):
                     if objIdL is None:
                         objId_cell.value = "None"
                     else:
-                        objId_cell.value = ", ".join(objIdL)
+                        objId_cell.value = "; ".join(objIdL)
                 # print(f"***{ident_cell.value} -> {objId_cell.value}")
             if (
                 uploaded_cell.value == "None"
                 and objId_cell.value == "None"
-                and kandidat_cell.value is None
+                and candidate_cell.value is None
             ):
+                candidate_cell.value = "x"
                 changed = True
-                row[4].value = "x"
             return changed
 
         c = 1  # case counter
@@ -300,11 +309,8 @@ class PrepareUpload(BaseApp):
             We will need other identNr parsers in the future so we have to find load
             plugins from conf.
             """
-            # stem = path.stem # assuming there is only one suffix
-            stem = str(path).split(".")[0]
-            # print (stem)
+            stem = str(path).split(".")[0] # stem is everything before first .
             m = re.search(r"([\w ,\.\-]+)\w*-KK", stem)
-            # print (m)
             if m:
                 return m.group(1)        
 
@@ -340,7 +346,7 @@ class PrepareUpload(BaseApp):
         print(f"* Scanning source dir: {src_dir}")
 
         # todo: i am filtering files which have *-KK*; 
-        #maybe I should allow all files???
+        # maybe I should allow all files???
         c = 3  # start writing in 3rd line
         for path in src_dir.rglob("*-KK*"):
             print(path)
