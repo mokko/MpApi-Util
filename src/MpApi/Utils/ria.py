@@ -201,12 +201,10 @@ class RiaUtil:
             tnew._rewrite_identNr(newNr=identNr)
             # we dont know at all if the order of the elements makes a difference for
             # zetcom, so we'll try it out
-            mItemN = tnew.xpath("/m:application/m:modules/m:module/m:moduleItem")
-            print (f"mItemN {mItemN}")
             
         if DEBUG:
             tnew.toFile(path="DDtemplate.xml")
-        raise SyntaxError ("SH")
+        #raise SyntaxError ("SH")
         resX = self.mpapi.createItem2(mtype=mtype, data=tnew)
 
         # we can assume that we created only one record

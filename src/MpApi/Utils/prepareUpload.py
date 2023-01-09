@@ -88,6 +88,7 @@ class PrepareUpload(BaseApp):
         # should we prevent writing file if it hasn't changed? not for now
         self._save_excel(path=self.excel_fn)
 
+
     def _init_sheet(self, workbook: Workbook) -> Any:  # openpyxl.worksheet
         """
         Defines the Excel format of this app. Needs to be specific to app.
@@ -124,6 +125,7 @@ class PrepareUpload(BaseApp):
         ws.column_dimensions["G"].width = 100
         return ws
 
+
     def _raise_if_excel_has_no_content(self):
         # assuming that after scandisk excel has to have more than 2 lines
         if self.ws.max_row < 3:  
@@ -133,6 +135,34 @@ class PrepareUpload(BaseApp):
         return True
         #else:
         #    print(f"* Excel has data: {self.ws.max_row} rows")
+
+
+    # I lost an old version of this method. Where did it go?
+    def _suspicious_characters(self, *, identNr:str) -> bool:
+        #print (f"***suspicious? {identNr}")
+        
+        msg = "suspicious_characters:"
+        
+        if identNr is None:
+            #print ("return bc None")
+            return False
+        elif '  ' in identNr:
+            logging.info (f"{msg} double space {identNr}")
+        elif '.' in identNr:
+            logging.info (f"{msg} unwanted symbol {identNr}")
+            return True
+        elif ' ' not in identNr:
+            logging.info (f"{msg} missing space {identNr}")
+            return True
+        elif '-a' in identNr:
+            logging.info (f"{msg} combination -a {identNr}")
+            return True
+        elif identNr.count(',') > 1:
+            logging.info (f"{msg} number of commas {identNr}")
+            return True
+
+        #print (" -> not suspicious")
+        return False
 
     #
     # public
@@ -158,8 +188,9 @@ class PrepareUpload(BaseApp):
             if uploaded_cell.value == None:
                 changed = True
                 # Let's not make org_unit optional!
+                # print (f"xxxxxxxxxxxxxxxxxx {self.conf['org_unit']}")
                 idL = self.client.fn_to_mulId(
-                    fn=filename_cell.value, orgUnit=self.conf["org_unit"]
+                    fn=filename_cell.value, orgUnit=self.conf["org_unit"] 
                 )
                 if idL is None:
                     uploaded_cell.value = "None"
