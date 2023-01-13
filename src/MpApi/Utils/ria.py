@@ -276,9 +276,7 @@ class RiaUtil:
         For a given filename check if there is one or more assets with that same filename
         in RIA.
 
-        New: Return empty set if no records found!
-
-        OLD: Return None if there is none, or the mulIds for the records in a set.
+        New: Return empty set if no records found! (Used to return None.) 
         """
         # print (f"* Getting assets for filename '{fn}'")
         q = Search(module="Multimedia")

@@ -149,6 +149,7 @@ class PrepareUpload(BaseApp):
         elif '  ' in identNr:
             logging.info (f"{msg} double space {identNr}")
         elif '.' in identNr:
+            #TODO seems that identNr with . are not mrked
             logging.info (f"{msg} unwanted symbol {identNr}")
             return True
         elif ' ' not in identNr:
@@ -170,15 +171,20 @@ class PrepareUpload(BaseApp):
 
     def asset_exists_already(self):
         """
-        Fills in the already uploaded? cell in Excel (column C).
+        Fills in the "already uploaded?" cell in Excel (column C).
         Checks if an asset with that filename exists already in RIA. If so, it lists the
         corresponding mulId(s); if not None
 
-        New: The check is now specific to an OrgUnit which is the internal name of a Bereich
+        New: 
+        - The check is now specific to an OrgUnit which is the internal name of a Bereich
         (e.g. EMSudseeAustralien).
+        - The search is not exact. RIA ignores Sonderzeichen like _; i.e. if we search 
+          for an asset with  name x_x.jog and we learn that this one exists already 
+          according to this method then we dont know if the filename is really x_x.jpg
+          or any number of variants such as x__x.jpg.
 
-        If the cell is empty it still needs to be checked.
-
+        If the Excel cell is empty, we still need to run the test. If it has one, multiple 
+        mulIds or "None" we don't need to run it again.
         """
 
         def _per_row(*, row, changed) -> bool:
@@ -186,16 +192,16 @@ class PrepareUpload(BaseApp):
             uploaded_cell = row[2]
             print(f"* mulId for filename {c} of {self.ws.max_row-2}")
             if uploaded_cell.value == None:
-                changed = True
                 # Let's not make org_unit optional!
                 # print (f"xxxxxxxxxxxxxxxxxx {self.conf['org_unit']}")
                 idL = self.client.fn_to_mulId(
                     fn=filename_cell.value, orgUnit=self.conf["org_unit"] 
                 )
-                if idL is None:
+                if len(idL) == 0:
                     uploaded_cell.value = "None"
                 else:
                     uploaded_cell.value = ", ".join(idL)
+                changed = True
             return changed
 
         self._raise_if_excel_has_no_content()
@@ -265,7 +271,6 @@ class PrepareUpload(BaseApp):
                 print("* Limit reached")
                 break
             c += 1
-
         if changed is True:
             self._save_excel(path=self.excel_fn)
 
@@ -302,11 +307,11 @@ class PrepareUpload(BaseApp):
                 changed = True
                 for single in ident_cell.value.split(";"):
                     ident = single.strip()
-                    objIdL = self.client.objId_for_ident(identNr=ident)
-                    if objIdL is None:
+                    objIdL = self.client.identNr_exists(nr=ident)
+                    if len(objIdL) == 0:
                         objId_cell.value = "None"
                     else:
-                        objId_cell.value = "; ".join(objIdL)
+                        objId_cell.value = "; ".join(str(objId) for objId in objIdL)
                 # print(f"***{ident_cell.value} -> {objId_cell.value}")
             if (
                 uploaded_cell.value == "None"
