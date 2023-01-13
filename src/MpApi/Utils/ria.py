@@ -161,7 +161,7 @@ class RiaUtil:
             raise ValueError (
             "Template should be a single record; instead {len(template)} records"
             )
-        mtype = template.extract_mtypes()[0]
+        mtype = template.extract_mtype()
         print (f"mtype {mtype}")
 
         """
@@ -180,7 +180,7 @@ class RiaUtil:
         is that it exists in multiple places
         (1) virtualFields: already deleted
         (2) dataField:ObjObjectNumberTxt 
-        (3) repeatableGroup:ObjObjectNumberGrp
+        (3) repeatableGroup:ObjObjectNumberGrpt
         ISSUE Wrong orgUnit and possible rights issues
         Next issue of the orgUnit. Since I dont have the rights for writing in the 
         Bereich of the template, RIA changes the Bereich internally to one that I have
@@ -191,26 +191,24 @@ class RiaUtil:
         in here.
         
         """
-        tnew = copy.deepcopy(template) # so we dont change the original
+        t_new = copy.deepcopy(template) # so we dont change the original
         # purge all remants of identNr
 
 
         if identNr is not None:
             print (f"new identNr {identNr}")
-            print ("new identNr parts f{partsL}")
+            
             tnew._rewrite_identNr(newNr=identNr)
             # we dont know at all if the order of the elements makes a difference for
             # zetcom, so we'll try it out
             
+            
         if DEBUG:
-            tnew.toFile(path="DDtemplate.xml")
+            t_new.toFile(path="DDrewritten.xml")
         #raise SyntaxError ("SH")
-        resX = self.mpapi.createItem2(mtype=mtype, data=tnew)
-
-        # we can assume that we created only one record
-        resET = etree.fromstring(resX, parser)
-        idL = resET.xpath("/m:application/m:modules/m:module/m:moduleItem/@id", namespaces=NSMAP)
-        return int(idL[0])
+        #objId = self.mpapi.createItem3(data=tnew)
+        #return objId
+        raise RuntimeError ("Stop here!")
 
     # a simple test - not even a lookup
     def id_exists(self, *, mtype:str, ID: int) -> bool:
@@ -295,14 +293,16 @@ class RiaUtil:
         return positiveIDs
 
 
-    #not sure if we really need this
     def get_template(self, *, mtype, ID): 
+        """
+        Returns a Module object in upload form.
+        """
         m = self.mpapi.getItem2(mtype=mtype, ID=ID)
 
         if not m:
             raise SyntaxError(f"ERROR: Template record not found: {mtype} {ID}")
 
-        m.clean() # necessary? Eliminates Versicherungswert
+        m.clean() # necessary? Eliminates Versicherungswert; let's just drop the virtual fields
         m.uploadForm()
         #if DEBUG:
         #    m.toFile(path=f"DDtemplate-{mtype}{ID}.xml") 

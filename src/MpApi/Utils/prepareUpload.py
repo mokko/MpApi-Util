@@ -53,6 +53,22 @@ from MpApi.Utils.Ria import RiaUtil
 # }
 
 
+invNrSchemata = {
+    #sechs
+    'VI Dlg': 1090,
+    'VI K': 67,
+    'VI Nls': 73,
+    'VI': 208,
+    #sieben
+    'VII B': 64,
+    'VII F': 234,
+    'VII G': 65,
+    'VII I': 66,
+    #acht
+    'VIII': 243
+}
+
+
 class PrepareUpload(BaseApp):
     def __init__(
         self,
@@ -116,6 +132,10 @@ class PrepareUpload(BaseApp):
         ws["F1"] = "Bemerkung"
         ws["G1"] = "Pfad"
         ws["G2"] = "aus Verzeichnis"
+        ws["H1"] = "Inv.Nr.Schema"
+        ws["H2"] = "aus IdentNr"
+        ws["I1"] = "SchemaID"
+        ws["I2"] = "aus Schema"
 
         ws.column_dimensions["A"].width = 25
         ws.column_dimensions["B"].width = 10
@@ -355,6 +375,18 @@ class PrepareUpload(BaseApp):
             if m:
                 return m.group(1)        
 
+
+        def _extractSchema(*, identNr:str) -> str:
+            if identNr is not None:
+                print (f"--------{identNr}")
+                m = re.search(r"^([\w ]+) \d+", identNr)
+                if m:
+                    return m.group(1)
+                else:
+                    pass
+                    #raise RuntimeError (f"_extractSchema failed: {identNr}")
+            
+
         def _per_row(*, c: int, path: Path) -> None:
             """
             c: row count
@@ -366,7 +398,15 @@ class PrepareUpload(BaseApp):
             self.ws[f"A{c}"] = path.name
             self.ws[f"B{c}"] = identNr
             self.ws[f"G{c}"] = str(path)
-
+            schema = _extractSchema(identNr=identNr)
+            if schema is not None:
+                self.ws[f"H{c}"] = schema
+            try: 
+                invId = invNrSchemata[schema]
+                self.ws[f"I{c}"] = invId
+            except:
+                invId = False
+        
             red = Font(color="FF0000")
 
             if self._suspicious_characters(identNr=identNr):
