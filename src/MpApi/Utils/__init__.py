@@ -5,9 +5,12 @@ credentials = "credentials.py"  # expect credentials in pwd
 
 import argparse
 
+from mpapi.client import MpApi
 from MpApi.Utils.du import Du
 from MpApi.Utils.rename import Rename
 from MpApi.Utils.bcreate import Bcreate
+from MpApi.Utils.identNr import IdentNrFactory, IdentNr
+from MpApi.Utils.unzipChunks import iter_chunks
 
 # from MpApi.Util.scandisk import Scandisk #mpapi.util.
 from MpApi.Utils.prepareUpload import PrepareUpload  # mpapi.util.
@@ -101,6 +104,58 @@ def prepareUpload():
         p.objId_for_ident()
     elif args.phase == "createobjects":  
         p.create_objects()
+
+def update_schemas():
+
+    """
+        CLI USAGE
+        update_schema_db -e excel.xlsx      # xlsx as written by prepare
+        update_schema_db -f bla.xml         # looks thru a file
+        update_schema_db -i "VII c 123 a-c" # looks identNr up online
+        update_schema_db -v version
+
+        -s (optional) use schemas.json file instead of default
+    """
+            
+
+    parser = argparse.ArgumentParser(
+        description="parse zml for schema information"
+    )
+    parser.add_argument("-e", "--excel", help="Look for identNrs in excel file (from prepare)")
+    parser.add_argument("-f", "--file", help="Use identNr from zml file")
+    parser.add_argument("-i", "--individual", help="Lookup indiovidual identNr in RIA")
+    parser.add_argument("-s", "--schemas_fn", help="Path to schemas.json file; default is flit's location 'src/data'")
+    parser.add_argument("-v", "--version", help="Display version info and exit", action="store_true")
+    args = parser.parse_args()
+
+    if args.schemas_fn is None: # setting default
+        print ("Using default schemas file.")
+        f = IdentNrFactory()
+    else:
+        print (f"Using user supplied schemas file '{args.schemas_fn}'.")
+        f = IdentNrFactory(schemas_fn=args.schemas_fn)
+
+    if args.version:
+        print (f"Version: {__version__}")
+        sys.exit(0)
+    elif args.excel is not None:
+        print ("Excel function not yet implemented")
+        #f.update_schema_db(excel_fn=args.excel)        
+        sys.exit(0)
+    elif args.file is not None:
+        for chunk_fn in iter_chunks(first=args.file):
+            print (f"Loading file {chunk_fn}")
+            f.update_schemas(file=chunk_fn)
+        sys.exit(0)
+    elif args.individual is not None:
+        c = MpApi(baseURL, user=user, pw=pw)
+        q = Search(module="Object")
+        q.addCriterion()
+        m = c.search2(query=q)
+        f.update_schema_db(data=m)
+        sys.exit(0)
+    else:
+        raise ValueError ("Nothing to do!")
 
 
 def rename():

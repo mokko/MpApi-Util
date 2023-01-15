@@ -93,7 +93,7 @@ def test_create_ident_from_shorter_string():
     m.dataField(parent=mItem, name="ObjSystematicClb", value="Architekturfotografie")
     
     part1 = "VIII"
-    part2 = " B"
+    part2 = " B" # crazy
     part3 = "74"
     invNrTxt = "VIII B 74"
     invNumberScheme = "68"
@@ -134,7 +134,6 @@ def test_create_ident_from_shorter_string():
     </application>"""
 
     print (xml)
-
     m = Module(xml=xml)
 
     objId = client.createItem3(data=m)

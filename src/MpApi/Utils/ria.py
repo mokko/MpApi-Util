@@ -146,16 +146,19 @@ class RiaUtil:
 
     def create_from_template(self, *, template: Module, identNr:str = None) -> int:
         """
-        Given a template record (identified by a module type and an ID), copy that 
+        Given a template record (a module Object), copy that 
         to a new record of the same type, fill in the provided identNr and return 
         the ID of the new record.
         
         Raises on some errors.
         
-        Returns objId as int.
+        Returns objId of newly created record as int.
         """
         if identNr.isspace():
             raise TypeError ("Ident cant only consist of space: {identNr}")
+
+        if identNr is None:
+            raise TypeError ("Ident can't be None")
 
         if len(template) != 1:
             raise ValueError (
@@ -191,20 +194,15 @@ class RiaUtil:
         in here.
         
         """
-        t_new = copy.deepcopy(template) # so we dont change the original
-        # purge all remants of identNr
-
-
-        if identNr is not None:
-            print (f"new identNr {identNr}")
-            
-            tnew._rewrite_identNr(newNr=identNr)
-            # we dont know at all if the order of the elements makes a difference for
-            # zetcom, so we'll try it out
-            
-            
-        if DEBUG:
-            t_new.toFile(path="DDrewritten.xml")
+        t2 = copy.deepcopy(template) # so we dont change the original
+        # discard __all__ existing identNrs of the template
+        # this might be a bit heavy-handed, but let's do it anyways for now
+        ObjNumberGrpL = t2.xpath("//m:repeatableGroup[@name = 'ObjObjectNumberGrp']")
+        for ObjNumberGrpN in ObjNumberGrpL:
+            ObjNumberGrpN.getparent().remove(ObjNumberGrpN)
+        t2.toFile(path="DDrewritten.xml")
+        t2.newObjNumberGrp(identNr=identNr)
+       
         #raise SyntaxError ("SH")
         #objId = self.mpapi.createItem3(data=tnew)
         #return objId

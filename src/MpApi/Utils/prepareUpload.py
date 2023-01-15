@@ -5,28 +5,45 @@ With this tool we
 - recursively scan a directory
 - filter for specific files (e.g. with "-KK" or only *.jpg)
 - extract the identNr from filename
-- check if asset has already been uploaded (sort of Dublette)
-- loopup objId by identNr
-- mark cases where extracted identNr is suspicious
+- check if asset has already been uploaded (sort of a Dublette)
+- lookup objId by identNr
+- mark cases where extracted identNr are suspicious
+- figure out cases where object record doesn't exit yet
 - write results into spreadsheet
+- for those cases create object records by copying a template record
+- write the new identNr in the new record
 
 This tool is meant to be used by an editor. The editor runs the script multiple times
-and each time checks the results in the Excel file
+in different phases. For each phase, the edior checks the results in the Excel file
+and, if necessary, corrects something. There are three phases
+(1) scandisk
+(2) checkria and
+(3) createobjects
 
-(1) write/edit/update configuration (e.g. prepare.ini)
-(2) call the script something like this:
    $ prepare -p scandisk -c prepare.ini 
-    results are written to excel file whose name is specified in the config file
-(3) examine if identNr have successfully parsed by script
-(4) potentially correct filenames -> delete Excel file and repeat step 3
-(5) identNr is not successfully extracted, contact programmer to revise identNr 
-    extraction logarithm
-(6) run script 2nd time like this
-   $ prepare -p checkria -c prepare.ini
-(7) editor examines results in excel file, specifically the Kandidaten column
-(8) script is run for the third time, creating new records for the files that are marked
-    with x in the Kandidaten column. For those identNr new Objekte-DS are created copying
-    a template with the templateID specified in configuration.
+   $ prepare -p checkria -c prepare.ini 
+   $ prepare -p createobjects -c prepare.ini 
+
+Preparation
+- write/edit/update configuration (e.g. prepare.ini)
+- cd to your project_dir with credentials.py file
+
+After running scandisk
+- check IdentNr have successfully been extracted
+- if files are not named correctly/consistently, rename them
+- check that schema ids have been identified; if necessary update schema db
+- check if already uploaded results are plausible (current check is not exact)
+- if there are a number of assets that have already been uploaded, consider moving them
+  away using other util
+- check cases where one file has multiple mulIds objIds
+- if necessary delete Excel and re-run scandisk phase
+
+After running checkria
+- check if candidates are plausible
+- revise candidates manually if desired
+
+After running createobjects
+- preserve Excel file for documentation; contains ids of newly created records
 """
 
 
@@ -69,6 +86,9 @@ invNrSchemata = {
 }
 
 
+red = Font(color="FF0000")
+
+
 class PrepareUpload(BaseApp):
     def __init__(
         self,
@@ -101,7 +121,6 @@ class PrepareUpload(BaseApp):
         )  # overwrites existing conf values
 
         # die if not writable so that user can close it before waste of time
-        # should we prevent writing file if it hasn't changed? not for now
         self._save_excel(path=self.excel_fn)
 
 
@@ -185,9 +204,11 @@ class PrepareUpload(BaseApp):
         #print (" -> not suspicious")
         return False
 
+
     #
     # public
     #
+
 
     def asset_exists_already(self):
         """
@@ -220,7 +241,7 @@ class PrepareUpload(BaseApp):
                 if len(idL) == 0:
                     uploaded_cell.value = "None"
                 else:
-                    uploaded_cell.value = ", ".join(idL)
+                    uploaded_cell.value = "; ".join(idL)
                 changed = True
             return changed
 
@@ -245,15 +266,16 @@ class PrepareUpload(BaseApp):
         Loop thru excel objId column. Act for rows where candidates = "x" or "X". 
         For those, create a new object record in RIA using template record mentioned in
         the configuration (templateID).
+        
+        Write the objId(s) of the newly created records in candidate column.
         """
-        def _per_row(*, row, changed, template) -> bool:
+        def _per_row(*, row, template) -> bool:
             ident_cell = row[1]    # in Excel from filename; can have multiple
             if ident_cell.value is None:
                 # without a identNr we cant fill in a identNr in template
                 # should not happen, that identNr is empty and cadinate = x
                 # maybe log this case?
-                return changed 
-                
+                return
             identL = ident_cell.value.split(";")
             candidate_cell = row[4] # to write into
             if candidate_cell.value is not None:
@@ -262,10 +284,11 @@ class PrepareUpload(BaseApp):
                     objIds = set()
                     for ident in identL:
                         identNr = ident.strip()
-                        objIds.add(self.client.create_from_template(template=template, identNr=identNr))
-                        changed = True
+                        new_id = self.client.create_from_template(template=template, identNr=identNr)
+                        #logging.info(f"new record created: object {new_id} with {identNr} from template")
+                        objIds.add(new_id)
                     candidate_cell.value = "; ".join(objIds)
-            return changed
+                    self._save_excel(path=self.excel_fn) # save immediately since likely to die
 
         try:
             self.conf['template']
@@ -284,15 +307,12 @@ class PrepareUpload(BaseApp):
         #templateM.toFile(path="debug.template.xml")
 
         c = 1  # counter; start counting at row 3, so counts the entries more than the rows
-        changed = False
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            changed = _per_row(row=row, changed=changed, template=templateM)
+            _per_row(row=row, template=templateM)
             if self.limit == c:
                 print("* Limit reached")
                 break
             c += 1
-        if changed is True:
-            self._save_excel(path=self.excel_fn)
 
 
     def objId_for_ident(self):
@@ -313,10 +333,11 @@ class PrepareUpload(BaseApp):
         #that's cool scope, just slightly magic?
         def _per_row(*, row, changed):
             print(f"* objId for identNr {c} of {self.ws.max_row-2}")
-            ident_cell = row[1]    # in Excel from filename; can have multiple
-            uploaded_cell = row[2] # can have multiple 
-            objId_cell = row[3]    # to write into  
+            ident_cell = row[1]     # in Excel from filename; can have multiple
+            uploaded_cell = row[2]  # can have multiple 
+            objId_cell = row[3]     # to write into  
             candidate_cell = row[4] # to write into
+            schema_id = row[8]      # to color candidate
             
             # in rare cases identNr_cell might be None
             # then we cant look up anything
@@ -338,8 +359,12 @@ class PrepareUpload(BaseApp):
                 and objId_cell.value == "None"
                 and candidate_cell.value is None
             ):
-                candidate_cell.value = "x"
                 changed = True
+                if id_cell.value is None:
+                    candidate_cell.value = "y"
+                    candidate_cell.font = red
+                else:
+                    candidate_cell.value = "x"                
             return changed
 
         c = 1  # case counter
@@ -378,12 +403,12 @@ class PrepareUpload(BaseApp):
 
         def _extractSchema(*, identNr:str) -> str:
             if identNr is not None:
-                print (f"--------{identNr}")
                 m = re.search(r"^([\w ]+) \d+", identNr)
                 if m:
                     return m.group(1)
                 else:
-                    pass
+                    print(f"_extractSchema failed: {identNr}")
+                    #pass
                     #raise RuntimeError (f"_extractSchema failed: {identNr}")
             
 
@@ -405,10 +430,9 @@ class PrepareUpload(BaseApp):
                 invId = invNrSchemata[schema]
                 self.ws[f"I{c}"] = invId
             except:
-                invId = False
+                self.ws[f"I{c}"] = "None"
+                self.ws[f"I{c}"].font = red
         
-            red = Font(color="FF0000")
-
             if self._suspicious_characters(identNr=identNr):
                 self.ws[f"A{c}"].font = red
                 self.ws[f"B{c}"].font = red
