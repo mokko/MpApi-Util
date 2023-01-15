@@ -1,0 +1,905 @@
+{
+ "Album": {
+  "part1": "Album 7",
+  "part2": null,
+  "part3": null,
+  "schemaId": 45,
+  "text": "Album 7"
+ },
+ "E": {
+  "part1": "E",
+  "part2": "1575",
+  "part3": "1904",
+  "schemaId": 167,
+  "text": "E 1575/1904"
+ },
+ "Fototafel Ceylon": {
+  "part1": "Fototafel Ceylon 1",
+  "part2": null,
+  "part3": null,
+  "schemaId": 45,
+  "text": "Fototafel Ceylon 1"
+ },
+ "Fototafel Indien": {
+  "part1": "Fototafel Indien 7",
+  "part2": null,
+  "part3": null,
+  "schemaId": 45,
+  "text": "Fototafel Indien 7"
+ },
+ "I A": {
+  "part1": "I",
+  "part2": " A",
+  "part3": "2168",
+  "schemaId": 99,
+  "text": "I A 2168 a"
+ },
+ "I A 2305": {
+  "part1": "I",
+  "part2": " A",
+  "part3": "2305",
+  "schemaId": 99,
+  "text": "I A 2305 1-26"
+ },
+ "I A Nls": {
+  "part1": "I",
+  "part2": " A Nls",
+  "part3": "329",
+  "schemaId": 107,
+  "text": "I A Nls 329"
+ },
+ "I B": {
+  "part1": "I",
+  "part2": " B",
+  "part3": "16664",
+  "schemaId": 108,
+  "text": "I B 16664"
+ },
+ "I B 440": {
+  "part1": "I",
+  "part2": " B",
+  "part3": "440",
+  "schemaId": 108,
+  "text": "I B 440 1-16"
+ },
+ "I B Dlg": {
+  "part1": "I",
+  "part2": " B Dlg",
+  "part3": "78",
+  "schemaId": 111,
+  "text": "I B Dlg 78"
+ },
+ "I B Nls": {
+  "part1": "I",
+  "part2": " B Nls",
+  "part3": "373",
+  "schemaId": 110,
+  "text": "I B Nls 373"
+ },
+ "I B Nls 456": {
+  "part1": "I",
+  "part2": " B Nls",
+  "part3": "456",
+  "schemaId": 110,
+  "text": "I B Nls 456 48"
+ },
+ "I C": {
+  "part1": "I",
+  "part2": " C",
+  "part3": "48170",
+  "schemaId": 93,
+  "text": "I C 48170"
+ },
+ "I C 49107": {
+  "part1": "I",
+  "part2": " C",
+  "part3": "49107",
+  "schemaId": 93,
+  "text": "I C 49107 7"
+ },
+ "I C DLG": {
+  "part1": "I",
+  "part2": " C DLG",
+  "part3": "39",
+  "schemaId": 374,
+  "text": "I C DLG 39"
+ },
+ "I C Nls": {
+  "part1": "I",
+  "part2": " C Nls",
+  "part3": "838",
+  "schemaId": 97,
+  "text": "I C Nls 838"
+ },
+ "I D": {
+  "part1": "I",
+  "part2": " D",
+  "part3": "36352",
+  "schemaId": 98,
+  "text": "I D 36352"
+ },
+ "I D 25383": {
+  "part1": "I",
+  "part2": " D",
+  "part3": "25383",
+  "schemaId": 98,
+  "text": "I D 25383 1-61"
+ },
+ "I D Nls": {
+  "part1": "I",
+  "part2": " D Nls",
+  "part3": "561",
+  "schemaId": 135,
+  "text": "I D Nls 561"
+ },
+ "IBERO Nls": {
+  "part1": "IBERO",
+  "part2": " Nls",
+  "part3": "163",
+  "schemaId": 1189,
+  "text": "IBERO Nls 163"
+ },
+ "III A": {
+  "part1": "III",
+  "part2": " A",
+  "part3": "709",
+  "schemaId": 48,
+  "text": "III A 709"
+ },
+ "III B": {
+  "part1": "III",
+  "part2": " B",
+  "part3": "3326",
+  "schemaId": 109,
+  "text": "III B 3326"
+ },
+ "III C": {
+  "part1": "III",
+  "part2": " C",
+  "part3": "6689",
+  "schemaId": 51,
+  "text": "III C 6689 c"
+ },
+ "III D": {
+  "part1": "III",
+  "part2": " D",
+  "part3": "1548",
+  "schemaId": 52,
+  "text": "III D 1548"
+ },
+ "III E": {
+  "part1": "III",
+  "part2": " E",
+  "part3": "7966",
+  "schemaId": 53,
+  "text": "III E 7966"
+ },
+ "III F": {
+  "part1": "III",
+  "part2": " F",
+  "part3": "97",
+  "schemaId": 54,
+  "text": "III F 97"
+ },
+ "III G": {
+  "part1": "III",
+  "part2": " G",
+  "part3": "2",
+  "schemaId": 55,
+  "text": "III G 2"
+ },
+ "III Nls": {
+  "part1": "III",
+  "part2": " Nls",
+  "part3": "763",
+  "schemaId": 56,
+  "text": "III Nls 763"
+ },
+ "III Z": {
+  "part1": "III",
+  "part2": " Z",
+  "part3": "152",
+  "schemaId": 47,
+  "text": "III Z 152"
+ },
+ "IV A": {
+  "part1": "IV",
+  "part2": " A",
+  "part3": "1861",
+  "schemaId": 74,
+  "text": "IV A 1861 c"
+ },
+ "IV B": {
+  "part1": "IV",
+  "part2": " B",
+  "part3": "12920",
+  "schemaId": 75,
+  "text": "IV B 12920"
+ },
+ "IV Ca": {
+  "part1": "IV",
+  "part2": " Ca",
+  "part3": "50468",
+  "schemaId": 85,
+  "text": "IV Ca 50468"
+ },
+ "IV Ca Nls": {
+  "part1": "IV",
+  "part2": " Ca Nls",
+  "part3": "2658",
+  "schemaId": 144,
+  "text": "IV Ca Nls 2658"
+ },
+ "IV Cb": {
+  "part1": "IV",
+  "part2": " Cb",
+  "part3": "78",
+  "schemaId": 86,
+  "text": "IV Cb 78"
+ },
+ "IX d": {
+  "part1": "IX",
+  "part2": " d",
+  "part3": "1763",
+  "schemaId": 91,
+  "text": "IX d 1763"
+ },
+ "Konvolut": {
+  "part1": "Konvolut 2",
+  "part2": null,
+  "part3": null,
+  "schemaId": 45,
+  "text": "Konvolut 2"
+ },
+ "MV 686 e": {
+  "part1": "MV 686 e 16/2",
+  "part2": null,
+  "part3": null,
+  "schemaId": 45,
+  "text": "MV 686 e 16/2"
+ },
+ "P": {
+  "part1": "P 14957",
+  "part2": null,
+  "part3": null,
+  "schemaId": 45,
+  "text": "P 14957"
+ },
+ "V A": {
+  "part1": "V",
+  "part2": " A",
+  "part3": "66835",
+  "schemaId": 87,
+  "text": "V A 66835"
+ },
+ "V A Nls": {
+  "part1": "V",
+  "part2": " A Nls",
+  "part3": "236",
+  "schemaId": 146,
+  "text": "V A Nls 236"
+ },
+ "V B": {
+  "part1": "V",
+  "part2": " B",
+  "part3": "14503",
+  "schemaId": 79,
+  "text": "V B 14503"
+ },
+ "V B Nls": {
+  "part1": "V",
+  "part2": " B Nls",
+  "part3": "2",
+  "schemaId": 138,
+  "text": "V B Nls 2"
+ },
+ "V C": {
+  "part1": "V",
+  "part2": " C",
+  "part3": "9700",
+  "schemaId": 80,
+  "text": "V C 9700"
+ },
+ "V C Nls": {
+  "part1": "V",
+  "part2": " C Nls",
+  "part3": "184",
+  "schemaId": 147,
+  "text": "V C Nls 184"
+ },
+ "VI": {
+  "part1": "VI",
+  "part2": "8565",
+  "part3": null,
+  "schemaId": 208,
+  "text": "VI 8565"
+ },
+ "VI 41910 b": {
+  "part1": "VI",
+  "part2": "41910",
+  "part3": "b 12",
+  "schemaId": 208,
+  "text": "VI 41910 b 12"
+ },
+ "VI Nls": {
+  "part1": "VI",
+  "part2": " Nls",
+  "part3": "3697",
+  "schemaId": 73,
+  "text": "VI Nls 3697"
+ },
+ "VII": {
+  "part1": "VII",
+  "part2": " 78/",
+  "part3": "2229",
+  "schemaId": 153,
+  "text": "VII 78/2229"
+ },
+ "VII A": {
+  "part1": "VII",
+  "part2": " A",
+  "part3": "4425",
+  "schemaId": 60,
+  "text": "VII A 4425"
+ },
+ "VII B": {
+  "part1": "VII",
+  "part2": " B",
+  "part3": "1170",
+  "schemaId": 64,
+  "text": "VII B 1170"
+ },
+ "VII CD": {
+  "part1": "VII",
+  "part2": " CD",
+  "part3": "1692",
+  "schemaId": 151,
+  "text": "VII CD 1692"
+ },
+ "VII D": {
+  "part1": "VII",
+  "part2": " D",
+  "part3": "1208",
+  "schemaId": 102,
+  "text": "VII D 1208 (16)"
+ },
+ "VII E": {
+  "part1": "VII",
+  "part2": " E",
+  "part3": "336",
+  "schemaId": 89,
+  "text": "VII E 336"
+ },
+ "VII G": {
+  "part1": "VII",
+  "part2": " G",
+  "part3": "282",
+  "schemaId": 65,
+  "text": "VII G 282"
+ },
+ "VII K": {
+  "part1": "VII",
+  "part2": " K",
+  "part3": "1073",
+  "schemaId": 154,
+  "text": "VII K 1073"
+ },
+ "VII LP": {
+  "part1": "VII",
+  "part2": " LP",
+  "part3": "2658",
+  "schemaId": 152,
+  "text": "VII LP 2658"
+ },
+ "VII N": {
+  "part1": "VII",
+  "part2": " N",
+  "part3": "1",
+  "schemaId": 1389,
+  "text": "VII N 1"
+ },
+ "VII Nls": {
+  "part1": "VII",
+  "part2": " Nls",
+  "part3": "127",
+  "schemaId": 790,
+  "text": "VII Nls 127"
+ },
+ "VII OA": {
+  "part1": "VII",
+  "part2": " OA",
+  "part3": "0826",
+  "schemaId": 155,
+  "text": "VII OA 0826"
+ },
+ "VII VB": {
+  "part1": "VII",
+  "part2": " VB",
+  "part3": "0360",
+  "schemaId": 159,
+  "text": "VII VB 0360"
+ },
+ "VII VS": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0020",
+  "schemaId": 160,
+  "text": "VII VS 0020"
+ },
+ "VII VS 0001": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0001",
+  "schemaId": 160,
+  "text": "VII VS 0001 001"
+ },
+ "VII VS 0002": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0002",
+  "schemaId": 160,
+  "text": "VII VS 0002 001"
+ },
+ "VII VS 0003": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0003",
+  "schemaId": 160,
+  "text": "VII VS 0003 001 c"
+ },
+ "VII VS 0008": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0008",
+  "schemaId": 160,
+  "text": "VII VS 0008 001"
+ },
+ "VII VS 0009": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0009",
+  "schemaId": 160,
+  "text": "VII VS 0009 004"
+ },
+ "VII VS 0010": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0010",
+  "schemaId": 160,
+  "text": "VII VS 0010 001"
+ },
+ "VII VS 0011": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0011",
+  "schemaId": 160,
+  "text": "VII VS 0011 001"
+ },
+ "VII VS 0012": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0012",
+  "schemaId": 160,
+  "text": "VII VS 0012 001"
+ },
+ "VII VS 0013": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0013",
+  "schemaId": 160,
+  "text": "VII VS 0013 001"
+ },
+ "VII VS 0014": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0014",
+  "schemaId": 160,
+  "text": "VII VS 0014 001"
+ },
+ "VII VS 0015": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0015",
+  "schemaId": 160,
+  "text": "VII VS 0015 001"
+ },
+ "VII VS 0016": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0016",
+  "schemaId": 160,
+  "text": "VII VS 0016 001"
+ },
+ "VII VS 0019": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0019",
+  "schemaId": 160,
+  "text": "VII VS 0019 009 d"
+ },
+ "VII VS 0021": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0021",
+  "schemaId": 160,
+  "text": "VII VS 0021 008"
+ },
+ "VII VS 0023": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0023",
+  "schemaId": 160,
+  "text": "VII VS 0023 002"
+ },
+ "VII VS 0024": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0024",
+  "schemaId": 160,
+  "text": "VII VS 0024 002 b"
+ },
+ "VII VS 0027": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0027",
+  "schemaId": 160,
+  "text": "VII VS 0027 003"
+ },
+ "VII VS 0028": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0028",
+  "schemaId": 160,
+  "text": "VII VS 0028 024"
+ },
+ "VII VS 0029": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0029",
+  "schemaId": 160,
+  "text": "VII VS 0029 020"
+ },
+ "VII VS 0030": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0030",
+  "schemaId": 160,
+  "text": "VII VS 0030 005"
+ },
+ "VII VS 0032": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0032",
+  "schemaId": 160,
+  "text": "VII VS 0032 041"
+ },
+ "VII VS 0037": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0037",
+  "schemaId": 160,
+  "text": "VII VS 0037 001"
+ },
+ "VII VS 0041": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0041",
+  "schemaId": 160,
+  "text": "VII VS 0041 001"
+ },
+ "VII VS 0043": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0043",
+  "schemaId": 160,
+  "text": "VII VS 0043 009"
+ },
+ "VII VS 0045": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0045",
+  "schemaId": 160,
+  "text": "VII VS 0045 010"
+ },
+ "VII VS 0050": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0050",
+  "schemaId": 160,
+  "text": "VII VS 0050 001"
+ },
+ "VII VS 0053": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0053",
+  "schemaId": 160,
+  "text": "VII VS 0053 001"
+ },
+ "VII VS 0060": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0060",
+  "schemaId": 160,
+  "text": "VII VS 0060 001"
+ },
+ "VII VS 0061": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0061",
+  "schemaId": 160,
+  "text": "VII VS 0061 001"
+ },
+ "VII VS 0065": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0065",
+  "schemaId": 160,
+  "text": "VII VS 0065 003"
+ },
+ "VII VS 0067": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0067",
+  "schemaId": 160,
+  "text": "VII VS 0067 001"
+ },
+ "VII VS 0068": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0068",
+  "schemaId": 160,
+  "text": "VII VS 0068 001"
+ },
+ "VII VS 0069": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0069",
+  "schemaId": 160,
+  "text": "VII VS 0069 001"
+ },
+ "VII VS 0070": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0070",
+  "schemaId": 160,
+  "text": "VII VS 0070 001"
+ },
+ "VII VS 0071": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0071",
+  "schemaId": 160,
+  "text": "VII VS 0071 001"
+ },
+ "VII VS 0072": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0072",
+  "schemaId": 160,
+  "text": "VII VS 0072 001"
+ },
+ "VII VS 0077": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0077",
+  "schemaId": 160,
+  "text": "VII VS 0077 001"
+ },
+ "VII VS 0079": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0079",
+  "schemaId": 160,
+  "text": "VII VS 0079 001"
+ },
+ "VII VS 0080": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0080",
+  "schemaId": 160,
+  "text": "VII VS 0080 001"
+ },
+ "VII VS 0081": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0081",
+  "schemaId": 160,
+  "text": "VII VS 0081 001"
+ },
+ "VII VS 0086": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0086",
+  "schemaId": 160,
+  "text": "VII VS 0086 001"
+ },
+ "VII VS 0091": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0091",
+  "schemaId": 160,
+  "text": "VII VS 0091 030"
+ },
+ "VII VS 0105": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0105",
+  "schemaId": 160,
+  "text": "VII VS 0105 001"
+ },
+ "VII VS 0106": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0106",
+  "schemaId": 160,
+  "text": "VII VS 0106 007"
+ },
+ "VII VS 0123": {
+  "part1": "VII",
+  "part2": " VS",
+  "part3": "0123",
+  "schemaId": 160,
+  "text": "VII VS 0123 001"
+ },
+ "VII W": {
+  "part1": "VII",
+  "part2": " W",
+  "part3": "7055",
+  "schemaId": 157,
+  "text": "VII W 7055"
+ },
+ "VII W 9258": {
+  "part1": "VII",
+  "part2": " W",
+  "part3": "9258",
+  "schemaId": 157,
+  "text": "VII W 9258 2"
+ },
+ "VII W 9260": {
+  "part1": "VII",
+  "part2": " W",
+  "part3": "9260",
+  "schemaId": 157,
+  "text": "VII W 9260 2"
+ },
+ "VII WS": {
+  "part1": "VII",
+  "part2": " WS",
+  "part3": "351",
+  "schemaId": 1229,
+  "text": "VII WS 351"
+ },
+ "VII a": {
+  "part1": "VII",
+  "part2": " a",
+  "part3": "113",
+  "schemaId": 125,
+  "text": "VII a 113"
+ },
+ "VII b": {
+  "part1": "VII",
+  "part2": " b",
+  "part3": "197",
+  "schemaId": 128,
+  "text": "VII b 197"
+ },
+ "VII c": {
+  "part1": "VII",
+  "part2": " c",
+  "part3": "124",
+  "schemaId": 127,
+  "text": "VII c 124"
+ },
+ "VII d": {
+  "part1": "VII",
+  "part2": " d",
+  "part3": "12",
+  "schemaId": 968,
+  "text": "VII d 12 f"
+ },
+ "VII e": {
+  "part1": "VII",
+  "part2": " e",
+  "part3": "209",
+  "schemaId": 126,
+  "text": "VII e 209"
+ },
+ "VII f": {
+  "part1": "VII",
+  "part2": " f",
+  "part3": "274",
+  "schemaId": 124,
+  "text": "VII f 274"
+ },
+ "VII g": {
+  "part1": "VII",
+  "part2": " g",
+  "part3": "1",
+  "schemaId": 1989,
+  "text": "VII g 1"
+ },
+ "VIII": {
+  "part1": "VIII",
+  "part2": "3441",
+  "part3": null,
+  "schemaId": 243,
+  "text": "VIII 3441"
+ },
+ "VIII A": {
+  "part1": "VIII",
+  "part2": " A",
+  "part3": "1456",
+  "schemaId": 58,
+  "text": "VIII A 1456"
+ },
+ "VIII AmA": {
+  "part1": "VIII",
+  "part2": " AmA",
+  "part3": "223",
+  "schemaId": 808,
+  "text": "VIII AmA 223"
+ },
+ "VIII B": {
+  "part1": "VIII",
+  "part2": " B",
+  "part3": "3792",
+  "schemaId": 68,
+  "text": "VIII B 3792"
+ },
+ "VIII B Nls": {
+  "part1": "VIII",
+  "part2": " B Nls",
+  "part3": "85",
+  "schemaId": 1809,
+  "text": "VIII B Nls 85"
+ },
+ "VIII C": {
+  "part1": "VIII",
+  "part2": " C",
+  "part3": "20302",
+  "schemaId": 96,
+  "text": "VIII C 20302"
+ },
+ "VIII D": {
+  "part1": "VIII",
+  "part2": " D",
+  "part3": "9216",
+  "schemaId": 104,
+  "text": "VIII D 9216"
+ },
+ "VIII D Nls": {
+  "part1": "VIII",
+  "part2": " D Nls",
+  "part3": "6",
+  "schemaId": 1873,
+  "text": "VIII D Nls 6"
+ },
+ "VIII E": {
+  "part1": "VIII",
+  "part2": " E",
+  "part3": "627",
+  "schemaId": 90,
+  "text": "VIII E 627"
+ },
+ "VIII E 2041 bis": {
+  "part1": "VIII",
+  "part2": " E",
+  "part3": "2041",
+  "schemaId": 82,
+  "text": "VIII E 2041 bis 2044"
+ },
+ "VIII E Nls": {
+  "part1": "VIII",
+  "part2": " E Nls",
+  "part3": "1367",
+  "schemaId": 1069,
+  "text": "VIII E Nls 1367"
+ },
+ "VIII NA": {
+  "part1": "VIII",
+  "part2": " NA",
+  "part3": "538",
+  "schemaId": 132,
+  "text": "VIII NA 538"
+ }
+}

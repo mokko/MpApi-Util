@@ -9,4 +9,4 @@ bak/*
 dist/*
 build/*
 sdata/*
-test/sdata/*
+*.spec
