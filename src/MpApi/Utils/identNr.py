@@ -98,7 +98,6 @@ class IdentNrFactory:
         if schemas_fn is None:
             parent = Path(__file__).parents[2]
             self.schemas_fn = parent / "data" / "schemas.json"
-            print(f"XXX{self.schemas_fn}")
 
     def _extractSchema(self, *, text: str) -> str:
         """

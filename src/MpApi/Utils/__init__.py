@@ -6,6 +6,7 @@ credentials = "credentials.py"  # expect credentials in pwd
 import argparse
 
 from mpapi.client import MpApi
+from mpapi.search import Search
 from MpApi.Utils.du import Du
 from MpApi.Utils.rename import Rename
 from MpApi.Utils.bcreate import Bcreate
@@ -121,17 +122,17 @@ def update_schemas():
 
     parser = argparse.ArgumentParser(description="parse zml for schema information")
     parser.add_argument(
-        "-e", "--excel", help="Look for identNrs in excel file (from prepare)"
+        "-e", "--excel", help="look for identNrs in excel file (from prepare)"
     )
-    parser.add_argument("-f", "--file", help="Use identNr from zml file")
-    parser.add_argument("-i", "--individual", help="Lookup indiovidual identNr in RIA")
+    parser.add_argument("-f", "--file", help="use identNr from zml file")
+    parser.add_argument("-i", "--identNr", help="lookup indiovidual identNr in RIA")
     parser.add_argument(
         "-s",
         "--schemas_fn",
-        help="Path to schemas.json file; default is flit's location 'src/data'",
+        help="path to schemas.json file; default is flit's location 'src/data'",
     )
     parser.add_argument(
-        "-v", "--version", help="Display version info and exit", action="store_true"
+        "-v", "--version", help="display version info and exit", action="store_true"
     )
     args = parser.parse_args()
 
@@ -154,12 +155,17 @@ def update_schemas():
             print(f"Loading file {chunk_fn}")
             f.update_schemas(file=chunk_fn)
         sys.exit(0)
-    elif args.individual is not None:
-        c = MpApi(baseURL, user=user, pw=pw)
+    elif args.identNr is not None:
+        c = MpApi(baseURL=baseURL, user=user, pw=pw)
         q = Search(module="Object")
-        q.addCriterion()
+        q.addCriterion(
+            operator="startsWithField",
+            field="ObjObjectNumberGrp.InventarNrSTxt",
+            value=args.identNr,
+        )
         m = c.search2(query=q)
-        f.update_schema_db(data=m)
+        print(f"{len(m)} objects found...")
+        f.update_schemas(data=m)
         sys.exit(0)
     else:
         raise ValueError("Nothing to do!")
