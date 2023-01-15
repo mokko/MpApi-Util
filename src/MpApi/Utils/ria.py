@@ -63,7 +63,7 @@ class RiaUtil:
 
         Side-effect:Changes itemN in place.
 
-        Todo: 
+        Todo:
         - Create a new identNr or change an existing one
         - decide if I want a whole document or just an itemN
         - test it
@@ -121,7 +121,7 @@ class RiaUtil:
         """
 
         part1 = identNr.split()[0]
-        part2 = " " + identNr.split()[1] # weird
+        part2 = " " + identNr.split()[1]  # weird
         part3 = " ".join(identNr.split()[2:])
         print(f"DEBUG:{part1}|{part2}|{part3}|")
 
@@ -143,29 +143,28 @@ class RiaUtil:
         )  # EM-Südsee/Australien VIII B
         # return m we change the object in-place
 
-
-    def create_from_template(self, *, template: Module, identNr:str = None) -> int:
+    def create_from_template(self, *, template: Module, identNr: str = None) -> int:
         """
-        Given a template record (a module Object), copy that 
-        to a new record of the same type, fill in the provided identNr and return 
+        Given a template record (a module Object), copy that
+        to a new record of the same type, fill in the provided identNr and return
         the ID of the new record.
-        
+
         Raises on some errors.
-        
+
         Returns objId of newly created record as int.
         """
         if identNr.isspace():
-            raise TypeError ("Ident cant only consist of space: {identNr}")
+            raise TypeError("Ident cant only consist of space: {identNr}")
 
         if identNr is None:
-            raise TypeError ("Ident can't be None")
+            raise TypeError("Ident can't be None")
 
         if len(template) != 1:
-            raise ValueError (
-            "Template should be a single record; instead {len(template)} records"
+            raise ValueError(
+                "Template should be a single record; instead {len(template)} records"
             )
         mtype = template.extract_mtype()
-        print (f"mtype {mtype}")
+        print(f"mtype {mtype}")
 
         """
         the identNr issue: usually we dont want to duplicate a template with an
@@ -194,7 +193,7 @@ class RiaUtil:
         in here.
         
         """
-        t2 = copy.deepcopy(template) # so we dont change the original
+        t2 = copy.deepcopy(template)  # so we dont change the original
         # discard __all__ existing identNrs of the template
         # this might be a bit heavy-handed, but let's do it anyways for now
         ObjNumberGrpL = t2.xpath("//m:repeatableGroup[@name = 'ObjObjectNumberGrp']")
@@ -202,22 +201,20 @@ class RiaUtil:
             ObjNumberGrpN.getparent().remove(ObjNumberGrpN)
         t2.toFile(path="DDrewritten.xml")
         t2.newObjNumberGrp(identNr=identNr)
-       
-        #raise SyntaxError ("SH")
-        #objId = self.mpapi.createItem3(data=tnew)
-        #return objId
-        raise RuntimeError ("Stop here!")
+
+        # raise SyntaxError ("SH")
+        # objId = self.mpapi.createItem3(data=tnew)
+        # return objId
+        raise RuntimeError("Stop here!")
 
     # a simple test - not even a lookup
-    def id_exists(self, *, mtype:str, ID: int) -> bool:
+    def id_exists(self, *, mtype: str, ID: int) -> bool:
         """
         Test if an ID exists. Returns False if not and True if so.
-        
+
         """
         q = Search(module=mtype)
-        q.addCriterion( 
-            operator="equalsField", field="__id", value=str(ID)
-        )
+        q.addCriterion(operator="equalsField", field="__id", value=str(ID))
         q.addField(field="__id")
         m = self.mpapi.search2(query=q)
 
@@ -227,24 +224,24 @@ class RiaUtil:
             return True
 
     # a simple loopup
-    def identNr_exists(self, *, nr:str, orgUnit:Optional[str] = None) -> list[int]:
+    def identNr_exists(self, *, nr: str, orgUnit: Optional[str] = None) -> list[int]:
         """
-            Simple check if identNr exists in RIA. Returns a list of objIds of the 
-            matching records.
-            
-            identNr is compared to ObjObjectNumberVrt which exists only in Objects.
+        Simple check if identNr exists in RIA. Returns a list of objIds of the
+        matching records.
 
-            If optional orgUnit is present it returns only objIds that are in that
-            orgUnit.
-            
-            New:
-            - returns a potentially empty list; empty list is falsy
-            - list with items is truthy
-            
-            if r := c.identNr_exists(nr="VII c 123"):
-                print (len(r))
-                for objId in r:
-                    do_something()
+        identNr is compared to ObjObjectNumberVrt which exists only in Objects.
+
+        If optional orgUnit is present it returns only objIds that are in that
+        orgUnit.
+
+        New:
+        - returns a potentially empty list; empty list is falsy
+        - list with items is truthy
+
+        if r := c.identNr_exists(nr="VII c 123"):
+            print (len(r))
+            for objId in r:
+                do_something()
         """
 
         q = Search(module="Object", limit=-1, offset=0)
@@ -258,13 +255,12 @@ class RiaUtil:
         if orgUnit is not None:
             q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
         q.addField(field="__id")  # make query faster
-        q.validate(mode="search") # raises if not valid
+        q.validate(mode="search")  # raises if not valid
         m = self.mpapi.search2(query=q)
         # this are all moduleItem's ids, but the query makes sure we only have those
         # that we want; xpath returns str
         objIdL = m.xpath("/m:application/m:modules/m:module/m:moduleItem/@id")
-        return [ int(x) for x in objIdL ]
-
+        return [int(x) for x in objIdL]
 
     # a simple lookup
     def fn_to_mulId(self, *, fn, orgUnit=None) -> set:
@@ -272,7 +268,7 @@ class RiaUtil:
         For a given filename check if there is one or more assets with that same filename
         in RIA.
 
-        New: Return empty set if no records found! (Used to return None.) 
+        New: Return empty set if no records found! (Used to return None.)
         """
         # print (f"* Getting assets for filename '{fn}'")
         q = Search(module="Multimedia")
@@ -290,8 +286,7 @@ class RiaUtil:
             positiveIDs.add(itemN.get("id"))
         return positiveIDs
 
-
-    def get_template(self, *, mtype, ID): 
+    def get_template(self, *, mtype, ID):
         """
         Returns a Module object in upload form.
         """
@@ -300,12 +295,10 @@ class RiaUtil:
         if not m:
             raise SyntaxError(f"ERROR: Template record not found: {mtype} {ID}")
 
-        m.clean() # necessary? Eliminates Versicherungswert; let's just drop the virtual fields
+        m.clean()  # necessary? Eliminates Versicherungswert; let's just drop the virtual fields
         m.uploadForm()
-        #if DEBUG:
-        #    m.toFile(path=f"DDtemplate-{mtype}{ID}.xml") 
+        # if DEBUG:
+        #    m.toFile(path=f"DDtemplate-{mtype}{ID}.xml")
         return m
 
-
-    #deprecated: objId_for_identNr -> use identNr_exists instead 
-    
+    # deprecated: objId_for_identNr -> use identNr_exists instead

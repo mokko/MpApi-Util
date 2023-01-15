@@ -24,7 +24,6 @@ if Path(credentials).exists():
         exec(f.read())
 
 
-
 def du():
     if not Path(credentials).exists():
         raise ValueError("ERROR: Credentials not found!")
@@ -53,14 +52,14 @@ def bcreate():
     args = parser.parse_args()
 
     if args.version:
-        print (f"Version: {__version__}")
+        print(f"Version: {__version__}")
         sys.exit(0)
 
     if not args.conf or not args.job:
-        raise SyntaxError ("-p parameter and -j job name required!")
+        raise SyntaxError("-p parameter and -j job name required!")
 
     if not baseURL or not user or not pw:
-        raise SyntaxError ("Missing user baseURL or pw. Are you in the right dir?")
+        raise SyntaxError("Missing user baseURL or pw. Are you in the right dir?")
 
     bc = Bcreate(baseURL=baseURL, confFN=args.conf, job=args.job, pw=pw, user=user)
 
@@ -73,8 +72,10 @@ def prepareUpload():
     parser.add_argument("-j", "--job", help="job inside config file", default="test")
     parser.add_argument("-l", "--limit", help="stop after number of items", default=-1)
     parser.add_argument(
-        "-p", "--phase", help="phase to run (scandir, checkria, create)", 
-        choices = ['scandisk','checkria', 'createobjects']
+        "-p",
+        "--phase",
+        help="phase to run (scandir, checkria, create)",
+        choices=["scandisk", "checkria", "createobjects"],
     )
     parser.add_argument(
         "-v", "--version", help="display version information", action="store_true"
@@ -83,12 +84,12 @@ def prepareUpload():
     args = parser.parse_args()
 
     if args.version:
-        print (f"Version: {__version__}")
+        print(f"Version: {__version__}")
         sys.exit(0)
 
     if not args.phase:
-        raise SyntaxError ("-p parameter required!")
-        
+        raise SyntaxError("-p parameter required!")
+
     p = PrepareUpload(
         baseURL=baseURL,
         conf_fn=args.conf,
@@ -102,49 +103,55 @@ def prepareUpload():
     elif args.phase == "checkria":
         p.asset_exists_already()
         p.objId_for_ident()
-    elif args.phase == "createobjects":  
+    elif args.phase == "createobjects":
         p.create_objects()
+
 
 def update_schemas():
 
     """
-        CLI USAGE
-        update_schema_db -e excel.xlsx      # xlsx as written by prepare
-        update_schema_db -f bla.xml         # looks thru a file
-        update_schema_db -i "VII c 123 a-c" # looks identNr up online
-        update_schema_db -v version
+    CLI USAGE
+    update_schema_db -e excel.xlsx      # xlsx as written by prepare
+    update_schema_db -f bla.xml         # looks thru a file
+    update_schema_db -i "VII c 123 a-c" # looks identNr up online
+    update_schema_db -v version
 
-        -s (optional) use schemas.json file instead of default
+    -s (optional) use schemas.json file instead of default
     """
-            
 
-    parser = argparse.ArgumentParser(
-        description="parse zml for schema information"
+    parser = argparse.ArgumentParser(description="parse zml for schema information")
+    parser.add_argument(
+        "-e", "--excel", help="Look for identNrs in excel file (from prepare)"
     )
-    parser.add_argument("-e", "--excel", help="Look for identNrs in excel file (from prepare)")
     parser.add_argument("-f", "--file", help="Use identNr from zml file")
     parser.add_argument("-i", "--individual", help="Lookup indiovidual identNr in RIA")
-    parser.add_argument("-s", "--schemas_fn", help="Path to schemas.json file; default is flit's location 'src/data'")
-    parser.add_argument("-v", "--version", help="Display version info and exit", action="store_true")
+    parser.add_argument(
+        "-s",
+        "--schemas_fn",
+        help="Path to schemas.json file; default is flit's location 'src/data'",
+    )
+    parser.add_argument(
+        "-v", "--version", help="Display version info and exit", action="store_true"
+    )
     args = parser.parse_args()
 
-    if args.schemas_fn is None: # setting default
-        print ("Using default schemas file.")
+    if args.schemas_fn is None:  # setting default
+        print("Using default schemas file.")
         f = IdentNrFactory()
     else:
-        print (f"Using user supplied schemas file '{args.schemas_fn}'.")
+        print(f"Using user supplied schemas file '{args.schemas_fn}'.")
         f = IdentNrFactory(schemas_fn=args.schemas_fn)
 
     if args.version:
-        print (f"Version: {__version__}")
+        print(f"Version: {__version__}")
         sys.exit(0)
     elif args.excel is not None:
-        print ("Excel function not yet implemented")
-        #f.update_schema_db(excel_fn=args.excel)        
+        print("Excel function not yet implemented")
+        # f.update_schema_db(excel_fn=args.excel)
         sys.exit(0)
     elif args.file is not None:
         for chunk_fn in iter_chunks(first=args.file):
-            print (f"Loading file {chunk_fn}")
+            print(f"Loading file {chunk_fn}")
             f.update_schemas(file=chunk_fn)
         sys.exit(0)
     elif args.individual is not None:
@@ -155,7 +162,7 @@ def update_schemas():
         f.update_schema_db(data=m)
         sys.exit(0)
     else:
-        raise ValueError ("Nothing to do!")
+        raise ValueError("Nothing to do!")
 
 
 def rename():

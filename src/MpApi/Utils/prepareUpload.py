@@ -71,18 +71,18 @@ from MpApi.Utils.Ria import RiaUtil
 
 
 invNrSchemata = {
-    #sechs
-    'VI Dlg': 1090,
-    'VI K': 67,
-    'VI Nls': 73,
-    'VI': 208,
-    #sieben
-    'VII B': 64,
-    'VII F': 234,
-    'VII G': 65,
-    'VII I': 66,
-    #acht
-    'VIII': 243
+    # sechs
+    "VI Dlg": 1090,
+    "VI K": 67,
+    "VI Nls": 73,
+    "VI": 208,
+    # sieben
+    "VII B": 64,
+    "VII F": 234,
+    "VII G": 65,
+    "VII I": 66,
+    # acht
+    "VIII": 243,
 }
 
 
@@ -123,7 +123,6 @@ class PrepareUpload(BaseApp):
         # die if not writable so that user can close it before waste of time
         self._save_excel(path=self.excel_fn)
 
-
     def _init_sheet(self, workbook: Workbook) -> Any:  # openpyxl.worksheet
         """
         Defines the Excel format of this app. Needs to be specific to app.
@@ -133,9 +132,9 @@ class PrepareUpload(BaseApp):
             ws = workbook[sheet_title]
         except:  # new sheet
             ws = self.wb.active
-        else:  
-            return ws # sheet exists already 
-        #this is a new sheet
+        else:
+            return ws  # sheet exists already
+        # this is a new sheet
 
         ws.title = sheet_title
         ws["A1"] = "Dateiname"
@@ -164,51 +163,47 @@ class PrepareUpload(BaseApp):
         ws.column_dimensions["G"].width = 100
         return ws
 
-
     def _raise_if_excel_has_no_content(self):
         # assuming that after scandisk excel has to have more than 2 lines
-        if self.ws.max_row < 3:  
+        if self.ws.max_row < 3:
             raise ValueError(
                 f"ERROR: no data found; excel contains {self.ws.max_row} rows!"
             )
         return True
-        #else:
+        # else:
         #    print(f"* Excel has data: {self.ws.max_row} rows")
 
-
     # I lost an old version of this method. Where did it go?
-    def _suspicious_characters(self, *, identNr:str) -> bool:
-        #print (f"***suspicious? {identNr}")
-        
+    def _suspicious_characters(self, *, identNr: str) -> bool:
+        # print (f"***suspicious? {identNr}")
+
         msg = "suspicious_characters:"
-        
+
         if identNr is None:
-            #print ("return bc None")
+            # print ("return bc None")
             return False
-        elif '  ' in identNr:
-            logging.info (f"{msg} double space {identNr}")
-        elif '.' in identNr:
-            #TODO seems that identNr with . are not mrked
-            logging.info (f"{msg} unwanted symbol {identNr}")
+        elif "  " in identNr:
+            logging.info(f"{msg} double space {identNr}")
+        elif "." in identNr:
+            # TODO seems that identNr with . are not mrked
+            logging.info(f"{msg} unwanted symbol {identNr}")
             return True
-        elif ' ' not in identNr:
-            logging.info (f"{msg} missing space {identNr}")
+        elif " " not in identNr:
+            logging.info(f"{msg} missing space {identNr}")
             return True
-        elif '-a' in identNr:
-            logging.info (f"{msg} combination -a {identNr}")
+        elif "-a" in identNr:
+            logging.info(f"{msg} combination -a {identNr}")
             return True
-        elif identNr.count(',') > 1:
-            logging.info (f"{msg} number of commas {identNr}")
+        elif identNr.count(",") > 1:
+            logging.info(f"{msg} number of commas {identNr}")
             return True
 
-        #print (" -> not suspicious")
+        # print (" -> not suspicious")
         return False
-
 
     #
     # public
     #
-
 
     def asset_exists_already(self):
         """
@@ -216,15 +211,15 @@ class PrepareUpload(BaseApp):
         Checks if an asset with that filename exists already in RIA. If so, it lists the
         corresponding mulId(s); if not None
 
-        New: 
+        New:
         - The check is now specific to an OrgUnit which is the internal name of a Bereich
         (e.g. EMSudseeAustralien).
-        - The search is not exact. RIA ignores Sonderzeichen like _; i.e. if we search 
-          for an asset with  name x_x.jog and we learn that this one exists already 
+        - The search is not exact. RIA ignores Sonderzeichen like _; i.e. if we search
+          for an asset with  name x_x.jog and we learn that this one exists already
           according to this method then we dont know if the filename is really x_x.jpg
           or any number of variants such as x__x.jpg.
 
-        If the Excel cell is empty, we still need to run the test. If it has one, multiple 
+        If the Excel cell is empty, we still need to run the test. If it has one, multiple
         mulIds or "None" we don't need to run it again.
         """
 
@@ -236,7 +231,7 @@ class PrepareUpload(BaseApp):
                 # Let's not make org_unit optional!
                 # print (f"xxxxxxxxxxxxxxxxxx {self.conf['org_unit']}")
                 idL = self.client.fn_to_mulId(
-                    fn=filename_cell.value, orgUnit=self.conf["org_unit"] 
+                    fn=filename_cell.value, orgUnit=self.conf["org_unit"]
                 )
                 if len(idL) == 0:
                     uploaded_cell.value = "None"
@@ -260,51 +255,55 @@ class PrepareUpload(BaseApp):
         if changed is True:
             self._save_excel(path=self.excel_fn)
 
-
     def create_objects(self):
         """
-        Loop thru excel objId column. Act for rows where candidates = "x" or "X". 
+        Loop thru excel objId column. Act for rows where candidates = "x" or "X".
         For those, create a new object record in RIA using template record mentioned in
         the configuration (templateID).
-        
+
         Write the objId(s) of the newly created records in candidate column.
         """
+
         def _per_row(*, row, template) -> bool:
-            ident_cell = row[1]    # in Excel from filename; can have multiple
+            ident_cell = row[1]  # in Excel from filename; can have multiple
             if ident_cell.value is None:
                 # without a identNr we cant fill in a identNr in template
                 # should not happen, that identNr is empty and cadinate = x
                 # maybe log this case?
                 return
             identL = ident_cell.value.split(";")
-            candidate_cell = row[4] # to write into
+            candidate_cell = row[4]  # to write into
             if candidate_cell.value is not None:
                 cand_str = candidate_cell.value.strip()
                 if cand_str == "X" or cand_str == "x":
                     objIds = set()
                     for ident in identL:
                         identNr = ident.strip()
-                        new_id = self.client.create_from_template(template=template, identNr=identNr)
-                        #logging.info(f"new record created: object {new_id} with {identNr} from template")
+                        new_id = self.client.create_from_template(
+                            template=template, identNr=identNr
+                        )
+                        # logging.info(f"new record created: object {new_id} with {identNr} from template")
                         objIds.add(new_id)
                     candidate_cell.value = "; ".join(objIds)
-                    self._save_excel(path=self.excel_fn) # save immediately since likely to die
+                    self._save_excel(
+                        path=self.excel_fn
+                    )  # save immediately since likely to die
 
         try:
-            self.conf['template']
+            self.conf["template"]
         except:
-            raise SyntaxError ("Config value 'template' not defined!")
+            raise SyntaxError("Config value 'template' not defined!")
 
-        ttype, tid = self.conf['template'].split() # do i need to strip?
+        ttype, tid = self.conf["template"].split()  # do i need to strip?
         ttype = ttype.strip()
         tid = tid.strip()
         print(f"***template: {ttype} {tid}")
-                    
-        self._raise_if_excel_has_no_content() 
+
+        self._raise_if_excel_has_no_content()
         self.client = self._init_client()
-        #we want the same template for all records
+        # we want the same template for all records
         templateM = self.client.get_template(ID=tid, mtype=ttype)
-        #templateM.toFile(path="debug.template.xml")
+        # templateM.toFile(path="debug.template.xml")
 
         c = 1  # counter; start counting at row 3, so counts the entries more than the rows
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
@@ -314,7 +313,6 @@ class PrepareUpload(BaseApp):
                 break
             c += 1
 
-
     def objId_for_ident(self):
         """
         Lookup objIds for IdentNr. Write the objId(s) back to Excel. If none is found,
@@ -322,23 +320,23 @@ class PrepareUpload(BaseApp):
         "schon hochgeladen?" = None.
 
         Take ident from Excel, get the objId from RIA and write it back to Excel.
-        
+
         TODO: Allow for multiple identNrs separated by '; '
         """
         # currently this is unnecessary, but why rely on that?
-        self._raise_if_excel_has_no_content() 
+        self._raise_if_excel_has_no_content()
         self.client = self._init_client()
 
-        #c has not been passed here, but still works
-        #that's cool scope, just slightly magic?
+        # c has not been passed here, but still works
+        # that's cool scope, just slightly magic?
         def _per_row(*, row, changed):
             print(f"* objId for identNr {c} of {self.ws.max_row-2}")
-            ident_cell = row[1]     # in Excel from filename; can have multiple
-            uploaded_cell = row[2]  # can have multiple 
-            objId_cell = row[3]     # to write into  
-            candidate_cell = row[4] # to write into
-            schema_id = row[8]      # to color candidate
-            
+            ident_cell = row[1]  # in Excel from filename; can have multiple
+            uploaded_cell = row[2]  # can have multiple
+            objId_cell = row[3]  # to write into
+            candidate_cell = row[4]  # to write into
+            schema_id = row[8]  # to color candidate
+
             # in rare cases identNr_cell might be None
             # then we cant look up anything
             if ident_cell.value is None:
@@ -364,7 +362,7 @@ class PrepareUpload(BaseApp):
                     candidate_cell.value = "y"
                     candidate_cell.font = red
                 else:
-                    candidate_cell.value = "x"                
+                    candidate_cell.value = "x"
             return changed
 
         c = 1  # case counter
@@ -380,13 +378,13 @@ class PrepareUpload(BaseApp):
 
     def scan_disk(self):
         """
-        Recursively scan a dir (src_dir) for *-KK*. List a files in an Excel file trying 
+        Recursively scan a dir (src_dir) for *-KK*. List a files in an Excel file trying
         to extract the proper identNr.
 
-        Filenames with suspicious characters (e.g. '-' or ';') are flagged by coloring 
+        Filenames with suspicious characters (e.g. '-' or ';') are flagged by coloring
         them red.
         """
-    
+
         def _extractIdentNr(*, path: Path) -> Optional[str]:
             """
             extracts IdentNr (=identifier, Signatur) from filename specifically for KK.
@@ -395,22 +393,20 @@ class PrepareUpload(BaseApp):
             We will need other identNr parsers in the future so we have to find load
             plugins from conf.
             """
-            stem = str(path).split(".")[0] # stem is everything before first .
+            stem = str(path).split(".")[0]  # stem is everything before first .
             m = re.search(r"([\w ,\.\-]+)\w*-KK", stem)
             if m:
-                return m.group(1)        
+                return m.group(1)
 
-
-        def _extractSchema(*, identNr:str) -> str:
+        def _extractSchema(*, identNr: str) -> str:
             if identNr is not None:
                 m = re.search(r"^([\w ]+) \d+", identNr)
                 if m:
                     return m.group(1)
                 else:
                     print(f"_extractSchema failed: {identNr}")
-                    #pass
-                    #raise RuntimeError (f"_extractSchema failed: {identNr}")
-            
+                    # pass
+                    # raise RuntimeError (f"_extractSchema failed: {identNr}")
 
         def _per_row(*, c: int, path: Path) -> None:
             """
@@ -426,13 +422,13 @@ class PrepareUpload(BaseApp):
             schema = _extractSchema(identNr=identNr)
             if schema is not None:
                 self.ws[f"H{c}"] = schema
-            try: 
+            try:
                 invId = invNrSchemata[schema]
                 self.ws[f"I{c}"] = invId
             except:
                 self.ws[f"I{c}"] = "None"
                 self.ws[f"I{c}"].font = red
-        
+
             if self._suspicious_characters(identNr=identNr):
                 self.ws[f"A{c}"].font = red
                 self.ws[f"B{c}"].font = red
@@ -450,7 +446,7 @@ class PrepareUpload(BaseApp):
         src_dir = Path(self.conf["src_dir"])
         print(f"* Scanning source dir: {src_dir}")
 
-        # todo: i am filtering files which have *-KK*; 
+        # todo: i am filtering files which have *-KK*;
         # maybe I should allow all files???
         c = 3  # start writing in 3rd line
         for path in src_dir.rglob("*-KK*"):

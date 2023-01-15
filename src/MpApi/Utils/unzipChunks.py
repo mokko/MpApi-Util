@@ -17,7 +17,8 @@ from zipfile import ZipFile
 from typing import Iterator
 import re
 
-def iter_chunks(*, first:str) -> Iterator[str]:
+
+def iter_chunks(*, first: str) -> Iterator[str]:
     fn = Path(first)
     parent_fn = fn.parent
     stem = str(fn).split(".")[0]
@@ -27,9 +28,9 @@ def iter_chunks(*, first:str) -> Iterator[str]:
         beginning = m.group(1)
         no = int(m.group(2))
     else:
-        raise ValueError (f"filename not recognized {stem}")
+        raise ValueError(f"filename not recognized {stem}")
 
-    #print (f"{beginning} {no} {suffixes}")
+    # print (f"{beginning} {no} {suffixes}")
     while fn.exists():
         yield fn
         no += 1
@@ -37,7 +38,7 @@ def iter_chunks(*, first:str) -> Iterator[str]:
         fn = parent_fn / new_name
 
 
-def unzip(*, file:str) -> None:
+def unzip(*, file: str) -> None:
     file = Path(file)
     if str(file.suffix).lower() == ".zip":
         parent_dir = file.parent
@@ -46,19 +47,16 @@ def unzip(*, file:str) -> None:
         with ZipFile(file, "r") as zippy:
             zippy.extract(str(member), path=parent_dir)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="unzip a series of chunks"
-    )
+    parser = argparse.ArgumentParser(description="unzip a series of chunks")
     parser.add_argument("-f", "--first", help="path to first chunk", required=True)
     args = parser.parse_args()
 
     for fn in iter_chunks(first=args.first):
         xml = fn.with_suffix(".xml")
         if xml.exists():
-            print (f"{xml} exists already")
+            print(f"{xml} exists already")
         else:
-            print (f"Unzipping {fn}")
+            print(f"Unzipping {fn}")
             unzip(file=fn)
-    
-

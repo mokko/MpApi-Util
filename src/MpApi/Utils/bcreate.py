@@ -24,7 +24,8 @@ import logging
 from mpapi.module import Module
 from mpapi.client import MpApi
 from MpApi.Utils.BaseApp import BaseApp
-#from MpApi.Utils.Ria import RiaUtil # not yet used
+
+# from MpApi.Utils.Ria import RiaUtil # not yet used
 
 # from mpapi.sar import Sar
 from mpapi.search import Search
@@ -45,8 +46,8 @@ class Bcreate(BaseApp):
     ) -> None:
 
         self.api = MpApi(baseURL=baseURL, user=user, pw=pw)
-        #not yet used
-        #self.client = RiaUtil(baseURL=baseURL, user=user, pw=pw)
+        # not yet used
+        # self.client = RiaUtil(baseURL=baseURL, user=user, pw=pw)
         self.conf = self._init_conf(path=confFN, job=job)
         self._init_log()
 
@@ -288,8 +289,6 @@ class Bcreate(BaseApp):
     #
     # privates
     #
-
-
 
     def _xtractIdentNr(self, *, name: str) -> str:
         parts = name.split(" ")

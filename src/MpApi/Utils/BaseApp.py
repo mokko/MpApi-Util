@@ -112,7 +112,6 @@ class BaseApp:
         print(f"* Saving {path}")
         self.wb.save(filename=path)
 
-    def _suspicous_character(self, *, identNr:str):
-        if identNr is None or any('-', ';') in str(identNr):
+    def _suspicous_character(self, *, identNr: str):
+        if identNr is None or any("-", ";") in str(identNr):
             return True
-       

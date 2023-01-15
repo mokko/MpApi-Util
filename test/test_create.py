@@ -1,11 +1,12 @@
-#from mpapi.search import Search
+# from mpapi.search import Search
 from mpapi.module import Module
 from mpapi.client import MpApi
-#from lxml import etree  # type: ignore
+
+# from lxml import etree  # type: ignore
 from pathlib import Path
 import pytest
 
-#NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
+# NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
 
 credentials = Path(__file__).parents[1] / "sdata/credentials.py"
 
@@ -19,14 +20,15 @@ client = MpApi(baseURL=baseURL, user=user, pw=pw)
 # simple online tests
 #
 
+
 def test_create_empty_item():
     m = Module()
     objModule = m.module(name="Object")
     with pytest.raises(Exception) as e_info:
         objId = client.createItem3(data=m)
-    #assert objId
+    # assert objId
     # fails with HTTP_Error 500 Server Error
-    #print (objId)
+    # print (objId)
 
 
 def tast_create_nonempty_item():
@@ -36,15 +38,16 @@ def tast_create_nonempty_item():
     m.dataField(parent=mItem, name="ObjSystematicClb", value="Architekturfotografie")
     objId = client.createItem3(data=m)
     assert objId
-    print (objId)
+    print(objId)
 
-def tast_create_ident_from_string(): # works
+
+def tast_create_ident_from_string():  # works
     m = Module()
     objModule = m.module(name="Object")
     mItem = m.moduleItem(parent=objModule)
     m.dataField(parent=mItem, name="ObjSystematicClb", value="Architekturfotografie")
-    
-    xml="""
+
+    xml = """
     <application xmlns="http://www.zetcom.com/ria/ws/module">
         <modules>
             <module name="Object">
@@ -83,22 +86,23 @@ def tast_create_ident_from_string(): # works
 
     objId = client.createItem3(data=m)
     assert objId
-    print (objId)
+    print(objId)
+
 
 def test_create_ident_from_shorter_string():
-    
+
     m = Module()
     objModule = m.module(name="Object")
     mItem = m.moduleItem(parent=objModule)
     m.dataField(parent=mItem, name="ObjSystematicClb", value="Architekturfotografie")
-    
+
     part1 = "VIII"
-    part2 = " B" # crazy
+    part2 = " B"  # crazy
     part3 = "74"
     invNrTxt = "VIII B 74"
     invNumberScheme = "68"
-    
-    xml=f"""
+
+    xml = f"""
     <application xmlns="http://www.zetcom.com/ria/ws/module">
         <modules>
             <module name="Object">
@@ -133,9 +137,9 @@ def test_create_ident_from_shorter_string():
         </modules>
     </application>"""
 
-    print (xml)
+    print(xml)
     m = Module(xml=xml)
 
     objId = client.createItem3(data=m)
     assert objId
-    print (objId)
+    print(objId)

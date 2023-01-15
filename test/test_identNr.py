@@ -1,10 +1,11 @@
 from mpapi.module import Module
 from MpApi.Utils.identNr import IdentNrFactory
-#from lxml import etree  # type: ignore
+
+# from lxml import etree  # type: ignore
 from pathlib import Path
 import pytest
 
-#NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
+# NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
 
 credentials = Path(__file__).parents[1] / "sdata/credentials.py"
 
@@ -19,5 +20,4 @@ def test_constructor():
     assert iNr
     assert iNr.text == "V A 10557"
     assert iNr.schemaId == 87
-    #print (iNr.schemaId)
-    
+    # print (iNr.schemaId)
