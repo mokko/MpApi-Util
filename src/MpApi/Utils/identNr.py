@@ -14,10 +14,10 @@
     itemN = identNr.get_node() # this is always newly assembled, not the original
 
     CLI USAGE
-    update_schema_db -i "VII c 123 a-c" # looks identNr up online
-    update_schema_db -f bla.xml         # looks thru a file
-    update_schema_db -e excel.xlsx      # xlsx as written by prepare
-    update_schema_db -v version
+    update_schemas -i "VII c 123 a-c" # looks identNr up online
+    update_schemas -f bla.xml         # looks thru a file
+    update_schemas -e excel.xlsx      # xlsx as written by prepare
+    update_schemas -v version
 
 """
 from dataclasses import dataclass, field
@@ -28,6 +28,9 @@ from pathlib import Path
 import re
 from typing import Any, Iterator
 
+parser = etree.XMLParser(remove_blank_text=True)
+
+
 NSMAP = {
     "s": "http://www.zetcom.com/ria/ws/module/search",
     "m": "http://www.zetcom.com/ria/ws/module",
@@ -36,7 +39,7 @@ NSMAP = {
 
 class UnknownSchemaException(Exception):
     """
-    The schema is not known to schema_db.
+    The schema is not known to schemas data silo.
     """
 
     pass
@@ -51,7 +54,7 @@ class IdentNr:
     schema: str = field(init=False)
     schemaId: str = field(init=False)
 
-    def get_node() -> Any:  # lxml
+    def get_node(self) -> Any:  # lxml
         """
         Assemble the internal identNr info into a node and return that.
 
@@ -84,7 +87,7 @@ class IdentNr:
                         <vocabularyReferenceItem id="2737051"/>
                     </vocabularyReference>
                     <moduleReference name="InvNumberSchemeRef" targetModule="InventoryNumber" multiplicity="N:1" size="1">
-                        <moduleReferenceItem moduleItemId="{self.schemeId}"/>
+                        <moduleReferenceItem moduleItemId="{self.schemaId}"/>
                     </moduleReference>
                 </repeatableGroupItem>
             </repeatableGroup>"""
@@ -99,7 +102,7 @@ class IdentNrFactory:
             parent = Path(__file__).parents[2]
             self.schemas_fn = parent / "data" / "schemas.json"
 
-    def _extractSchema(self, *, text: str) -> str:
+    def _extract_schema(self, *, text: str) -> str:
         """
         What should I do if text is empty?
         """
@@ -107,31 +110,28 @@ class IdentNrFactory:
             m = re.search(r"^([\w ]+) \d+", text)
             if m:
                 return m.group(1)
-
-        # return None
-        raise TypeError(f"_extractSchema failed: {text}")
+        # let's be strict
+        # don't return None
+        raise TypeError(f"_extract_schema failed: {text}")
 
     def _load_schemas(self) -> None:
-        print(f"lazy loading schemas file '{self.schemas_fn}'")
-        if Path(self.schemas_fn).exists():
-            with open(self.schemas_fn, "r") as openfile:
-                self.schema_db = json.load(openfile)
-        else:
-            self.schema_db = {}
+        """
+        initialies (loads lazily) schemas.json info and saves it in self.schemas.
+        """
+        if not hasattr(self, "schemas"):
+            print(f"lazy loading schemas file '{self.schemas_fn}'")
+            if Path(self.schemas_fn).exists():
+                with open(self.schemas_fn, "r") as openfile:
+                    self.schemas = json.load(openfile)
+            else:
+                self.schemas = {}
 
     def _save_schemas(self):
-        #        try:
-        #            json.dump(self.schema_db, outfile, indent=True, sort_keys=True)
-        #        except:
-        #            print (self.schema_db)
-        #            print ("* json file not written")
-        #        else:
         with open(self.schemas_fn, "w") as outfile:
-            json.dump(self.schema_db, outfile, indent=True, sort_keys=True)
+            json.dump(self.schemas, outfile, indent=True, sort_keys=True)
 
     def _update_schemas(self, *, data):
-        if not hasattr(self, "schema_db"):
-            self._load_schemas()
+        self._load_schemas()
         itemL = data.xpath(
             "/m:application/m:modules/m:module/m:moduleItem/m:repeatableGroup[@name = 'ObjObjectNumberGrp']/m:repeatableGroupItem"
         )
@@ -146,7 +146,7 @@ class IdentNrFactory:
                 print(f"WARN: not storing identNr without schema! {iNr}")
                 break
             print(f"{iNr.text}")
-            self.schema_db[iNr.schema] = {
+            self.schemas[iNr.schema] = {
                 "part1": iNr.part1,
                 "part2": iNr.part2,
                 "part3": iNr.part3,
@@ -160,9 +160,8 @@ class IdentNrFactory:
     #
 
     def get_schemas(self) -> dict:
-        if not hasattr(self, "schema_db"):
-            self._load_schemas()
-        return self.schema_db
+        self._load_schemas()
+        return self.schemas
 
     def new_from_str(self, *, text: str) -> IdentNr:
         iNr = IdentNr()
@@ -171,16 +170,15 @@ class IdentNrFactory:
         iNr.part1 = parts[0].strip()
         iNr.part2 = " " + parts[1].strip()
         iNr.part3 = " ".join(parts[2:]).strip()  # rest lumped together
-        iNr.schema = self._extractSchema(text=text)
+        iNr.schema = self._extract_schema(text=text)
 
-        # lazy load schema_db only once
-        if not hasattr(self, "schema_db"):
-            self._load_schema_db()
+        # lazy load schemas only once
+        self._load_schemas()
         try:
-            schemaId = self.schema_db[iNr.schema]
+            schemaId = self.schemas[iNr.schema]
         except:
             raise UnknownSchemaException(f"Unknown schema for '{iNr.text}'")
-        iNr.schemaId = self.schema_db[iNr.schema]["schemaId"]
+        iNr.schemaId = self.schemas[iNr.schema]["schemaId"]
         return iNr
 
     def new_from_node(self, *, node) -> IdentNr:
@@ -220,7 +218,7 @@ class IdentNrFactory:
                 namespaces=NSMAP,
             )[0]
         )
-        iNr.schema = self._extractSchema(text=iNr.text)
+        iNr.schema = self._extract_schema(text=iNr.text)
         return iNr
 
     def update_schemas(self, *, data=None, file=None):

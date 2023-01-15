@@ -36,12 +36,13 @@ Reusable methods that interface with the low-level mpapi client
 
 """
 
+import copy
 from lxml import etree  # type: ignore
+from mpapi.client import MpApi
 from mpapi.module import Module
 from mpapi.search import Search
-from mpapi.client import MpApi
+from MpApi.Utils.identNr import IdentNrFactory, IdentNr
 from typing import Optional
-import copy
 
 DEBUG = True
 
@@ -145,13 +146,11 @@ class RiaUtil:
 
     def create_from_template(self, *, template: Module, identNr: str = None) -> int:
         """
-        Given a template record (a module Object), copy that
-        to a new record of the same type, fill in the provided identNr and return
-        the ID of the new record.
+        Given a template record (a module Object),
+        - copy that
+        - replace existing identNr with new one
 
-        Raises on some errors.
-
-        Returns objId of newly created record as int.
+        Returns objId of created record; raises on some errors.
         """
         if identNr.isspace():
             raise TypeError("Ident cant only consist of space: {identNr}")
@@ -163,8 +162,6 @@ class RiaUtil:
             raise ValueError(
                 "Template should be a single record; instead {len(template)} records"
             )
-        mtype = template.extract_mtype()
-        print(f"mtype {mtype}")
 
         """
         the identNr issue: usually we dont want to duplicate a template with an
@@ -193,19 +190,28 @@ class RiaUtil:
         in here.
         
         """
-        t2 = copy.deepcopy(template)  # so we dont change the original
-        # discard __all__ existing identNrs of the template
-        # this might be a bit heavy-handed, but let's do it anyways for now
-        ObjNumberGrpL = t2.xpath("//m:repeatableGroup[@name = 'ObjObjectNumberGrp']")
-        for ObjNumberGrpN in ObjNumberGrpL:
-            ObjNumberGrpN.getparent().remove(ObjNumberGrpN)
-        t2.toFile(path="DDrewritten.xml")
-        t2.newObjNumberGrp(identNr=identNr)
+        f = IdentNrFactory()
+        iNr = f.new_from_str(text=identNr)
+        new_numberGrpN = iNr.get_node()
 
-        # raise SyntaxError ("SH")
-        # objId = self.mpapi.createItem3(data=tnew)
-        # return objId
-        raise RuntimeError("Stop here!")
+        new_item = copy.deepcopy(template)  # so we dont change the original
+        # there can be only one or none
+        try:
+            numberGrpN = new_item.xpath(
+                "//m:repeatableGroup[@name = 'ObjObjectNumberGrp']"
+            )[0]
+        except:
+            # if no OBjObjectNumberGrp
+            mItemN = new_item.xpath("//m:moduleItem")[0]
+            etree.append(mItemN, new_numberGrpN)
+        else:
+            # if there is one already replace it
+            numberGrpN.getparent().replace(numberGrpN, new_numberGrpN)
+
+        new_item.toFile(path="DDrewritten.xml")
+        print(f"About to create record {identNr}")
+        objId = self.mpapi.createItem3(data=new_item)
+        return objId
 
     # a simple test - not even a lookup
     def id_exists(self, *, mtype: str, ID: int) -> bool:

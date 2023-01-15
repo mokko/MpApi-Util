@@ -250,7 +250,7 @@ class PrepareUpload(BaseApp):
         Write the objId(s) of the newly created records in candidate column.
         """
 
-        def _per_row(*, row, template) -> bool:
+        def _per_row(*, row, template) -> None:
             ident_cell = row[1]  # in Excel from filename; can have multiple
             if ident_cell.value is None:
                 # without a identNr we cant fill in a identNr in template
@@ -261,7 +261,7 @@ class PrepareUpload(BaseApp):
             candidate_cell = row[4]  # to write into
             if candidate_cell.value is not None:
                 cand_str = candidate_cell.value.strip()
-                if cand_str == "X" or cand_str == "x":
+                if cand_str.lower() == "x":
                     objIds = set()
                     for ident in identL:
                         identNr = ident.strip()
@@ -270,10 +270,9 @@ class PrepareUpload(BaseApp):
                         )
                         # logging.info(f"new record created: object {new_id} with {identNr} from template")
                         objIds.add(new_id)
-                    candidate_cell.value = "; ".join(objIds)
-                    self._save_excel(
-                        path=self.excel_fn
-                    )  # save immediately since likely to die
+                    candidate_cell.value = "; ".join(str(objId) for objId in objIds)
+                    # save immediately since likely to die
+                    self._save_excel(path=self.excel_fn)
 
         try:
             self.conf["template"]
@@ -413,8 +412,9 @@ class PrepareUpload(BaseApp):
             if self._suspicious_characters(identNr=identNr):
                 self.ws[f"A{c}"].font = red
                 self.ws[f"B{c}"].font = red
+                self.ws[f"E{c}"].font = red
                 print(
-                    f"WARNING: Likely parsing error when looking for identNr: {identNr}"
+                    f"WARNING: identNr is suspicious - file correctly named? {identNr}"
                 )
             # If the original files are misnamed, perhaps best to correct them instead of
             # adapting the parser to errors.
