@@ -158,13 +158,11 @@ class IdentNrFactory:
     #
     # PUBLIC
     #
-    def update_schemas(self, *, data=None, file=None):
-        """
-        Update the schemas info using existing data either from file or in a Module object.
-        """
-        if file is not None:
-            data = Module(file=file)
-        self._update_schemas(data=data)
+
+    def get_schemas(self) -> dict:
+        if not hasattr(self, "schema_db"):
+            self._load_schemas()
+        return self.schema_db
 
     def new_from_str(self, *, text: str) -> IdentNr:
         iNr = IdentNr()
@@ -224,6 +222,14 @@ class IdentNrFactory:
         )
         iNr.schema = self._extractSchema(text=iNr.text)
         return iNr
+
+    def update_schemas(self, *, data=None, file=None):
+        """
+        Update the schemas info using existing data either from file or in a Module object.
+        """
+        if file is not None:
+            data = Module(file=file)
+        self._update_schemas(data=data)
 
 
 if __name__ == "__main__":

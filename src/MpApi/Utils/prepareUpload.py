@@ -61,6 +61,7 @@ from typing import Any, Optional
 # from mpapi.sar import Sar
 from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.Ria import RiaUtil
+from MpApi.Utils.identNr import IdentNrFactory
 
 # worksheet: openpyxl.worksheet
 
@@ -68,23 +69,6 @@ from MpApi.Utils.Ria import RiaUtil
 #    "m": "http://www.zetcom.com/ria/ws/module",
 #    "o": "http://www.zetcom.com/ria/ws/module/orgunit",
 # }
-
-
-invNrSchemata = {
-    # sechs
-    "VI Dlg": 1090,
-    "VI K": 67,
-    "VI Nls": 73,
-    "VI": 208,
-    # sieben
-    "VII B": 64,
-    "VII F": 234,
-    "VII G": 65,
-    "VII I": 66,
-    # acht
-    "VIII": 243,
-}
-
 
 red = Font(color="FF0000")
 
@@ -181,9 +165,10 @@ class PrepareUpload(BaseApp):
 
         if identNr is None:
             # print ("return bc None")
-            return False
+            return True
         elif "  " in identNr:
             logging.info(f"{msg} double space {identNr}")
+            return True
         elif "." in identNr:
             # TODO seems that identNr with . are not mrked
             logging.info(f"{msg} unwanted symbol {identNr}")
@@ -208,6 +193,7 @@ class PrepareUpload(BaseApp):
     def asset_exists_already(self):
         """
         Fills in the "already uploaded?" cell in Excel (column C).
+
         Checks if an asset with that filename exists already in RIA. If so, it lists the
         corresponding mulId(s); if not None
 
@@ -315,13 +301,13 @@ class PrepareUpload(BaseApp):
 
     def objId_for_ident(self):
         """
-        Lookup objIds for IdentNr. Write the objId(s) back to Excel. If none is found,
-        leave field write string "None". Do that only for rows where there that have
-        "schon hochgeladen?" = None.
+        Lookup objIds for IdentNr. Write the objId(s) to Excel. If none is found,
+        write the string "None".
 
-        Take ident from Excel, get the objId from RIA and write it back to Excel.
+        Write x in candidate cell if uploaded and objId cell both have None; write
+        y if schemaId is missing.
 
-        TODO: Allow for multiple identNrs separated by '; '
+
         """
         # currently this is unnecessary, but why rely on that?
         self._raise_if_excel_has_no_content()
@@ -335,7 +321,7 @@ class PrepareUpload(BaseApp):
             uploaded_cell = row[2]  # can have multiple
             objId_cell = row[3]  # to write into
             candidate_cell = row[4]  # to write into
-            schema_id = row[8]  # to color candidate
+            schema_id_cell = row[8]  # to color candidate
 
             # in rare cases identNr_cell might be None
             # then we cant look up anything
@@ -358,7 +344,7 @@ class PrepareUpload(BaseApp):
                 and candidate_cell.value is None
             ):
                 changed = True
-                if id_cell.value is None:
+                if schema_id_cell.value is None:
                     candidate_cell.value = "y"
                     candidate_cell.font = red
                 else:
@@ -393,20 +379,11 @@ class PrepareUpload(BaseApp):
             We will need other identNr parsers in the future so we have to find load
             plugins from conf.
             """
-            stem = str(path).split(".")[0]  # stem is everything before first .
-            m = re.search(r"([\w ,\.\-]+)\w*-KK", stem)
+            # stem = str(path).split(".")[0]  # stem is everything before first .
+            stem = path.stem
+            m = re.search(r"([\w\d +.,-]+)-KK", stem)
             if m:
-                return m.group(1)
-
-        def _extractSchema(*, identNr: str) -> str:
-            if identNr is not None:
-                m = re.search(r"^([\w ]+) \d+", identNr)
-                if m:
-                    return m.group(1)
-                else:
-                    print(f"_extractSchema failed: {identNr}")
-                    # pass
-                    # raise RuntimeError (f"_extractSchema failed: {identNr}")
+                return m.group(1).strip()
 
         def _per_row(*, c: int, path: Path) -> None:
             """
@@ -416,15 +393,19 @@ class PrepareUpload(BaseApp):
             writes to self.ws
             """
             identNr = _extractIdentNr(path=path)
+            print(f"{identNr} : {path.name}")
             self.ws[f"A{c}"] = path.name
             self.ws[f"B{c}"] = identNr
             self.ws[f"G{c}"] = str(path)
-            schema = _extractSchema(identNr=identNr)
-            if schema is not None:
-                self.ws[f"H{c}"] = schema
+            if identNr is not None:
+                schema = IdentNrFactory._extractSchema("self", text=identNr)
+            else:
+                schema = "None"
+            self.ws[f"H{c}"] = schema
+
             try:
-                invId = invNrSchemata[schema]
-                self.ws[f"I{c}"] = invId
+                schemaId = self.schemas[schema]["schemaId"]
+                self.ws[f"I{c}"] = schemaId
             except:
                 self.ws[f"I{c}"] = "None"
                 self.ws[f"I{c}"].font = red
@@ -446,11 +427,14 @@ class PrepareUpload(BaseApp):
         src_dir = Path(self.conf["src_dir"])
         print(f"* Scanning source dir: {src_dir}")
 
+        f = IdentNrFactory()
+        self.schemas = f.get_schemas()
+
         # todo: i am filtering files which have *-KK*;
         # maybe I should allow all files???
         c = 3  # start writing in 3rd line
         for path in src_dir.rglob("*-KK*"):
-            print(path)
+            # print(path)
             _per_row(c=c, path=path)
             if self.limit == c:
                 print("* Limit reached")

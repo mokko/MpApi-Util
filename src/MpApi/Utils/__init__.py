@@ -148,7 +148,7 @@ def update_schemas():
         sys.exit(0)
     elif args.excel is not None:
         print("Excel function not yet implemented")
-        # f.update_schema_db(excel_fn=args.excel)
+        # f.update_schemas_excel(fn=args.excel)
         sys.exit(0)
     elif args.file is not None:
         for chunk_fn in iter_chunks(first=args.file):
