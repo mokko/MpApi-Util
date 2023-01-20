@@ -331,7 +331,10 @@ class PrepareUpload(BaseApp):
                 changed = True
                 for single in ident_cell.value.split(";"):
                     ident = single.strip()
-                    objIdL = self.client.identNr_exists(nr=ident)
+                    print(self.conf)
+                    objIdL = self.client.identNr_exists(
+                        nr=ident, orgUnit=self.conf["org_unit"]
+                    )
                     if len(objIdL) == 0:
                         objId_cell.value = "None"
                     else:
@@ -397,7 +400,7 @@ class PrepareUpload(BaseApp):
             self.ws[f"B{c}"] = identNr
             self.ws[f"G{c}"] = str(path)
             if identNr is not None:
-                schema = IdentNrFactory._extractSchema("self", text=identNr)
+                schema = IdentNrFactory._extract_schema("self", text=identNr)
             else:
                 schema = "None"
             self.ws[f"H{c}"] = schema
