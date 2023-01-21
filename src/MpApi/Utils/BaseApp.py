@@ -32,6 +32,8 @@ from openpyxl import Workbook, load_workbook
 import sys
 
 # from typing import Any
+class ConfigError(Exception):
+    pass
 
 
 class BaseApp:
@@ -70,14 +72,15 @@ class BaseApp:
     # should we require conf_fn as a Path to be more consistent?
     def _init_conf(self, *, path: Path, job: str) -> dict:
         if not path.exists():
-            raise SyntaxError("ERROR: Config file not found!")
+            raise ConfigError("ERROR: Config file not found!")
         config = configparser.ConfigParser()
         config.read(path, "UTF-8")
-        logging.info(f"config file {path} successfully loaded")
+        print(f"* reading config file '{path}'")
+        # logging.info(f"config file {path} successfully loaded")
         try:
             return config[job]
         except:
-            raise SyntaxError(f"Job '{job}'doesn't exist in config file!")
+            raise ConfigError(f"Job '{job}'doesn't exist in config file!")
 
     def _init_excel(self, *, path: Path) -> Workbook:
         """

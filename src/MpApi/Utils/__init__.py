@@ -70,13 +70,13 @@ def prepareUpload():
     parser.add_argument(
         "-c", "--conf", help="location of configuration file", default="prepare.ini"
     )
-    parser.add_argument("-j", "--job", help="job inside config file", default="test")
+    parser.add_argument("-j", "--job", help="pick a job from the config file")
     parser.add_argument("-l", "--limit", help="stop after number of items", default=-1)
     parser.add_argument(
         "-p",
         "--phase",
-        help="phase to run (scandir, checkria, create)",
-        choices=["scandisk", "checkria", "createobjects"],
+        help="phase to run",
+        choices=["scandisk", "checkria", "createobjects", "movedupes"],
     )
     parser.add_argument(
         "-v", "--version", help="display version information", action="store_true"
@@ -104,6 +104,9 @@ def prepareUpload():
     elif args.phase == "checkria":
         p.asset_exists_already()
         p.objId_for_ident()
+    elif args.phase == "movedupes":
+        print("* About to move dupes; make sure you have called checkria before.")
+        p.mv_dupes()
     elif args.phase == "createobjects":
         p.create_objects()
 

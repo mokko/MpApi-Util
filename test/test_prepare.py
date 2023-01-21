@@ -24,7 +24,7 @@ client = MpApi(baseURL=baseURL, user=user, pw=pw)
 def test_create_empty_item():
     m = Module()
     objModule = m.module(name="Object")
-    with pytest.raises(Exception) as e_info:
+    with pytest.raises(ConfigError) as e_info:
         objId = client.createItem3(data=m)
     # assert objId
     # fails with HTTP_Error 500 Server Error

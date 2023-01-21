@@ -58,92 +58,6 @@ class RiaUtil:
     def __init__(self, *, baseURL: str, user: str, pw: str):
         self.mpapi = MpApi(baseURL=baseURL, user=user, pw=pw)
 
-    def add_identNr(self, *, itemN, nr: str):
-        """
-        Expect a moduleItem fragment and create/overwrite the identNr ObjObjectNumberGrp
-
-        Side-effect:Changes itemN in place.
-
-        Todo:
-        - Create a new identNr or change an existing one
-        - decide if I want a whole document or just an itemN
-        - test it
-
-        Assume that
-        - I dont need or may not have InventarNrSTxt, ModifiedByTxt, ModifiedDateDat,
-        - have to have Part1Txt, Part2Txt, Part3Txt and
-        - want to have SortLnu
-        <repeatableGroup name="ObjObjectNumberGrp">
-          <repeatableGroupItem>
-            <dataField name="InventarNrSTxt">
-              <value>VIII B 74</value>
-            </dataField>
-            <dataField name="ModifiedByTxt">
-              <value>EM_EM</value>
-            </dataField>
-            <dataField name="ModifiedDateDat">
-              <value>2010-05-07</value>
-            </dataField>
-            <dataField name="Part1Txt">
-              <value>VIII</value>
-            </dataField>
-            <dataField name="Part2Txt">
-              <value> B</value>
-            </dataField>
-            <dataField name="Part3Txt">
-              <value>74</value>
-            </dataField>
-            <dataField name="SortLnu">
-              <value>1</value>
-            </dataField>
-            ...
-
-            Note the leading space in Part2!
-
-        <repeatableGroup name="ObjObjectNumberGrp">
-          <repeatableGroupItem>
-            <dataField name="InventarNrSTxt">
-              <value>{identNr}</value>
-            </dataField>
-            <dataField name="Part1Txt">
-              <value>{part1}</value>
-            </dataField>
-            <dataField name="Part2Txt">
-              <value> {part2}</value>
-            </dataField>
-            <dataField name="Part3Txt">
-              <value>{part3}</value>
-            </dataField>
-            <dataField name="SortLnu">
-              <value>1</value>
-            </dataField>
-          </repeatableGroupItem>
-        </repeatableGroup>
-        """
-
-        part1 = identNr.split()[0]
-        part2 = " " + identNr.split()[1]  # weird
-        part3 = " ".join(identNr.split()[2:])
-        print(f"DEBUG:{part1}|{part2}|{part3}|")
-
-        itemN = data.xpath("/m:application/m:modules/m:module/m:moduleItem[1]")[0]
-        # assume that ObjObjektNumberGrp exists already, which is a reasonable expectation
-        # only api-created records may have no identNr
-        rGrpN = data.repeatableGroup(parent=itemN, name="ObjObjectNumberGrp")
-        grpItemN = data.repeatableGroupItem(parent=rGrpN)
-        data.dataField(parent=grpItemN, name="InventarNrSTxt", value=identNr)
-        data.dataField(parent=grpItemN, name="Part1Txt", value=part1)
-        data.dataField(parent=grpItemN, name="Part2Txt", value=part2)
-        data.dataField(parent=grpItemN, name="Part3Txt", value=part3)
-        data.dataField(parent=grpItemN, name="SortLnu", value="1")
-        vr = data.vocabularyReference(parent=grpItemN, name="DenominationVoc")
-        data.vocabularyReferenceItem(parent=vr, ID=2737051)  # Ident. Nr.
-        mrN = data.moduleReference(parent=grpItemN, name="InvNumberSchemeRef")
-        data.moduleReferenceItem(
-            parent=mrN, moduleItemId="68"
-        )  # EM-Südsee/Australien VIII B
-        # return m we change the object in-place
-
     def create_from_template(self, *, template: Module, identNr: str = None) -> int:
         """
         Given a template record (a module Object),
@@ -229,8 +143,47 @@ class RiaUtil:
         else:
             return True
 
-    # a simple loopup
-    def identNr_exists(self, *, nr: str, orgUnit: Optional[str] = None) -> list[int]:
+    def identNr_exists2(
+        self, *, nr: str, orgUnit: Optional[str] = None, strict: bool = True
+    ) -> list[tuple[int, str]]:
+        """
+        Returns objIds and identNr as tuple inside a list
+        """
+        if strict is True:
+            op = "equalsField"
+        else:
+            op = "startsWithField"
+
+        q = Search(module="Object", limit=-1, offset=0)
+        if orgUnit is not None:
+            q.AND()
+        q.addCriterion(
+            field="ObjObjectNumberVrt",
+            operator=op,
+            value=nr,
+        )
+        if orgUnit is not None:
+            q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
+        q.addField(field="ObjObjectNumberTxt")
+        q.addField(field="ObjObjectNumberVrt")  # dont know what's the difference
+        q.validate(mode="search")  # raises if not valid
+        m = self.mpapi.search2(query=q)
+        if not m:
+            return []
+
+        results = list()
+        m.toFile(path="debug.xml")
+        for itemN in m.iter(module="Object"):
+            objId = int(itemN.xpath("@id")[0])
+            identNrL = itemN.xpath(
+                "m:dataField[@name = 'ObjObjectNumberTxt']/m:value", namespaces=NSMAP
+            )
+            results.append((objId, identNrL[0].text))
+        return results
+
+    def identNr_exists(
+        self, *, nr: str, orgUnit: Optional[str] = None, strict: bool = True
+    ) -> list[int]:
         """
         Simple check if identNr exists in RIA. Returns a list of objIds of the
         matching records.
@@ -243,6 +196,8 @@ class RiaUtil:
         New:
         - returns a potentially empty list; empty list is falsy
         - list with items is truthy
+        - has a strict mode (default). In strict mode it returns exact matches. If strict
+          is False, returns searches if identNr begin with this string.
 
         if r := c.identNr_exists(nr="VII c 123"):
             print (len(r))
@@ -250,19 +205,25 @@ class RiaUtil:
                 do_something()
         """
 
+        if strict is True:
+            op = "equalsField"
+        else:
+            op = "startsWithField"
+
         q = Search(module="Object", limit=-1, offset=0)
         if orgUnit is not None:
             q.AND()
         q.addCriterion(
             field="ObjObjectNumberVrt",
-            operator="equalsField",
+            operator=op,
             value=nr,
         )
         if orgUnit is not None:
             q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
-        q.addField(field="__id")  # make query faster
+        q.addField(field="__id")
         q.validate(mode="search")  # raises if not valid
         m = self.mpapi.search2(query=q)
+
         # this are all moduleItem's ids, but the query makes sure we only have those
         # that we want; xpath returns str
         objIdL = m.xpath("/m:application/m:modules/m:module/m:moduleItem/@id")
@@ -301,7 +262,7 @@ class RiaUtil:
         if not m:
             raise SyntaxError(f"ERROR: Template record not found: {mtype} {ID}")
 
-        m.clean()  # necessary? Eliminates Versicherungswert; let's just drop the virtual fields
+        # m.clean()  # necessary? Eliminates Versicherungswert; let's just drop the virtual fields
         m.uploadForm()
         # if DEBUG:
         #    m.toFile(path=f"DDtemplate-{mtype}{ID}.xml")
