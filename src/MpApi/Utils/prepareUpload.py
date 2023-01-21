@@ -240,6 +240,7 @@ class PrepareUpload(BaseApp):
         # else:
         #    print(f"* Excel has data: {self.ws.max_row} rows")
 
+    # needs to go to Ria.py
     def _rm_garbage(self, text: str):
         """
         rm the garbage from Zetcom's dreaded html bug

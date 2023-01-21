@@ -9,7 +9,6 @@ from mpapi.client import MpApi
 from mpapi.search import Search
 from MpApi.Utils.du import Du
 from MpApi.Utils.rename import Rename
-from MpApi.Utils.bcreate import Bcreate
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
 from MpApi.Utils.unzipChunks import iter_chunks
 
@@ -35,34 +34,6 @@ def du():
     parser.add_argument("-i", "--input", help="path to Excel sheet", required=True)
     args = parser.parse_args()
     du = Du(cmd=args.cmd, Input=args.input, baseURL=baseURL, pw=pw, user=user)
-
-
-def bcreate():
-    parser = argparse.ArgumentParser(
-        description="bcreate - create Object records for assets"
-    )
-    parser.add_argument(
-        "-c", "--conf", help="location of configuration file", default="bcreate.ini"
-    )
-    parser.add_argument(
-        "-j", "--job", help="job from the configuration to execute", default="test"
-    )
-    parser.add_argument(
-        "-v", "--version", help="display version information", action="store_true"
-    )
-    args = parser.parse_args()
-
-    if args.version:
-        print(f"Version: {__version__}")
-        sys.exit(0)
-
-    if not args.conf or not args.job:
-        raise SyntaxError("-p parameter and -j job name required!")
-
-    if not baseURL or not user or not pw:
-        raise SyntaxError("Missing user baseURL or pw. Are you in the right dir?")
-
-    bc = Bcreate(baseURL=baseURL, confFN=args.conf, job=args.job, pw=pw, user=user)
 
 
 def prepareUpload():
