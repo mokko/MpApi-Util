@@ -71,6 +71,7 @@ from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.Ria import RiaUtil
 from MpApi.Utils.identNr import IdentNrFactory
 from mpapi.module import Module
+
 # worksheet: openpyxl.worksheet
 
 # NSMAP = {
@@ -314,7 +315,9 @@ class PrepareUpload(BaseApp):
         for row, c in self._loop_table():
             filename_cell = row[0]  # 0-index
             uploaded_cell = row[2]
-            print(f"* mulId for filename {c} of {self.ws.max_row-2}", end="\r", flush=True)
+            print(
+                f"* mulId for filename {c} of {self.ws.max_row-2}", end="\r", flush=True
+            )
             if uploaded_cell.value == None:
                 # Let's not make org_unit optional!
                 idL = self.client.fn_to_mulId(
@@ -368,8 +371,8 @@ class PrepareUpload(BaseApp):
         templateM = self.client.get_template(ID=tid, mtype=ttype)
         templateM.toFile(path="debug.template.xml")
 
-        for row,c in self._loop_table():
-            ident_cell = row[1]      # in Excel from filename; can have multiple
+        for row, c in self._loop_table():
+            ident_cell = row[1]  # in Excel from filename; can have multiple
             candidate_cell = row[5]  # to write into
             if ident_cell.value is None:
                 # without a identNr we cant fill in a identNr in template
@@ -379,7 +382,9 @@ class PrepareUpload(BaseApp):
             if candidate_cell.value is not None:
                 cand_str = candidate_cell.value.strip()
                 if cand_str.lower() == "x":
-                    objIds_str = _create_object(identNrs=ident_cell.value, template=templateM)
+                    objIds_str = _create_object(
+                        identNrs=ident_cell.value, template=templateM
+                    )
                     candidate_cell.value = objIds_str
                     # save immediately since likely to die
                     self._save_excel(path=self.excel_fn)
@@ -463,7 +468,9 @@ class PrepareUpload(BaseApp):
 
         changed = False
         for row, c in self._loop_table():
-            print(f"* objId for identNr {c} of {self.ws.max_row-2}") #, end="\r", flush=True
+            print(
+                f"* objId for identNr {c} of {self.ws.max_row-2}"
+            )  # , end="\r", flush=True
             ident_cell = row[1]  # in Excel from filename; can have multiple
             uploaded_cell = row[2]  # can have multiple
             objId_cell = row[3]  # to write into

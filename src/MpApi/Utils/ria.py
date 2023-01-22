@@ -277,4 +277,3 @@ class RiaUtil:
             text = text.replace("<html>", "").replace("</html>", "")
             text = text.replace("<body>", "").replace("</body>", "")
         return text
-

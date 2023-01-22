@@ -41,7 +41,7 @@ if Path(credentials).exists():
     with open(credentials) as f:
         exec(f.read())
 
-xml="""
+xml = """
 <application xmlns="http://www.zetcom.com/ria/ws/module">
   <modules>
     <module name="Object" totalSize="1">
@@ -61,8 +61,8 @@ if __name__ == "__main__":
     m = Module(xml=xml)
     m.validate()
     objId = client.createItem3(data=m)
-    
-    print (f"objId {objId}")
-    
+
+    print(f"objId {objId}")
+
     # print (f"Writing to {fn}")
     # m.toFile(path=fn)
