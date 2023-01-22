@@ -268,4 +268,13 @@ class RiaUtil:
         #    m.toFile(path=f"DDtemplate-{mtype}{ID}.xml")
         return m
 
-    # deprecated: objId_for_identNr -> use identNr_exists instead
+    def rm_junk(self, text: str):
+        """
+        rm the <html> garbage from Zetcom's dreaded bug
+        """
+
+        if "<html>" in text:
+            text = text.replace("<html>", "").replace("</html>", "")
+            text = text.replace("<body>", "").replace("</body>", "")
+        return text
+
