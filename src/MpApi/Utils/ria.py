@@ -38,6 +38,7 @@ Reusable methods that interface with the low-level mpapi client
 
 import copy
 from lxml import etree  # type: ignore
+from mpapi.constants import NSMAP
 from mpapi.client import MpApi
 from mpapi.module import Module
 from mpapi.search import Search
@@ -47,11 +48,6 @@ from typing import Optional
 DEBUG = True
 
 parser = etree.XMLParser(remove_blank_text=True)
-
-NSMAP = {
-    "m": "http://www.zetcom.com/ria/ws/module",
-    "o": "http://www.zetcom.com/ria/ws/module/orgunit",
-}
 
 
 class RiaUtil:

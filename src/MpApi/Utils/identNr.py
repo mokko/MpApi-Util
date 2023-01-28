@@ -23,18 +23,13 @@
 from dataclasses import dataclass, field
 import json
 from lxml import etree  # type: ignore
+from mpapi.constants import NSMAP
 from mpapi.module import Module
 from pathlib import Path
 import re
 from typing import Any, Iterator
 
 parser = etree.XMLParser(remove_blank_text=True)
-
-
-NSMAP = {
-    "s": "http://www.zetcom.com/ria/ws/module/search",
-    "m": "http://www.zetcom.com/ria/ws/module",
-}
 
 
 class UnknownSchemaException(Exception):
@@ -112,13 +107,14 @@ class IdentNrFactory:
                 return m.group(1)
         # let's be strict
         # don't return None
-        raise TypeError(f"_extract_schema failed: {text}")
+        print(f"WARN: _extract_schema failed: {text}")
+        # raise TypeError(f"_extract_schema failed: {text}")
 
     def _load_schemas(self) -> None:
         """
         initialies (loads lazily) schemas.json info and saves it in self.schemas.
         """
-        if not hasattr(self, "schemas"):
+        if not hasattr(self, "schemas"):  # todo: might not work
             print(f"lazy loading schemas file '{self.schemas_fn}'")
             if Path(self.schemas_fn).exists():
                 with open(self.schemas_fn, "r") as openfile:

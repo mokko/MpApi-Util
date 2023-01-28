@@ -74,10 +74,6 @@ from mpapi.module import Module
 
 # worksheet: openpyxl.worksheet
 
-# NSMAP = {
-#    "m": "http://www.zetcom.com/ria/ws/module",
-#    "o": "http://www.zetcom.com/ria/ws/module/orgunit",
-# }
 
 red = Font(color="FF0000")
 
@@ -550,7 +546,7 @@ class PrepareUpload(BaseApp):
                 self.ws[f"B{c}"] = identNr
                 self.ws[f"H{c}"] = str(path)
                 if identNr is not None:
-                    schema = IdentNrFactory._extract_schema("self", text=identNr)
+                    schema = identNrF._extract_schema(text=identNr)
                 else:
                     schema = "None"
                 self.ws[f"I{c}"] = schema
@@ -579,21 +575,25 @@ class PrepareUpload(BaseApp):
         src_dir = Path(self.conf["src_dir"])
         print(f"* Scanning source dir: {src_dir}")
 
-        f = IdentNrFactory()
-        self.schemas = f.get_schemas()
+        identNrF = IdentNrFactory()
+        self.schemas = identNrF.get_schemas()
 
         try:
             filemask = self.conf["filemask"]
             filemask2 = f"*{self.conf['filemask']}*"
         except:
             filemask = ""  # -*
-            filemask2 = "*"
+            filemask2 = "**"
         # todo: i am filtering files which have *-KK*;
         # maybe I should allow all files???
         c = 3  # start writing in 3rd line
-        for path in src_dir.rglob(filemask2):
+        file_list = sorted(src_dir.rglob(filemask2))
+        for path in file_list:
+            print(f"{c-2} of {len(file_list)}")  # DDD{filemask2}
             name = path.name
-            if name.lower() == "thumbs.db":
+            if name.lower().strip() == "thumbs.db":
+                next
+            if name.lower().strip() == "desktop.ini":
                 next
             if self.limit == c:
                 print("* Limit reached")
