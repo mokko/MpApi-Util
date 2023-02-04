@@ -1,0 +1,8 @@
+from pathlib import Path
+
+src_dir = \\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS\Konvolute\EM_Ozeanien_Deterts_Dias_Hauser-Schäublin\02_Medien\TIFF
+
+p = Path(src_dir)
+for file in p.rglob("*.tif"):
+	print (f"{file}")
+

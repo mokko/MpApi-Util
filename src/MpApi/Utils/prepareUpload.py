@@ -567,6 +567,12 @@ class PrepareUpload(BaseApp):
                 # If the original files are misnamed, perhaps best to correct them instead of
                 # adapting the parser to errors.
 
+                if identNr in known_idents:
+                    self.ws[f"B{c}"].font = red
+                    self.ws[f"K{c}"] = "Duplikat"
+                    print(f"Duplikat {identNr}")
+                known_idents.add(identNr)
+
         # let's not overwrite or modify file information in Excel if already written
         # 2 lines are getting written by initialization
         if self.ws.max_row > 2:
@@ -583,11 +589,13 @@ class PrepareUpload(BaseApp):
             filemask2 = f"*{self.conf['filemask']}*"
         except:
             filemask = ""  # -*
-            filemask2 = "**"
+            filemask2 = "*"
         # todo: i am filtering files which have *-KK*;
         # maybe I should allow all files???
         c = 3  # start writing in 3rd line
         file_list = sorted(src_dir.rglob(filemask2))
+        # print (f"{filemask2} {file_list}")
+        known_idents = set()  # mark duplicates
         for path in file_list:
             print(f"{c-2} of {len(file_list)}")  # DDD{filemask2}
             name = path.name

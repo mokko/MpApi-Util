@@ -31,7 +31,6 @@ Home = "https://github.com/mokko/MpApi-Util"
 
 [project.scripts]
 du = 'MpApi.Utils:du'
-rename ='MpApi.Utils:rename'
-bcreate = 'MpApi.Utils:bcreate'
+brename ='MpApi.Utils:rename'
 prepare = 'MpApi.Utils:prepareUpload'
 update_schemas = 'MpApi.Utils:update_schemas'
