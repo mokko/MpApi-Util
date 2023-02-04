@@ -340,7 +340,7 @@ class PrepareUpload(BaseApp):
         def _create_object(*, identNrs: str, template) -> str:
             identL = identNrs.split(";")
 
-            objIds = set()
+            objIds = set()  # unique list of objIds from Excel
             for ident in identL:
                 identNr = ident.strip()
                 new_id = self.client.create_from_template(

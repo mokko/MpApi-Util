@@ -53,6 +53,7 @@ parser = etree.XMLParser(remove_blank_text=True)
 class RiaUtil:
     def __init__(self, *, baseURL: str, user: str, pw: str):
         self.mpapi = MpApi(baseURL=baseURL, user=user, pw=pw)
+        self.fac = IdentNrFactory()
 
     def create_from_template(self, *, template: Module, identNr: str = None) -> int:
         """
@@ -100,8 +101,7 @@ class RiaUtil:
         in here.
         
         """
-        f = IdentNrFactory()
-        iNr = f.new_from_str(text=identNr)
+        iNr = self.fac.new_from_str(text=identNr)
         new_numberGrpN = iNr.get_node()
 
         new_item = copy.deepcopy(template)  # so we dont change the original
