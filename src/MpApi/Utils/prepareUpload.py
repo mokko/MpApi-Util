@@ -97,7 +97,7 @@ class PrepareUpload(BaseApp):
     ) -> None:
         self.baseURL = baseURL
         self.conf_fn = Path(conf_fn)
-        self.job = job  # let's not load RiaUtil here, bc we dont need it for
+        self.job = job  # let's not load RiaUtil here, bc we dont need it yet
         self.limit = int(limit)
         self.user = user  # scandisk phase
         self.pw = pw
@@ -169,6 +169,11 @@ class PrepareUpload(BaseApp):
                 "desc": "aus IdentNr",
                 "col": "J",
             },
+            "duplicate": {
+                "label": "Duplikat",
+                "desc": "aus IdentNr",
+                "col": "K",
+            },
         }
 
         self.wb = self._init_excel(path=self.excel_fn)
@@ -227,7 +232,7 @@ class PrepareUpload(BaseApp):
                 break
             c += 1
 
-    def _raise_if_excel_has_no_content(self):
+    def _raise_if_excel_has_no_content(self) -> bool:
         # assuming that after scandisk excel has to have more than 2 lines
         if self.ws.max_row < 3:
             raise NoContentError(
@@ -238,7 +243,7 @@ class PrepareUpload(BaseApp):
         #    print(f"* Excel has data: {self.ws.max_row} rows")
 
     # needs to go to Ria.py
-    def _rm_garbage(self, text: str):
+    def _rm_garbage(self, text: str) -> str:
         """
         rm the garbage from Zetcom's dreaded html bug
         """
@@ -280,7 +285,7 @@ class PrepareUpload(BaseApp):
     # public
     #
 
-    def asset_exists_already(self):
+    def asset_exists_already(self) -> None:
         """
         Fills in the "already uploaded?" cell in Excel (column C).
 
@@ -328,7 +333,7 @@ class PrepareUpload(BaseApp):
         if changed is True:
             self._save_excel(path=self.excel_fn)
 
-    def create_objects(self):
+    def create_objects(self) -> None:
         """
         Loop thru excel objId column. Act for rows where candidates = "x" or "X".
         For those, create a new object record in RIA using template record mentioned in
@@ -385,7 +390,7 @@ class PrepareUpload(BaseApp):
                     # save immediately since likely to die
                     self._save_excel(path=self.excel_fn)
 
-    def mv_dupes(self):
+    def mv_dupes(self) -> None:
         def mk_dupes_dir():
             dupes_dir = Path(self.conf["mv_dupes"])
             if not dupes_dir.exists():
@@ -409,7 +414,7 @@ class PrepareUpload(BaseApp):
                 print(f"* Moving Dupe to {dest_fn}")
                 shutil.move(src_cell.value, dest_dir)
 
-    def objId_for_ident(self):
+    def objId_for_ident(self) -> None:
         """
         Writes in two cells: objIds and candidate
 
@@ -506,7 +511,7 @@ class PrepareUpload(BaseApp):
         if changed is True:  # let's only save if we changed something
             self._save_excel(path=self.excel_fn)
 
-    def scan_disk(self):
+    def scan_disk(self) -> None:
         """
         Recursively scan a dir (src_dir) for *-KK*. List the files in an Excel file trying
         to extract the proper identNr.

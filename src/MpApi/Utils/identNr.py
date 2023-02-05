@@ -22,14 +22,13 @@
 """
 from dataclasses import dataclass, field
 import json
-from lxml import etree  # type: ignore
-from mpapi.constants import NSMAP
+from lxml import etree
+import lxml
+from mpapi.constants import NSMAP, parser
 from mpapi.module import Module
 from pathlib import Path
 import re
 from typing import Any, Iterator
-
-parser = etree.XMLParser(remove_blank_text=True)
 
 
 class UnknownSchemaException(Exception):
@@ -49,7 +48,7 @@ class IdentNr:
     schema: str = field(init=False)
     schemaId: str = field(init=False)
 
-    def get_node(self) -> Any:  # lxml
+    def get_node(self) -> lxml.etree:
         """
         Assemble the internal identNr info into a node and return that.
 
@@ -92,7 +91,7 @@ class IdentNr:
 
 
 class IdentNrFactory:
-    def __init__(self, *, schemas_fn: str = None):
+    def __init__(self, *, schemas_fn: str = None) -> None:
         if schemas_fn is None:
             parent = Path(__file__).parents[2]
             self.schemas_fn = parent / "data" / "schemas.json"
@@ -122,11 +121,11 @@ class IdentNrFactory:
             else:
                 self.schemas = {}
 
-    def _save_schemas(self):
+    def _save_schemas(self) -> None:
         with open(self.schemas_fn, "w") as outfile:
             json.dump(self.schemas, outfile, indent=True, sort_keys=True)
 
-    def _update_schemas(self, *, data):
+    def _update_schemas(self, *, data: Module) -> None:
         self._load_schemas()
         itemL = data.xpath(
             "/m:application/m:modules/m:module/m:moduleItem/m:repeatableGroup[@name = 'ObjObjectNumberGrp']/m:repeatableGroupItem"
@@ -177,7 +176,7 @@ class IdentNrFactory:
         iNr.schemaId = self.schemas[iNr.schema]["schemaId"]
         return iNr
 
-    def new_from_node(self, *, node) -> IdentNr:
+    def new_from_node(self, *, node: lxml.etree._Element) -> IdentNr:
         iNr = IdentNr()
         try:
             iNr.text = node.xpath(
@@ -217,7 +216,7 @@ class IdentNrFactory:
         iNr.schema = self._extract_schema(text=iNr.text)
         return iNr
 
-    def update_schemas(self, *, data=None, file=None):
+    def update_schemas(self, *, data=None, file=None) -> None:
         """
         Update the schemas info using existing data either from file or in a Module object.
         """
