@@ -122,7 +122,9 @@ def upload():
         (b) uploads/attaches files from directory, 
         (c) creates a reference to object record."""
     )
-    parser.add_argument("-c", "--cmd", help="use one of the following commands: init, scandir or go")
+    parser.add_argument(
+        "-c", "--cmd", help="use one of the following commands: init, scandir or go"
+    )
     parser.add_argument(
         "-l", "--limit", help="break the go after number of items", default=-1
     )
@@ -144,6 +146,7 @@ def upload():
         u.go()
     else:
         print("Unknown command")
+
 
 def update_schemas():
     """

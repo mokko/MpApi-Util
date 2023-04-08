@@ -27,13 +27,14 @@ from typing import Any, Optional
 
 excel_fn = Path("upload.xlsx")
 red = Font(color="FF0000")
-green = Font(color="00FF00") # unused
+green = Font(color="00FF00")  # unused
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
 
+
 class AssetUploader(BaseApp):
-    def __init__(self, *, limit:int=-1) -> None:
-        self.limit = int(limit) # allows to break the go loop after number of items
+    def __init__(self, *, limit: int = -1) -> None:
+        self.limit = int(limit)  # allows to break the go loop after number of items
         creds = self._read_credentials()
         self.wb = self._init_excel(path=excel_fn)
         self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
@@ -41,7 +42,7 @@ class AssetUploader(BaseApp):
     def go(self) -> None:
         """
         Do the actual upload based on the preparations in the Excel file
-        
+
         (a) create new multimedia (=asset) records from a template
         (b) upload/attach files to an multimedia records
         (c) create a reference usually from object to multimedia record
@@ -49,11 +50,11 @@ class AssetUploader(BaseApp):
         (e) move uploaded file in uploaded subdir.
 
         """
-        print ("Enter go")
+        print("Enter go")
         udir = Path("uploaded")
         if not udir.exists():
-            print (f"Making new dir '{udir}'")
-            udir.mkdir() 
+            print(f"Making new dir '{udir}'")
+            udir.mkdir()
 
         # check if excel exists, has the expected shape and is writable
         if not excel_fn.exists():
@@ -72,28 +73,29 @@ class AssetUploader(BaseApp):
             raise ConfigError("ERROR: no templateID provided")
 
         templateID = int(ws2["B1"].value)
-        print (f"Using asset {templateID} as template")
+        print(f"Using asset {templateID} as template")
         templateM = self.client.get_template(ID=templateID, mtype="Multimedia")
         templateM.toFile(path=f".template.{templateID}.xml")
 
         for row, c in self._loop_table():
-            print (f"{c}: {row[0].value}")
+            print(f"{c}: {row[0].value}")
             asset_fn_exists_cell = self.ws[f"C{c}"]
             ref_cell = self.ws[f"F{c}"]
-            newAssetM = self._addReference(record=templateM, targetModule="Object", moduleItemId=ref_cell.value)
+            newAssetM = self._addReference(
+                record=templateM, targetModule="Object", moduleItemId=ref_cell.value
+            )
 
             if asset_fn_exists_cell.value == "None":
                 new_asset_id = self.client.create_asset_from_template(
-                    templateM=newAssetM, 
+                    templateM=newAssetM,
                 )
                 asset_fn_exists_cell.value = new_asset_id
                 asset_fn_exists_cell.font = teal
                 print(f"   Asset {new_asset_id} created")
             else:
                 print("   asset_fn already filled in")
-            # save at the end of every row
-            self._save_excel(path=excel_fn)
-        
+            self._save_excel(path=excel_fn)  # save at the end of every row
+
     def init(self) -> None:
         """
         Creates a pre-structured, but essentially empty Excel file for configuration
@@ -188,9 +190,11 @@ class AssetUploader(BaseApp):
         ws2["A1"] = "templateID"
         ws2["C1"] = "Asset"
         ws2["A2"] = "verlinktes Modul"
-        ws2["B2"] = "Objekte" # todo alternativer Wert Restaurierung
+        ws2["B2"] = "Objekte"  # todo alternativer Wert Restaurierung
         ws2["A3"] = "OrgUnit (optional)"
-        ws2["C3"] = "OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen)"
+        ws2[
+            "C3"
+        ] = "OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen)"
         ws2["B3"] = "EMMusikethnologie"
 
         ws2["C3"].alignment = Alignment(wrap_text=True)
@@ -228,10 +232,10 @@ class AssetUploader(BaseApp):
             raise ConfigError("ERROR: Scandir info already filled in!")
 
         conf_ws = self.wb["Conf"]
-        orgUnit = conf_ws["B3"].value # can be None
-        if orgUnit == '' or orgUnit.isspace():
+        orgUnit = conf_ws["B3"].value  # can be None
+        if orgUnit == "" or orgUnit.isspace():
             orgUnit = None
-        print (f"Using orgUnit = {orgUnit}")
+        print(f"Using orgUnit = {orgUnit}")
 
         def _per_row(*, c: int, path: Path) -> None:
             # labels are more readable
@@ -247,7 +251,7 @@ class AssetUploader(BaseApp):
 
             identNr = extractIdentNr(path=path)  # returns Python's None on failure
             print(f"  {path.name}: {identNr}")
-            # only write in empty fields 
+            # only write in empty fields
             if filename_cell.value is None:
                 filename_cell.value = path.name
             if ident_cell.value is None:
@@ -279,9 +283,9 @@ class AssetUploader(BaseApp):
 
             if ref_cell.value is None:
                 if (
-                    asset_fn_exists_cell.value == "None" and
-                    objId_cell.value != "None" and 
-                    ";" not in objId_cell.value
+                    asset_fn_exists_cell.value == "None"
+                    and objId_cell.value != "None"
+                    and ";" not in objId_cell.value
                 ):
                     ref_cell.value = objId_cell.value
                     ref_cell.font = teal
@@ -298,6 +302,7 @@ class AssetUploader(BaseApp):
                     pass
                 else:
                     fotografer_cell.value = "; ".join(data["Iptc.Application2.Byline"])
+
         # looping thru files (usually pwd)
         if Dir is None:
             src_dir = Path(".")
@@ -317,7 +322,7 @@ class AssetUploader(BaseApp):
                 continue
             elif str(p).lower() in ("thumbs.db", "desktop.ini", "debug.xml"):
                 continue
-            #print(f" {p}")
+            # print(f" {p}")
 
             _per_row(c=c, path=p)
             c += 1
@@ -328,17 +333,19 @@ class AssetUploader(BaseApp):
     # private and temporary
     #
 
-    def _addReference(self, *, record:Module, targetModule:str, moduleItemId: int) -> Module:
+    def _addReference(
+        self, *, record: Module, targetModule: str, moduleItemId: int
+    ) -> Module:
         """
         For a given record (of the type Module with one record inside), add a reference.
-        New reference has a mtype (targetModule) and an ID (moduleItemId). Returns an altered 
+        New reference has a mtype (targetModule) and an ID (moduleItemId). Returns an altered
         deep copy of the original record.
-        
-        This is a dumb version that assume that there is no other linked object so far. And it 
+
+        This is a dumb version that assume that there is no other linked object so far. And it
         adds always exactly one record.
 
         This should be in logic or in RIA, but not here... TODO
-        
+
         <composite name="MulReferencesCre">
           <compositeItem seqNo="0">
             <moduleReference name="MulObjectRef" targetModule="Object" multiplicity="M:N" size="1">
@@ -347,7 +354,7 @@ class AssetUploader(BaseApp):
           </compositeItem>
         </composite>
 
-        
+
         <composite name="MulReferencesCre">
           <compositeItem seqNo="0">
             <moduleReference name="MulObjectRef" targetModule="Object" multiplicity="M:N" size="1">
@@ -363,16 +370,22 @@ class AssetUploader(BaseApp):
         </composite>
 
         """
-        #worked
-        #newM = Module(file=".template.6549805rewrite.xml")
+        # worked
+        # newM = Module(file=".template.6549805rewrite.xml")
         newM = copy.deepcopy(record)  # so we dont change the original
         if len(newM) != 1:
-            raise TypeError ("ERROR: Only one record allowed!")
-        lastN = newM.xpath("/m:application/m:modules/m:module/m:moduleItem/m:*[last()]")[0]
-        checkL = newM.xpath("/m:application/m:modules/m:module/m:moduleItem/m:composite [@name='MulReferencesCre']")
+            raise TypeError("ERROR: Only one record allowed!")
+        lastN = newM.xpath(
+            "/m:application/m:modules/m:module/m:moduleItem/m:*[last()]"
+        )[0]
+        checkL = newM.xpath(
+            "/m:application/m:modules/m:module/m:moduleItem/m:composite [@name='MulReferencesCre']"
+        )
 
         if len(checkL) > 0:
-            raise TypeError ("ERROR: Not yet supported to add to previously existing references")
+            raise TypeError(
+                "ERROR: Not yet supported to add to previously existing references"
+            )
 
         # print (mItemN)
         xml = f"""<composite name="MulReferencesCre">
@@ -386,5 +399,3 @@ class AssetUploader(BaseApp):
         lastN.addnext(frag)
         newM.toFile(path=".ddd.xml")
         return newM
-    
-    

@@ -338,7 +338,7 @@ class PrepareUpload(BaseApp):
         self.client = self._init_client()
         # we want the same template for all records
         templateM = self.client.get_template(ID=tid, mtype=ttype)
-        #templateM.toFile(path="debug.template.xml")
+        # templateM.toFile(path="debug.template.xml")
 
         for row, c in self._loop_table():
             ident_cell = row[1]  # in Excel from filename; can have multiple
