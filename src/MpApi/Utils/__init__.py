@@ -6,6 +6,7 @@ import argparse
 from mpapi.client import MpApi
 from mpapi.search import Search
 from mpapi.constants import credentials
+from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.du import Du
 from MpApi.Utils.rename import Rename
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
@@ -109,9 +110,9 @@ def rename():
 def upload():
     """
     CLI USAGE:
-    upload init    # writes empty excel file at conf.xlsx; existing files not overwritten
-    upload scandir # scans current directory preparing for upload
-    upload go      # initiates or continues for upload process
+    upload -c init    # writes empty excel file at conf.xlsx; existing files not overwritten
+    upload -c scandir # scans current directory preparing for upload
+    upload -c go      # initiates or continues for upload process
 
     """
 
@@ -121,12 +122,10 @@ def upload():
         (b) uploads/attaches files from directory, 
         (c) creates a reference to object record."""
     )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("init", help="creates new excel file with basic setup")
-    group.add_argument(
-        "scandir", help="scans current directory as preparation for upload"
+    parser.add_argument("-c", "--cmd", help="use one of the following commands: init, scandir or go")
+    parser.add_argument(
+        "-l", "--limit", help="break the go after number of items", default=-1
     )
-    group.add_argument("go", help="initiate or continue upload process")
     parser.add_argument(
         "-v", "--version", help="display version info and exit", action="store_true"
     )
@@ -136,8 +135,15 @@ def upload():
         print(f"Version: {__version__}")
         sys.exit(0)
 
-    uploader = MpApi.Util.Upload
-
+    u = AssetUploader(limit=args.limit)
+    if args.cmd == "init":
+        u.init()
+    elif args.cmd == "scandir":
+        u.scandir()
+    elif args.cmd == "go":
+        u.go()
+    else:
+        print("Unknown command")
 
 def update_schemas():
     """

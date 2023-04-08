@@ -18,6 +18,7 @@ dependencies = [
 	"flit",
 	"lxml >=4.8.0", #pathlike objects
 	"openpyxl",
+	"pyexiv2",
     "requests >=2.6",
 	"typing_extensions",
 ]
