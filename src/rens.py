@@ -1,9 +1,7 @@
 from pathlib import Path
 import shutil
 
-src_dir = (
-    r"\\pk.de\smb\Mediadaten\Projekte\EM\Fotobank\MDVOS_OZ_SB\TIFF_Hauser-Schäublin"
-)
+src_dir = r"\\pk.de\smb\Mediadaten\Projekte\EM\Fotobank\MDVOS_OZ_SB\TIFF_Hauser-Schäublin\VIII Oz K 215"
 
 p = Path(src_dir)
 print(p)

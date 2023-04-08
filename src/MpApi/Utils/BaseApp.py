@@ -30,9 +30,14 @@ from MpApi.Utils.Ria import RiaUtil
 from pathlib import Path
 from openpyxl import Workbook, load_workbook
 import sys
+import tomllib
 
 # from typing import Any
 class ConfigError(Exception):
+    pass
+
+
+class NoContentError(Exception):
     pass
 
 
@@ -108,6 +113,30 @@ class BaseApp:
             format="%(asctime)s: %(message)s",
         )
         return Path(fn)
+
+    def _read_credentials(self) -> None:
+        """
+        New credentials systems where we read RIA credentials from a single file
+        in a home directory ($HOME/.ria) instead of multiple files in many directories. We could
+        also zip and encrypt this file.
+        """
+        cred_fn = Path.home() / ".ria"
+        if not cred_fn.exists():
+            raise ConfigError(f"RIA Credentials not found at {cred_fn}")
+
+        with open(cred_fn, "rb") as f:
+            return tomllib.load(f)
+
+    # needs to go to Ria.py?
+    def _rm_garbage(self, text: str) -> str:
+        """
+        rm the garbage from Zetcom's dreaded html bug
+        """
+
+        if "<html>" in text:
+            text = text.replace("<html>", "").replace("</html>", "")
+            text = text.replace("<body>", "").replace("</body>", "")
+        return text
 
     def _save_excel(self, path: Path) -> None:
         """Made this only to have same print msgs all the time"""

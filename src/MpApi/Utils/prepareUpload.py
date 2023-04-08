@@ -53,7 +53,7 @@ After running createobjects
 """
 
 
-import configparser
+import configparser  # todo replace with toml in future
 import logging
 from lxml import etree
 from openpyxl import Workbook, load_workbook
@@ -67,7 +67,7 @@ from typing import Any, Optional
 # from MpApi.Util.prepare.scandisk import Scandisk
 # from MpApi.Util.prepare.aea import Aea
 # from mpapi.sar import Sar
-from MpApi.Utils.BaseApp import BaseApp
+from MpApi.Utils.BaseApp import BaseApp, NoContentError
 from MpApi.Utils.Ria import RiaUtil
 from MpApi.Utils.identNr import IdentNrFactory
 from mpapi.module import Module
@@ -78,10 +78,6 @@ from mpapi.module import Module
 red = Font(color="FF0000")
 
 from MpApi.Utils.BaseApp import ConfigError
-
-
-class NoContentError(Exception):
-    pass
 
 
 class PrepareUpload(BaseApp):
@@ -241,17 +237,6 @@ class PrepareUpload(BaseApp):
         return True
         # else:
         #    print(f"* Excel has data: {self.ws.max_row} rows")
-
-    # needs to go to Ria.py
-    def _rm_garbage(self, text: str) -> str:
-        """
-        rm the garbage from Zetcom's dreaded html bug
-        """
-
-        if "<html>" in text:
-            text = text.replace("<html>", "").replace("</html>", "")
-            text = text.replace("<body>", "").replace("</body>", "")
-        return text
 
     def _suspicious_characters(self, *, identNr: str) -> bool:
         # print (f"***suspicious? {identNr}")

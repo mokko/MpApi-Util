@@ -1,12 +1,11 @@
 """Higer-level tools for MpApi, the unofficial MuseumPlus Client"""
 
-__version__ = "0.0.3"
-credentials = "credentials.py"  # expect credentials in pwd
-
+__version__ = "0.0.5"
 import argparse
 
 from mpapi.client import MpApi
 from mpapi.search import Search
+from mpapi.constants import credentials
 from MpApi.Utils.du import Du
 from MpApi.Utils.rename import Rename
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
@@ -82,8 +81,65 @@ def prepareUpload():
         p.create_objects()
 
 
-def update_schemas():
+def rename():
+    parser = argparse.ArgumentParser(
+        description="Rename tool using an Excel spreadsheet for manual check and documentation"
+    )
+    parser.add_argument("-s", "--src", help="Scan source directory")
+    parser.add_argument("-d", "--dst", help="destination directory")
+    parser.add_argument("-x", "--xsl", required=True, help="Excel file path")
+    parser.add_argument(
+        "-e",
+        "--execute",
+        action="store_true",
+        help="Execute the copy prepared in the specified Excel file",
+    )
+    args = parser.parse_args()
 
+    r = Rename()
+    if args.src:
+        # let's use the dictionary cache if, and only if, we need to find the jpg sisters
+        # of the tifs
+        # r.mk_cache(start_dir=src_dir)
+        r.scan(src_dir=args.src, dest_dir=args.dst, xls_fn=args.xsl)
+    elif args.execute:
+        r.execute(xls_fn=args.xsl)
+
+
+def upload():
+    """
+    CLI USAGE:
+    upload init    # writes empty excel file at conf.xlsx; existing files not overwritten
+    upload scandir # scans current directory preparing for upload
+    upload go      # initiates or continues for upload process
+
+    """
+
+    parser = argparse.ArgumentParser(
+        description="""Upload tool that simulates hotfolder, 
+        (a) creats asset records from templates, 
+        (b) uploads/attaches files from directory, 
+        (c) creates a reference to object record."""
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("init", help="creates new excel file with basic setup")
+    group.add_argument(
+        "scandir", help="scans current directory as preparation for upload"
+    )
+    group.add_argument("go", help="initiate or continue upload process")
+    parser.add_argument(
+        "-v", "--version", help="display version info and exit", action="store_true"
+    )
+
+    args = parser.parse_args()
+    if args.version:
+        print(f"Version: {__version__}")
+        sys.exit(0)
+
+    uploader = MpApi.Util.Upload
+
+
+def update_schemas():
     """
     CLI USAGE
     update_schema_db -e excel.xlsx      # xlsx as written by prepare
@@ -143,28 +199,3 @@ def update_schemas():
         sys.exit(0)
     else:
         raise ValueError("Nothing to do!")
-
-
-def rename():
-    parser = argparse.ArgumentParser(
-        description="Rename tool using an Excel spreadsheet for manual check and documentation"
-    )
-    parser.add_argument("-s", "--src", help="Scan source directory")
-    parser.add_argument("-d", "--dst", help="destination directory")
-    parser.add_argument("-x", "--xsl", required=True, help="Excel file path")
-    parser.add_argument(
-        "-e",
-        "--execute",
-        action="store_true",
-        help="Execute the copy prepared in the specified Excel file",
-    )
-    args = parser.parse_args()
-
-    r = Rename()
-    if args.src:
-        # let's use the dictionary cache if, and only if, we need to find the jpg sisters
-        # of the tifs
-        # r.mk_cache(start_dir=src_dir)
-        r.scan(src_dir=args.src, dest_dir=args.dst, xls_fn=args.xsl)
-    elif args.execute:
-        r.execute(xls_fn=args.xsl)

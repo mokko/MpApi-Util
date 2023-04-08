@@ -35,4 +35,4 @@ brename ='MpApi.Utils:rename'
 #breplace = 'MpApi.Utils:replace'
 prepare = 'MpApi.Utils:prepareUpload'
 update_schemas = 'MpApi.Utils:update_schemas'
-upload = = 'MpApi.Utils:upload' # asset uploader
+upload = 'MpApi.Utils:upload' # asset uploader

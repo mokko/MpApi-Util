@@ -123,11 +123,66 @@ class RiaUtil:
         objId = self.mpapi.createItem3(data=new_item)
         return objId
 
-    # a simple test - not even a lookup
+    def get_objIds(
+        self, *, identNr: str, strict: bool = True, orgUnit: str = None
+    ) -> str:
+        """
+        For an individual identNr (provided as str), lookup matching ids in RIA and
+        return them a colon separated list. If no results are found, the string "None"
+        is returned.
+
+        If the results include the dreaded <html> garbage, as MuseumPlus does sometimes
+        especially for identNrs, that junk is filtered out.
+
+        strict (optional): strict=True looks for exact matches; strict=None looks for
+        identNr beginning with the provided string. Strict=True is the default.
+
+        orgUnit (optional): If a valid orgUnit is provided, only results from that
+        orgUnit are returned.
+        """
+        ident = identNr.strip()
+        objIdL = self.identNr_exists(nr=ident, orgUnit=orgUnit, strict=strict)
+        if not objIdL:
+            return "None"
+        return self.rm_junk("; ".join(str(objId) for objId in objIdL))
+
+    def get_objIds2(
+        self, *, identNr: str, strict: bool = True, orgUnit: str = None
+    ) -> str:
+        """
+        A version of get_objIds that allows to search for Sonderzeichen. Not very
+        fast, but since RIA cant search for Sonderzeichen there sometimes is no way
+        around it.
+
+        The background problem is that MuseumPlus does not allow to search for
+        Sonderzeichen. So a search for "VII a 123 >" returns the same result as
+        "VII a 123"
+
+        This method basically returns the same Excel-ready string as get_objIds and uses
+        the same parameters.
+        """
+        for single in identNr.split(";"):
+            identNr = single.strip()
+            resL = self.identNr_exists2(nr=identNr, orgUnit=orgUnit, strict=strict)
+            if not resL:
+                return "None"
+            real_parts = []
+            for result in resL:
+                objId = result[0]
+                identNr_part = self.rm_junk(result[1])
+                if f"{identNr} " in identNr_part:
+                    real_parts.append(f"{objId} [{identNr_part}]")
+            # if we tested some results, but didnt find any real parts
+            # we dont want to test them again
+            if not real_parts:
+                return "None"
+            return "; ".join(real_parts)
+
     def id_exists(self, *, mtype: str, ID: int) -> bool:
         """
         Test if an ID exists. Returns False if not and True if so.
 
+        This is simple test, not even a lookup.
         """
         q = Search(module=mtype)
         q.addCriterion(operator="equalsField", field="__id", value=str(ID))
@@ -138,44 +193,6 @@ class RiaUtil:
             return False
         else:
             return True
-
-    def identNr_exists2(
-        self, *, nr: str, orgUnit: Optional[str] = None, strict: bool = True
-    ) -> list[tuple[int, str]]:
-        """
-        Returns objIds and identNr as tuple inside a list
-        """
-        if strict is True:
-            op = "equalsField"
-        else:
-            op = "startsWithField"
-
-        q = Search(module="Object", limit=-1, offset=0)
-        if orgUnit is not None:
-            q.AND()
-        q.addCriterion(
-            field="ObjObjectNumberVrt",
-            operator=op,
-            value=nr,
-        )
-        if orgUnit is not None:
-            q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
-        q.addField(field="ObjObjectNumberTxt")
-        q.addField(field="ObjObjectNumberVrt")  # dont know what's the difference
-        q.validate(mode="search")  # raises if not valid
-        m = self.mpapi.search2(query=q)
-        if not m:
-            return []
-
-        results = list()
-        m.toFile(path="debug.xml")
-        for itemN in m.iter(module="Object"):
-            objId = int(itemN.xpath("@id")[0])
-            identNrL = itemN.xpath(
-                "m:dataField[@name = 'ObjObjectNumberTxt']/m:value", namespaces=NSMAP
-            )
-            results.append((objId, identNrL[0].text))
-        return results
 
     def identNr_exists(
         self, *, nr: str, orgUnit: Optional[str] = None, strict: bool = True
@@ -225,6 +242,44 @@ class RiaUtil:
         objIdL = m.xpath("/m:application/m:modules/m:module/m:moduleItem/@id")
         return [int(x) for x in objIdL]
 
+    def identNr_exists2(
+        self, *, nr: str, orgUnit: Optional[str] = None, strict: bool = True
+    ) -> list[tuple[int, str]]:
+        """
+        Returns a list of tuples containing objIds and identNr
+        """
+        if strict is True:
+            op = "equalsField"
+        else:
+            op = "startsWithField"
+
+        q = Search(module="Object", limit=-1, offset=0)
+        if orgUnit is not None:
+            q.AND()
+        q.addCriterion(
+            field="ObjObjectNumberVrt",
+            operator=op,
+            value=nr,
+        )
+        if orgUnit is not None:
+            q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
+        q.addField(field="ObjObjectNumberTxt")
+        q.addField(field="ObjObjectNumberVrt")  # dont know what's the difference
+        q.validate(mode="search")  # raises if not valid
+        m = self.mpapi.search2(query=q)
+        if not m:
+            return []
+
+        results = list()
+        m.toFile(path="debug.xml")
+        for itemN in m.iter(module="Object"):
+            objId = int(itemN.xpath("@id")[0])
+            identNrL = itemN.xpath(
+                "m:dataField[@name = 'ObjObjectNumberTxt']/m:value", namespaces=NSMAP
+            )
+            results.append((objId, identNrL[0].text))
+        return results
+
     # a simple lookup
     def fn_to_mulId(self, *, fn, orgUnit=None) -> set:
         """
@@ -267,6 +322,8 @@ class RiaUtil:
     def rm_junk(self, text: str):
         """
         rm the <html> garbage from Zetcom's dreaded bug
+
+        expects text as string, returns cleaned text as string.
         """
 
         if "<html>" in text:
