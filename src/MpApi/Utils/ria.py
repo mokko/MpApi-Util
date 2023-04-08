@@ -50,10 +50,14 @@ DEBUG = True
 parser = etree.XMLParser(remove_blank_text=True)
 
 
-class RiaUtil:
+class RIA:
     def __init__(self, *, baseURL: str, user: str, pw: str):
         self.mpapi = MpApi(baseURL=baseURL, user=user, pw=pw)
         self.fac = IdentNrFactory()
+
+    def create_asset_from_template(self, *, templateM) -> int:
+        mulId = self.mpapi.createItem3(data=templateM)
+        return mulId
 
     def create_from_template(self, *, template: Module, identNr: str = None) -> int:
         """

@@ -68,7 +68,7 @@ from typing import Any, Optional
 # from MpApi.Util.prepare.aea import Aea
 # from mpapi.sar import Sar
 from MpApi.Utils.BaseApp import BaseApp, NoContentError
-from MpApi.Utils.Ria import RiaUtil
+from MpApi.Utils.Ria import RIA
 from MpApi.Utils.identNr import IdentNrFactory
 from mpapi.module import Module
 
@@ -211,23 +211,6 @@ class PrepareUpload(BaseApp):
                 ws.column_dimensions[col].width = width
         return ws
 
-    def _loop_table(self):
-        """
-        Loop thru the data part of the Excel table. For convenience, return cells by column names
-
-        row = {
-            "filename": row[0],
-
-        }
-        """
-        c = 1  # counter; measure in excel rows
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            yield row, c
-            if self.limit == c:
-                print("* Limit reached")
-                break
-            c += 1
-
     def _raise_if_excel_has_no_content(self) -> bool:
         # assuming that after scandisk excel has to have more than 2 lines
         if self.ws.max_row < 3:
@@ -355,7 +338,7 @@ class PrepareUpload(BaseApp):
         self.client = self._init_client()
         # we want the same template for all records
         templateM = self.client.get_template(ID=tid, mtype=ttype)
-        templateM.toFile(path="debug.template.xml")
+        #templateM.toFile(path="debug.template.xml")
 
         for row, c in self._loop_table():
             ident_cell = row[1]  # in Excel from filename; can have multiple

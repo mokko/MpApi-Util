@@ -26,7 +26,7 @@ Let's typically log errors?
 
 import configparser
 import logging
-from MpApi.Utils.Ria import RiaUtil
+from MpApi.Utils.Ria import RIA
 from pathlib import Path
 from openpyxl import Workbook, load_workbook
 import sys
@@ -67,7 +67,7 @@ class BaseApp:
         # return ws_conf
         # just access wb["conf"] if you need access
 
-    def _init_client(self) -> RiaUtil:
+    def _init_client(self) -> RIA:
         # avoid reinitializing although not sure that makes a significant difference
         if hasattr(self, "client"):
             return self.client
@@ -113,6 +113,23 @@ class BaseApp:
             format="%(asctime)s: %(message)s",
         )
         return Path(fn)
+
+    def _loop_table(self):
+        """
+        Loop thru the data part of the Excel table. For convenience, return cells by column names
+
+        row = {
+            "filename": row[0],
+
+        }
+        """
+        c = 3  # counter; used report different number
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            yield row, c
+            if self.limit == c:
+                print("* Limit reached")
+                break
+            c += 1
 
     def _read_credentials(self) -> None:
         """
