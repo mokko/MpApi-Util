@@ -7,6 +7,7 @@ from mpapi.client import MpApi
 from mpapi.search import Search
 from mpapi.constants import credentials
 from MpApi.Utils.AssetUploader import AssetUploader
+from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.du import Du
 from MpApi.Utils.rename import Rename
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
@@ -22,6 +23,32 @@ import sys
 if Path(credentials).exists():
     with open(credentials) as f:
         exec(f.read())
+
+
+def attacher():
+    # load credentials inside attacher from comon file
+    parser = argparse.ArgumentParser(
+        description="attach an asset file to a multimedia record and download it"
+    )
+    parser.add_argument(
+        "up", help="attach or upload a file to a asset record", action="store_true"
+    )
+    parser.add_argument(
+        "down", help="download or get a file from a asset record", action="store_true"
+    )
+    parser.add_argument("-f", "--file", help="path to file for upload")
+    parser.add_argument("-i", "--id", help="ID of asset record")
+    args = parser.parse_args()
+    a = Attacher()
+    # an asset can only have one attachment
+    if args.up:
+        if not args.file:
+            raise SyntaxError("ERROR: Need path to file for upload!")
+        a.up(ID=args.ID, file=args.file)
+    if args.down:
+        # Do we want to save with original filename?
+        # We definitely dont want to overwrite existing files
+        a.down(ID=args.ID)
 
 
 def du():

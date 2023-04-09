@@ -36,8 +36,8 @@ class AssetUploader(BaseApp):
     def __init__(self, *, limit: int = -1) -> None:
         self.limit = int(limit)  # allows to break the go loop after number of items
         creds = self._read_credentials()
-        self.wb = self._init_excel(path=excel_fn)
         self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
+        self.wb = self._init_excel(path=excel_fn)
 
     def go(self) -> None:
         """
@@ -79,8 +79,12 @@ class AssetUploader(BaseApp):
 
         for row, c in self._loop_table():
             print(f"{c}: {row[0].value}")
+            filename_cell = self.ws[
+                f"A{c}"
+            ]  # relative path; I assume dir hasn't changed
             asset_fn_exists_cell = self.ws[f"C{c}"]
             ref_cell = self.ws[f"F{c}"]
+
             newAssetM = self._addReference(
                 record=templateM, targetModule="Object", moduleItemId=ref_cell.value
             )
@@ -94,7 +98,14 @@ class AssetUploader(BaseApp):
                 print(f"   Asset {new_asset_id} created")
             else:
                 print("   asset_fn already filled in")
-            self._save_excel(path=excel_fn)  # save at the end of every row
+
+            fn = filename_cell.value
+            ID = int(asset_fn_exists_cell.value)  # should be new_asset_id
+            print(f"Attempt attachment {fn} {ID}")
+            ret = self.client.upload_attachment(file=fn, ID=ID)
+            print(ret)
+
+            self._save_excel(path=excel_fn)  # save after every file/row
 
     def init(self) -> None:
         """

@@ -43,6 +43,7 @@ from mpapi.client import MpApi
 from mpapi.module import Module
 from mpapi.search import Search
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
+from pathlib import Path
 from typing import Optional
 
 DEBUG = True
@@ -56,6 +57,7 @@ class RIA:
         self.fac = IdentNrFactory()
 
     def create_asset_from_template(self, *, templateM) -> int:
+        """method not really necessary"""
         mulId = self.mpapi.createItem3(data=templateM)
         return mulId
 
@@ -184,7 +186,7 @@ class RIA:
 
     def id_exists(self, *, mtype: str, ID: int) -> bool:
         """
-        Test if an ID exists. Returns False if not and True if so.
+        Test if a single ID exists. Returns False if not and True if so.
 
         This is simple test, not even a lookup.
         """
@@ -334,3 +336,17 @@ class RIA:
             text = text.replace("<html>", "").replace("</html>", "")
             text = text.replace("<body>", "").replace("</body>", "")
         return text
+
+    def upload_attachment(self, *, file: str, ID: int):
+        """
+        Save attachment to asset/Multmedia record identified by id.
+
+        New: return reponse object
+        """
+        p = Path(file)
+        if not p.exists():
+            raise TypeError(f"ERROR: Path '{file}' does not exist")
+        if p.is_dir():
+            raise TypeError(f"ERROR: Path '{file}' is a dir")
+
+        return self.mpapi.updateAttachment(module="Multimedia", path=file, id=ID)
