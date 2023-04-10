@@ -341,7 +341,11 @@ class RIA:
         """
         Save attachment to asset/Multmedia record identified by id.
 
-        New: return reponse object
+        * New: returns reponse object
+        * We could debate how much error checking should happen where. Let's say there
+          there should be none in the actual api. Then we could ask if it should happen
+          elsewhere, e.g. in the RIA package. What we don't want it redundant (=multiple)
+          checks.
         """
         p = Path(file)
         if not p.exists():

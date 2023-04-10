@@ -31,21 +31,19 @@ def attacher():
         description="attach an asset file to a multimedia record and download it"
     )
     parser.add_argument(
-        "up", help="attach or upload a file to a asset record", action="store_true"
-    )
-    parser.add_argument(
-        "down", help="download or get a file from a asset record", action="store_true"
+        "cmd",
+        help="up or down for uploading/attaching a file to an asset record or downloaing or getting it",
     )
     parser.add_argument("-f", "--file", help="path to file for upload")
-    parser.add_argument("-i", "--id", help="ID of asset record")
+    parser.add_argument("-i", "--ID", help="ID of asset record", required=True)
     args = parser.parse_args()
     a = Attacher()
     # an asset can only have one attachment
-    if args.up:
+    if args.cmd == "up":
         if not args.file:
             raise SyntaxError("ERROR: Need path to file for upload!")
         a.up(ID=args.ID, file=args.file)
-    if args.down:
+    if args.cmd == "down":
         # Do we want to save with original filename?
         # We definitely dont want to overwrite existing files
         a.down(ID=args.ID)

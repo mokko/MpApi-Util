@@ -27,7 +27,6 @@ from typing import Any, Optional
 
 excel_fn = Path("upload.xlsx")
 red = Font(color="FF0000")
-green = Font(color="00FF00")  # unused
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
 
@@ -348,9 +347,9 @@ class AssetUploader(BaseApp):
         self, *, record: Module, targetModule: str, moduleItemId: int
     ) -> Module:
         """
-        For a given record (of the type Module with one record inside), add a reference.
-        New reference has a mtype (targetModule) and an ID (moduleItemId). Returns an altered
-        deep copy of the original record.
+        For a given record (Module with one record inside), add a reference. New
+        reference has a mtype (targetModule) and an ID (moduleItemId). Returns an
+        altered deep copy of the original record.
 
         This is a dumb version that assume that there is no other linked object so far. And it
         adds always exactly one record.
