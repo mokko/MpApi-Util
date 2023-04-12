@@ -77,20 +77,24 @@ class AssetUploader(BaseApp):
 
         for row, c in self._loop_table():
             # relative path; assume dir hasn't changed since scandir run
-            filename_cell = self.ws[f"A{c}"]  
+            filename_cell = self.ws[f"A{c}"]
             asset_fn_exists_cell = self.ws[f"C{c}"]
             ref_cell = self.ws[f"F{c}"]
             fn = filename_cell.value
             asset_already_attached_cell = self.ws[f"J{c}"]
             print(f"{c}: {filename_cell.value}")
             if ref_cell.value == "None":
-                print ("   object reference unknown, not creating assets nor attachments")
+                print(
+                    "   object reference unknown, not creating assets nor attachments"
+                )
                 continue
             else:
-                print (f"   object reference known, continue {ref_cell.value}")
-            
+                print(f"   object reference known, continue {ref_cell.value}")
+
             if asset_fn_exists_cell.value == "None":
-                new_asset_id = self._make_new_asset(fn=fn, moduleItemId=ref_cell.value, templateM=templateM)
+                new_asset_id = self._make_new_asset(
+                    fn=fn, moduleItemId=ref_cell.value, templateM=templateM
+                )
                 asset_fn_exists_cell.value = new_asset_id
                 asset_fn_exists_cell.font = teal
                 print(f"   asset {new_asset_id} created")
@@ -98,14 +102,16 @@ class AssetUploader(BaseApp):
                 print(f"   asset exists already: {asset_fn_exists_cell.value}")
 
             if asset_already_attached_cell.value == None:
-                ID = int(asset_fn_exists_cell.value)  
+                ID = int(asset_fn_exists_cell.value)
                 print(f"   attaching {fn} {ID}")
                 ret = self.client.upload_attachment(file=fn, ID=ID)
-                print(f"success on upload? {ret}")
+                # print(f"   success on upload? {ret}")
                 if ret.status_code == 204:
                     asset_already_attached_cell.value = "x"
                     shutil.move(fn, u_dir)
-                    print (f"   fn moved to {u_dir}")
+                    print(f"   fn moved to dir '{u_dir}'")
+                else:
+                    print("   ATTACHING FAILED!")
             else:
                 print("   asset already attached")
             self._save_excel(path=excel_fn)  # save after every file/row
@@ -349,11 +355,11 @@ class AssetUploader(BaseApp):
 
         self._save_excel(path=excel_fn)
 
-#
-#
-#
+    #
+    #
+    #
 
-    def _make_new_asset(self, *, fn:str, moduleItemId:int, templateM: Module) -> int:
+    def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
         if moduleItemId is None or moduleItemId == "None":
             raise SyntaxError(f"moduleItemdId {moduleItemdId} not allowed!")
         r = Record(templateM)

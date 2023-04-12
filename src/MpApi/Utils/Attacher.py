@@ -57,7 +57,7 @@ class Attacher(BaseApp):
             else:
                 x = False
                 print(f"writing new file '{fn}'")
-            if x == 'y':
+            if x == "y":
                 self.client.mpapi.saveAttachment(module="Multimedia", id=ID, path=fn)
         else:
             raise SyntaxError(f"ERROR: multimedia {ID} does not exist!")
