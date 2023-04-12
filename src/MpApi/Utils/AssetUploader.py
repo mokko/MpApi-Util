@@ -17,12 +17,14 @@ from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.logic import extractIdentNr
 from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
+from mpapi.record import Record
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
 import pyexiv2
 import re
+import shutil
 from typing import Any, Optional
 
 excel_fn = Path("upload.xlsx")
@@ -50,11 +52,6 @@ class AssetUploader(BaseApp):
 
         """
         print("Enter go")
-        udir = Path("uploaded")
-        if not udir.exists():
-            print(f"Making new dir '{udir}'")
-            udir.mkdir()
-
         # check if excel exists, has the expected shape and is writable
         if not excel_fn.exists():
             raise ConfigError(f"ERROR: {excel_fn} NOT found!")
@@ -71,39 +68,46 @@ class AssetUploader(BaseApp):
         if ws2["B1"] is None:
             raise ConfigError("ERROR: no templateID provided")
 
-        templateID = int(ws2["B1"].value)
-        print(f"Using asset {templateID} as template")
-        templateM = self.client.get_template(ID=templateID, mtype="Multimedia")
-        templateM.toFile(path=f".template.{templateID}.xml")
+        templateM = self._prepare_template()
+
+        u_dir = Path("uploaded")
+        if not u_dir.exists():
+            print(f"Making new dir '{u_dir}'")
+            u_dir.mkdir()
 
         for row, c in self._loop_table():
-            print(f"{c}: {row[0].value}")
-            filename_cell = self.ws[
-                f"A{c}"
-            ]  # relative path; I assume dir hasn't changed
+            # relative path; assume dir hasn't changed since scandir run
+            filename_cell = self.ws[f"A{c}"]  
             asset_fn_exists_cell = self.ws[f"C{c}"]
             ref_cell = self.ws[f"F{c}"]
-
-            newAssetM = self._addReference(
-                record=templateM, targetModule="Object", moduleItemId=ref_cell.value
-            )
-
+            fn = filename_cell.value
+            asset_already_attached_cell = self.ws[f"J{c}"]
+            print(f"{c}: {filename_cell.value}")
+            if ref_cell.value == "None":
+                print ("   object reference unknown, not creating assets nor attachments")
+                continue
+            else:
+                print (f"   object reference known, continue {ref_cell.value}")
+            
             if asset_fn_exists_cell.value == "None":
-                new_asset_id = self.client.create_asset_from_template(
-                    templateM=newAssetM,
-                )
+                new_asset_id = self._make_new_asset(fn=fn, moduleItemId=ref_cell.value, templateM=templateM)
                 asset_fn_exists_cell.value = new_asset_id
                 asset_fn_exists_cell.font = teal
-                print(f"   Asset {new_asset_id} created")
+                print(f"   asset {new_asset_id} created")
             else:
-                print("   asset_fn already filled in")
+                print(f"   asset exists already: {asset_fn_exists_cell.value}")
 
-            fn = filename_cell.value
-            ID = int(asset_fn_exists_cell.value)  # should be new_asset_id
-            print(f"Attempt attachment {fn} {ID}")
-            ret = self.client.upload_attachment(file=fn, ID=ID)
-            print(ret)
-
+            if asset_already_attached_cell.value == None:
+                ID = int(asset_fn_exists_cell.value)  
+                print(f"   attaching {fn} {ID}")
+                ret = self.client.upload_attachment(file=fn, ID=ID)
+                print(f"success on upload? {ret}")
+                if ret.status_code == 204:
+                    asset_already_attached_cell.value = "x"
+                    shutil.move(fn, u_dir)
+                    print (f"   fn moved to {u_dir}")
+            else:
+                print("   asset already attached")
             self._save_excel(path=excel_fn)  # save after every file/row
 
     def init(self) -> None:
@@ -177,6 +181,12 @@ class AssetUploader(BaseApp):
                 "col": "I",
                 "width": 115,
             },
+            "attached": {
+                "label": "Asset hochgeladen?",
+                "desc": "wenn Upload erfolgreich",
+                "col": "J",
+                "width": 15,
+            },
         }
 
         for itemId in self.table_desc:
@@ -233,13 +243,13 @@ class AssetUploader(BaseApp):
         except:
             raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
 
-        # At least for now we want to be able to run scandir multiple times
+        if ws.max_row > 2:
+            raise ConfigError("ERROR: Scandir info already filled in!")
+        # For the development we want to be able to run scandir multiple times
         # We do not want to overwrite Excel cells that have already been filled in
         # It is not unlikely that new files are added or existing files get deleted
         # between runs. If that is the case info might be entered in the wrong row.
         # To avoid that we should __not__ allow rewriting in production mode.
-        if ws.max_row > 2:
-            raise ConfigError("ERROR: Scandir info already filled in!")
 
         conf_ws = self.wb["Conf"]
         orgUnit = conf_ws["B3"].value  # can be None
@@ -339,73 +349,27 @@ class AssetUploader(BaseApp):
 
         self._save_excel(path=excel_fn)
 
-    #
-    # private and temporary
-    #
+#
+#
+#
 
-    def _addReference(
-        self, *, record: Module, targetModule: str, moduleItemId: int
-    ) -> Module:
-        """
-        For a given record (Module with one record inside), add a reference. New
-        reference has a mtype (targetModule) and an ID (moduleItemId). Returns an
-        altered deep copy of the original record.
-
-        This is a dumb version that assume that there is no other linked object so far. And it
-        adds always exactly one record.
-
-        This should be in logic or in RIA, but not here... TODO
-
-        <composite name="MulReferencesCre">
-          <compositeItem seqNo="0">
-            <moduleReference name="MulObjectRef" targetModule="Object" multiplicity="M:N" size="1">
-              <moduleReferenceItem moduleItemId="211087" uuid="211087" seqNo="0"/>
-            </moduleReference>
-          </compositeItem>
-        </composite>
-
-
-        <composite name="MulReferencesCre">
-          <compositeItem seqNo="0">
-            <moduleReference name="MulObjectRef" targetModule="Object" multiplicity="M:N" size="1">
-              <moduleReferenceItem moduleItemId="211087" uuid="211087" seqNo="0">
-                <formattedValue language="de">Objekte: III C 8200, Plastik, Gedenkkopf eines Königs, 18. Jh.-19. Jh., Eduard Schmidt (1892)</formattedValue>
-                <dataField dataType="Boolean" name="ThumbnailBoo">
-                  <value>true</value>
-                  <formattedValue language="de">ja</formattedValue>
-                </dataField>
-              </moduleReferenceItem>
-            </moduleReference>
-          </compositeItem>
-        </composite>
-
-        """
-        # worked
-        # newM = Module(file=".template.6549805rewrite.xml")
-        newM = copy.deepcopy(record)  # so we dont change the original
-        if len(newM) != 1:
-            raise TypeError("ERROR: Only one record allowed!")
-        lastN = newM.xpath(
-            "/m:application/m:modules/m:module/m:moduleItem/m:*[last()]"
-        )[0]
-        checkL = newM.xpath(
-            "/m:application/m:modules/m:module/m:moduleItem/m:composite [@name='MulReferencesCre']"
+    def _make_new_asset(self, *, fn:str, moduleItemId:int, templateM: Module) -> int:
+        if moduleItemId is None or moduleItemId == "None":
+            raise SyntaxError(f"moduleItemdId {moduleItemdId} not allowed!")
+        r = Record(templateM)
+        r.add_reference(targetModule="Object", moduleItemId=moduleItemId)
+        r.set_filename(path=fn)
+        r.set_size(path=fn)
+        newAssetM = r.toModule()
+        new_asset_id = self.client.create_asset_from_template(
+            templateM=newAssetM,
         )
+        return new_asset_id
 
-        if len(checkL) > 0:
-            raise TypeError(
-                "ERROR: Not yet supported to add to previously existing references"
-            )
-
-        # print (mItemN)
-        xml = f"""<composite name="MulReferencesCre">
-          <compositeItem seqNo="0">
-            <moduleReference name="MulObjectRef" targetModule="{targetModule}" multiplicity="M:N" size="1">
-              <moduleReferenceItem moduleItemId="{moduleItemId}" seqNo="0"/>
-            </moduleReference>
-          </compositeItem>
-        </composite>"""
-        frag = etree.XML(xml, parser=parser)
-        lastN.addnext(frag)
-        newM.toFile(path=".ddd.xml")
-        return newM
+    def _prepare_template(self) -> Module:
+        ws2 = self.wb["Conf"]
+        templateID = int(ws2["B1"].value)
+        print(f"Using asset {templateID} as template")
+        template = self.client.get_template(ID=templateID, mtype="Multimedia")
+        template.toFile(path=f".template{templateID}.orig.xml")
+        return template

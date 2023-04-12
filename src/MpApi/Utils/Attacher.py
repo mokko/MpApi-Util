@@ -53,9 +53,11 @@ class Attacher(BaseApp):
             p = Path(fn)
             if p.exists():
                 print(f"overwrite existing file '{fn}'")
+                x = input("Really? (y/n)")
             else:
+                x = False
                 print(f"writing new file '{fn}'")
-
-            self.client.mpapi.saveAttachment(module="Multimedia", id=ID, path=fn)
+            if x == 'y':
+                self.client.mpapi.saveAttachment(module="Multimedia", id=ID, path=fn)
         else:
             raise SyntaxError(f"ERROR: multimedia {ID} does not exist!")

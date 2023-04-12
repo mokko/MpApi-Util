@@ -135,9 +135,9 @@ def rename():
 def upload():
     """
     CLI USAGE:
-    upload -c init    # writes empty excel file at conf.xlsx; existing files not overwritten
-    upload -c scandir # scans current directory preparing for upload
-    upload -c go      # initiates or continues for upload process
+    upload init    # writes empty excel file at conf.xlsx; existing files not overwritten
+    upload scandir # scans current directory preparing for upload
+    upload go      # initiates or continues for upload process
 
     """
 
@@ -148,7 +148,7 @@ def upload():
         (c) creates a reference to object record."""
     )
     parser.add_argument(
-        "-c", "--cmd", help="use one of the following commands: init, scandir or go"
+        "cmd", help="use one of the following commands: init, scandir or go"
     )
     parser.add_argument(
         "-l", "--limit", help="break the go after number of items", default=-1
