@@ -295,6 +295,7 @@ class RIA:
         New: Return empty set if no records found! (Used to return None.)
         """
         # print (f"* Getting assets for filename '{fn}'")
+        # print (f"----------{orgUnit}")
         q = Search(module="Multimedia")
         if orgUnit is not None:
             q.AND()

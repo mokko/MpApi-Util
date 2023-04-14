@@ -193,7 +193,7 @@ class BaseApp:
     def _save_excel(self, path: Path) -> None:
         """Made this only to have same print msgs all the time"""
 
-        print(f"* Saving {path}")
+        print(f"Saving {path}")
         self.wb.save(filename=path)
 
     def _suspicous_character(self, *, identNr: str):

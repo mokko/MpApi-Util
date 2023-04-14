@@ -118,8 +118,10 @@ class AssetUploader(BaseApp):
         self._go_checks()  # raise on error
 
         templateM = self._prepare_template()
-        ws2 = self.wb.create_sheet("Conf")
-        u_dir = ws2["C3"].value
+        ws2 = self.wb["Conf"]
+        if ws2["B4"].value is None:
+            raise Exception("ERROR: Destination directory empty!")
+        u_dir = Path(ws2["B4"].value)
         if not u_dir.exists():
             print(f"Making new dir '{u_dir}'")
             u_dir.mkdir()
@@ -128,7 +130,7 @@ class AssetUploader(BaseApp):
             # relative path; assume dir hasn't changed since scandir run
             fn = c["filename"].value
 
-            print(f"{rno}: {c['identNr']}")
+            print(f"{rno}: {c['identNr'].value}")
             if c["ref"].value == "None":
                 print(
                     "   object reference unknown, not creating assets nor attachments"
@@ -209,14 +211,16 @@ class AssetUploader(BaseApp):
         ] = "OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen)"
         ws2["C3"].alignment = Alignment(wrap_text=True)
 
-        ws2["A3"] = "Verzeichnis für hochgeladene Asset"
-        ws2["C3"] = "UNC-Pfade brauchen in Python vierfache Backslash."
+        ws2["A4"] = "Uploaded Directory"
+        ws2[
+            "C4"
+        ] = "Für hochgeladene Verzeichnisse. UNC-Pfade brauchen in Python jetzt wohl zweifache Backslash."
 
         ws2.column_dimensions["A"].width = 25
         ws2.column_dimensions["B"].width = 25
         ws2.column_dimensions["C"].width = 25
 
-        for each in "A1", "A2", "A3":
+        for each in "A1", "A2", "A3", "A4":
             ws2[each].font = Font(bold=True)
 
         self._save_excel(path=excel_fn)
@@ -225,13 +229,7 @@ class AssetUploader(BaseApp):
         """
         Scans local directory and enters values for each file in the Excel
 
-        It would be nice to have the possibility to re-scan a directory and update line
-        for exiting files or create new lines for new files.
-
-        At this point, we have to regenerate the whole list from scratch if we want to
-        change the files represented in the list.
-
-        Now it should be able to add new files, manually delete rows from Excel and
+        Now it should be possible to add new files, manually delete rows from Excel and
         to update the table by re-running scandir.
         """
 
@@ -265,7 +263,8 @@ class AssetUploader(BaseApp):
             src_dir = Path(Dir)
         print(f"Scanning pwd {src_dir}")
 
-        # self._drop_rows_if_file_gone()
+        self._drop_rows_if_file_gone()
+        c = 1
         for p in src_dir.glob("*"):
             if str(p).startswith("."):
                 continue
@@ -277,13 +276,38 @@ class AssetUploader(BaseApp):
                 continue
             elif str(p).lower() in ("thumbs.db", "desktop.ini", "debug.xml"):
                 continue
+            if self.limit != -1:
+                print(f"Counting proper files: {c}")
             rno = self._path_in_list(p)  # returns None if not in list, else rno
             self._file_to_list(path=p, rno=rno)  # update or new row in table
+            if self.limit == c:
+                print("* Limit reached")
+                break
+            c += 1
         self._save_excel(path=excel_fn)
 
     #
     # private
     #
+    def _drop_rows_if_file_gone(self) -> None:
+        """
+        Loop thru Excel sheet "Assets" and check if the files still exist. We use
+        relative filename for that, so update has to be executed in right dir.
+        If the file no longer exists on disk (e.g. because it has been renamed),
+        we delete it from the excel sheet by deleting the row.
+
+        This is for the scandir step.
+        """
+        c = 3
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            filename = self.ws[f"A{c}"].value
+            if not Path(filename).exists():
+                print(
+                    f"Deleting Excel row {c} since file '{filename}' no longer exists"
+                )
+                self.ws.delete_rows(c)
+                continue
+            c += 1
 
     def _file_to_list(self, *, path: Path, rno=None):
         """
@@ -321,7 +345,7 @@ class AssetUploader(BaseApp):
 
         if cells["objIds"].value == None:
             cells["objIds"].value = self.client.get_objIds(
-                identNr=cells["identNr"].value, strict=True
+                identNr=cells["identNr"].value, strict=True, orgUnit=self.orgUnit
             )
 
         if cells["parts_objIds"].value is None:
@@ -333,14 +357,20 @@ class AssetUploader(BaseApp):
         if cells["ref"].value is None:
             # if asset_fn exists we assume that asset has already been uploaded
             # if no single objId has been indentified, we will not create asset
-            if (
-                cells["asset_fn_exists"].value == "None"
-                and cells["objIds"].value != "None"
-                and ";" not in cells["objIds"].value
-            ):
-                # if single reference objId has been identified, color it teal
-                cells["ref"].value = cells["objIds"].value
-                cells["ref"].font = teal
+            if cells["asset_fn_exists"].value == "None":
+                # if single reference objId has been identified
+                if cells["objIds"].value != "None" and ";" not in cells["objIds"].value:
+                    cells["ref"].value = cells["objIds"].value
+                    cells["ref"].font = teal
+                # if single reference part objId has been identified
+                elif (
+                    cells["parts_objIds"].value != "None"
+                    and ";" not in cells["parts_objIds"].value
+                ):
+                    cells["ref"].value = (
+                        cells["parts_objIds"].value.split(" ")[0].strip()
+                    )
+                    cells["ref"].font = red
             else:
                 cells["ref"].value = "None"
                 cells["ref"].font = red
@@ -356,24 +386,6 @@ class AssetUploader(BaseApp):
                 cells["photographer"].value = "; ".join(
                     data["Iptc.Application2.Byline"]
                 )
-
-    def _drop_rows_if_file_gone(self) -> None:
-        """
-        Loop thru Excel sheet "Assets" and check if the files still exist. We use
-        relative filename for that, so update has to be executed in right dir.
-        If the file no longer exists on disk (e.g. because it has been renamed),
-        we delete it from the excel sheet by deleting the row.
-
-        This is for the scandir step.
-        """
-        c = 3
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            filename = self.ws[f"A{c}"].value
-            if not Path(filename).exists():
-                print("Deleting Excel row {c} since file '{filename}' no longer exists")
-                self.ws.delete_rows(c)
-                continue
-            c += 1
 
     def _go_checks(self) -> None:
         """

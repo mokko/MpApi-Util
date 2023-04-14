@@ -18,8 +18,10 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
     extracts IdentNr (=identifier, Signatur) from filename (as Pathlib path). Developed
     specifically for cataogue cards and not widely tested beyond.
     """
-    # stem = str(path).split(".")[0]  # stem is everything before first .
-    stem = path.stem
+    # stem = str(path).split(".")[0] stem is everything before first .
+    stem = (
+        path.stem
+    )  # stem as determined by path is everything before the last .suffix.
 
     # VII c 86 a -A x.tif    -> VII c 86 a
     # VII c 86 a <1>-A x.tif -> VII c 86 a <1>
@@ -33,7 +35,9 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
             new = " ".join(alist[0:4])
 
         new2 = re.sub(r"-[A-Z]+", "", new).strip()
-        print(new2)
-        return new2
+        # if there is a trailing + oder -, delete that
+        new3 = re.sub(r"[\+-] *$", "", new2).strip()
+        print(new3)
+        return new3
     # else
     #     return None
