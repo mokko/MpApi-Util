@@ -277,14 +277,7 @@ class AssetUploader(BaseApp):
                 continue
             elif str(p).lower() in ("thumbs.db", "desktop.ini", "debug.xml"):
                 continue
-<<<<<<< HEAD
             rno = self._path_in_list(p)  # returns None if not in list, else rno
-=======
-            # print(f" {p}")
-            print("b4 path in list")
-            rno = self._path_in_list(p)  # returns None if not in list, else rno
-            print(f"rno path in list {rno}")
->>>>>>> 47e334829cd61d59b30200239ba226de62c0db74
             self._file_to_list(path=p, rno=rno)  # update or new row in table
         self._save_excel(path=excel_fn)
 
@@ -301,10 +294,6 @@ class AssetUploader(BaseApp):
         """
         if rno is None:
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
-<<<<<<< HEAD
-=======
-        print(f"_file_to_list: {rno} {self.ws.max_row}")
->>>>>>> 47e334829cd61d59b30200239ba226de62c0db74
         cells = self._rno2dict(rno)
         identNr = extractIdentNr(path=path)  # returns Python's None on failure
         print(f"  {path.name}: {identNr}")
@@ -428,10 +417,6 @@ class AssetUploader(BaseApp):
     def _path_in_list(self, path):
         """Returns True of filename is already in list (column A), else False."""
         rno = 3
-<<<<<<< HEAD
-=======
-        print(f"path in list {path}")
->>>>>>> 47e334829cd61d59b30200239ba226de62c0db74
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
             fn = row[0].value
             if fn == str(path):
