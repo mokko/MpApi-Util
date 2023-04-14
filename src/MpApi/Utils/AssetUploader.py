@@ -31,7 +31,6 @@ excel_fn = Path("upload.xlsx")
 red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
-u_dir = Path("\\\\pk.de\smb\Mediadaten\Projekte\EM\Fotobank\IN RIA\Musikethnologie")
 
 
 class AssetUploader(BaseApp):
@@ -119,7 +118,8 @@ class AssetUploader(BaseApp):
         self._go_checks()  # raise on error
 
         templateM = self._prepare_template()
-
+        ws2 = self.wb.create_sheet("Conf")
+        u_dir = ws2["C3"].value
         if not u_dir.exists():
             print(f"Making new dir '{u_dir}'")
             u_dir.mkdir()
@@ -128,7 +128,7 @@ class AssetUploader(BaseApp):
             # relative path; assume dir hasn't changed since scandir run
             fn = c["filename"].value
 
-            print(f"{rno}: {fn}")
+            print(f"{rno}: {c['identNr']}")
             if c["ref"].value == "None":
                 print(
                     "   object reference unknown, not creating assets nor attachments"
@@ -198,15 +198,20 @@ class AssetUploader(BaseApp):
         ws2 = self.wb.create_sheet("Conf")
         ws2["A1"] = "templateID"
         ws2["C1"] = "Asset"
+
         ws2["A2"] = "verlinktes Modul"
         ws2["B2"] = "Objekte"  # todo alternativer Wert Restaurierung
+
         ws2["A3"] = "OrgUnit (optional)"
+        ws2["B3"] = "EMMusikethnologie"
         ws2[
             "C3"
         ] = "OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen)"
-        ws2["B3"] = "EMMusikethnologie"
-
         ws2["C3"].alignment = Alignment(wrap_text=True)
+
+        ws2["A3"] = "Verzeichnis für hochgeladene Asset"
+        ws2["C3"] = "UNC-Pfade brauchen in Python vierfache Backslash."
+
         ws2.column_dimensions["A"].width = 25
         ws2.column_dimensions["B"].width = 25
         ws2.column_dimensions["C"].width = 25
@@ -219,6 +224,15 @@ class AssetUploader(BaseApp):
     def scandir(self, *, Dir=None) -> None:
         """
         Scans local directory and enters values for each file in the Excel
+
+        It would be nice to have the possibility to re-scan a directory and update line
+        for exiting files or create new lines for new files.
+
+        At this point, we have to regenerate the whole list from scratch if we want to
+        change the files represented in the list.
+
+        Now it should be able to add new files, manually delete rows from Excel and
+        to update the table by re-running scandir.
         """
 
         # check if excel exists, has the expected shape and is writable
@@ -232,84 +246,17 @@ class AssetUploader(BaseApp):
         except:
             raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
 
-        if self.ws.max_row > 2:
-            raise ConfigError("ERROR: Scandir info already filled in!")
-        # For the development we want to be able to run scandir multiple times
-        # We do not want to overwrite Excel cells that have already been filled in
-        # It is not unlikely that new files are added or existing files get deleted
-        # between runs. If that is the case info might be entered in the wrong row.
-        # To avoid that we should __not__ allow rewriting in production mode.
+        if self.ws.max_row < 2:
+            raise ConfigError(
+                f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
+            )
 
         conf_ws = self.wb["Conf"]
         orgUnit = conf_ws["B3"].value  # can be None
         if orgUnit == "" or orgUnit.isspace():
             orgUnit = None
-        print(f"Using orgUnit = {orgUnit}")
 
-        def _per_row(*, rno: int, path: Path) -> None:
-            # labels are more readable
-            cells = self._rno2dict(rno)
-            identNr = extractIdentNr(path=path)  # returns Python's None on failure
-            print(f"  {path.name}: {identNr}")
-            # only write in empty fields
-            if cells["filename"].value is None:
-                cells["filename"].value = path.name
-            if cells["identNr"].value is None:
-                cells["identNr"].value = identNr
-            if cells["fullpath"].value is None:
-                cells["fullpath"].value = str(path.resolve())
-
-            if cells["asset_fn_exists"].value is None:
-                idL = self.client.fn_to_mulId(
-                    fn=cells["filename"].value, orgUnit=orgUnit
-                )
-                if len(idL) == 0:
-                    cells["asset_fn_exists"].value = "None"
-                else:
-                    cells["asset_fn_exists"].value = "; ".join(idL)
-
-            # in rare cases identNr_cell might be None, then we cant look up any objIds
-            if cells["identNr"].value is None:
-                print("WARNING: identNr cell is empty, cant continue!")
-                return None
-
-            if cells["objIds"].value == None:
-                cells["objIds"].value = self.client.get_objIds(
-                    identNr=cells["identNr"].value, strict=True
-                )
-
-            if cells["parts_objIds"].value is None:
-                cells["parts_objIds"].value = self.client.get_objIds2(
-                    identNr=cells["identNr"].value, strict=False
-                )
-                cells["parts_objIds"].alignment = Alignment(wrap_text=True)
-
-            if cells["ref"].value is None:
-                # if asset_fn exists we assume that asset has already been uploaded
-                # if no single objId has been indentified, we will not create asset
-                if (
-                    cells["asset_fn_exists"].value == "None"
-                    and cells["objIds"].value != "None"
-                    and ";" not in cells["objIds"].value
-                ):
-                    # if single reference objId has been identified, color it teal
-                    cells["ref"].value = cells["objIds"].value
-                    cells["ref"].font = teal
-                else:
-                    cells["ref"].value = "None"
-                    cells["ref"].font = red
-
-            if cells["photographer"].value is None:
-                with pyexiv2.Image(str(path)) as img:
-                    data = img.read_iptc()
-                try:
-                    data["Iptc.Application2.Byline"]
-                except:
-                    pass
-                else:
-                    cells["photographer"].value = "; ".join(
-                        data["Iptc.Application2.Byline"]
-                    )
+        self.orgUnit = orgUnit
 
         # looping thru files (usually pwd)
         if Dir is None:
@@ -318,7 +265,7 @@ class AssetUploader(BaseApp):
             src_dir = Path(Dir)
         print(f"Scanning pwd {src_dir}")
 
-        rno = 3  # line counter, begin at 3rd line
+        # self._drop_rows_if_file_gone()
         for p in src_dir.glob("*"):
             if str(p).startswith("."):
                 continue
@@ -331,15 +278,106 @@ class AssetUploader(BaseApp):
             elif str(p).lower() in ("thumbs.db", "desktop.ini", "debug.xml"):
                 continue
             # print(f" {p}")
-
-            _per_row(rno=rno, path=p)
-            rno += 1
-
+            print("b4 path in list")
+            rno = self._path_in_list(p)  # returns None if not in list, else rno
+            print(f"rno path in list {rno}")
+            self._file_to_list(path=p, rno=rno)  # update or new row in table
         self._save_excel(path=excel_fn)
 
     #
+    # private
     #
-    #
+
+    def _file_to_list(self, *, path: Path, rno=None):
+        """
+        if rno is None add a new file to the end of te Excel list, else update the row specified by
+        rno.
+
+        This is for the scandir step.
+        """
+        if rno is None:
+            rno = self.ws.max_row + 1  # max_row seems to be zero-based
+        print(f"_file_to_list: {rno} {self.ws.max_row}")
+        cells = self._rno2dict(rno)
+        identNr = extractIdentNr(path=path)  # returns Python's None on failure
+        print(f"  {path.name}: {identNr}")
+        # only write in empty fields
+        if cells["filename"].value is None:
+            cells["filename"].value = path.name
+        if cells["identNr"].value is None:
+            cells["identNr"].value = identNr
+        if cells["fullpath"].value is None:
+            cells["fullpath"].value = str(path.resolve())
+
+        if cells["asset_fn_exists"].value is None:
+            idL = self.client.fn_to_mulId(
+                fn=cells["filename"].value, orgUnit=self.orgUnit
+            )
+            if len(idL) == 0:
+                cells["asset_fn_exists"].value = "None"
+            else:
+                cells["asset_fn_exists"].value = "; ".join(idL)
+
+        # in rare cases identNr_cell might be None, then we cant look up any objIds
+        if cells["identNr"].value is None:
+            print("WARNING: identNr cell is empty, cant continue!")
+            return None
+
+        if cells["objIds"].value == None:
+            cells["objIds"].value = self.client.get_objIds(
+                identNr=cells["identNr"].value, strict=True
+            )
+
+        if cells["parts_objIds"].value is None:
+            cells["parts_objIds"].value = self.client.get_objIds2(
+                identNr=cells["identNr"].value, strict=False
+            )
+            cells["parts_objIds"].alignment = Alignment(wrap_text=True)
+
+        if cells["ref"].value is None:
+            # if asset_fn exists we assume that asset has already been uploaded
+            # if no single objId has been indentified, we will not create asset
+            if (
+                cells["asset_fn_exists"].value == "None"
+                and cells["objIds"].value != "None"
+                and ";" not in cells["objIds"].value
+            ):
+                # if single reference objId has been identified, color it teal
+                cells["ref"].value = cells["objIds"].value
+                cells["ref"].font = teal
+            else:
+                cells["ref"].value = "None"
+                cells["ref"].font = red
+
+        if cells["photographer"].value is None:
+            with pyexiv2.Image(str(path)) as img:
+                data = img.read_iptc()
+            try:
+                data["Iptc.Application2.Byline"]
+            except:
+                pass
+            else:
+                cells["photographer"].value = "; ".join(
+                    data["Iptc.Application2.Byline"]
+                )
+
+    def _drop_rows_if_file_gone(self) -> None:
+        """
+        Loop thru Excel sheet "Assets" and check if the files still exist. We use
+        relative filename for that, so update has to be executed in right dir.
+        If the file no longer exists on disk (e.g. because it has been renamed),
+        we delete it from the excel sheet by deleting the row.
+
+        This is for the scandir step.
+        """
+        c = 3
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            filename = self.ws[f"A{c}"].value
+            if not Path(filename).exists():
+                print("Deleting Excel row {c} since file '{filename}' no longer exists")
+                self.ws.delete_rows(c)
+                continue
+            c += 1
 
     def _go_checks(self) -> None:
         """
@@ -359,7 +397,13 @@ class AssetUploader(BaseApp):
 
         ws2 = self.wb["Conf"]
         if ws2["B1"] is None:
-            raise ConfigError("ERROR: no templateID provided")
+            raise ConfigError(
+                "ERROR: Missing configuration value: no templateID provided"
+            )
+        if ws2["B3"] is None:
+            raise ConfigError(
+                "ERROR: Missing configuration value: no dir for uploaded files"
+            )
 
     def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
         if moduleItemId is None or moduleItemId == "None":
@@ -373,6 +417,17 @@ class AssetUploader(BaseApp):
             templateM=newAssetM,
         )
         return new_asset_id
+
+    def _path_in_list(self, path):
+        """Returns True of filename is already in list (column A), else False."""
+        rno = 3
+        print(f"path in list {path}")
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            fn = row[0].value
+            if fn == str(path):
+                return rno
+            rno += 1
+        return None
 
     def _prepare_template(self) -> Module:
         ws2 = self.wb["Conf"]
