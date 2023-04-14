@@ -31,6 +31,7 @@ from pathlib import Path
 from openpyxl import Workbook, load_workbook
 import sys
 import tomllib
+from typing import Iterator, Union
 
 # from typing import Any
 class ConfigError(Exception):
@@ -114,9 +115,9 @@ class BaseApp:
         )
         return Path(fn)
 
-    def _loop_table(self):
+    def _loop_table(self) -> Union[Iterator, int]:
         """
-        Loop thru the data part of the Excel table. For convenience, return cells by column names
+        Loop thru the data part of the Excel table. Return row and number of row.
 
         row = {
             "filename": row[0],
@@ -130,6 +131,40 @@ class BaseApp:
                 print("* Limit reached")
                 break
             c += 1
+
+    def _loop_table2(self) -> dict:
+        """
+        Loop thru the data part of the Excel table. For convenience, return cells in dict by column
+        names. For this to work, we require a description of the table in the following form:
+
+        self.table_desc = {
+            "filename": {
+                "label": "Asset Dateiname",
+                "desc": "aus Verzeichnis",
+                "col": "A",
+                "width": 20,
+            },
+        }
+
+        for c,rno in _loop_table2():
+            print (f"row number {rno} {c['filename']}")
+        """
+        rno = 3  # row number; used to report a different number
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            cells = self._rno2dict(rno)
+            yield cells, rno
+            if self.limit == rno:
+                print("* Limit reached")
+                break
+            rno += 1
+
+    def _rno2dict(self, rno: int) -> dict:
+
+        cells = dict()
+        for label in self.table_desc:
+            col = self.table_desc[label]["col"]
+            cells[label] = self.ws[f"{col}{rno}"]
+        return cells
 
     def _read_credentials(self) -> None:
         """

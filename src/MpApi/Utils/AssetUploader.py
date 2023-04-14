@@ -31,6 +31,7 @@ excel_fn = Path("upload.xlsx")
 red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
+u_dir = Path("\\\\pk.de\smb\Mediadaten\Projekte\EM\Fotobank\IN RIA\Musikethnologie")
 
 
 class AssetUploader(BaseApp):
@@ -39,98 +40,6 @@ class AssetUploader(BaseApp):
         creds = self._read_credentials()
         self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
         self.wb = self._init_excel(path=excel_fn)
-
-    def go(self) -> None:
-        """
-        Do the actual upload based on the preparations in the Excel file
-
-        (a) create new multimedia (=asset) records from a template
-        (b) upload/attach files to an multimedia records
-        (c) create a reference usually from object to multimedia record
-        (d) update Excel to reflect changes
-        (e) move uploaded file in uploaded subdir.
-
-        """
-        print("Enter go")
-        # check if excel exists, has the expected shape and is writable
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-
-        # die if not writable so that user can close it before waste of time
-        self._save_excel(path=excel_fn)
-
-        try:
-            self.ws = self.wb["Assets"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
-
-        ws2 = self.wb["Conf"]
-        if ws2["B1"] is None:
-            raise ConfigError("ERROR: no templateID provided")
-
-        templateM = self._prepare_template()
-
-        u_dir = Path("uploaded")
-        if not u_dir.exists():
-            print(f"Making new dir '{u_dir}'")
-            u_dir.mkdir()
-
-        for row, c in self._loop_table():
-            # relative path; assume dir hasn't changed since scandir run
-            filename_cell = self.ws[f"A{c}"]
-            asset_fn_exists_cell = self.ws[f"C{c}"]
-            ref_cell = self.ws[f"F{c}"]
-            fn = filename_cell.value
-            asset_already_attached_cell = self.ws[f"J{c}"]
-            print(f"{c}: {filename_cell.value}")
-            if ref_cell.value == "None":
-                print(
-                    "   object reference unknown, not creating assets nor attachments"
-                )
-                continue
-            else:
-                print(f"   object reference known, continue {ref_cell.value}")
-
-            if asset_fn_exists_cell.value == "None":
-                new_asset_id = self._make_new_asset(
-                    fn=fn, moduleItemId=ref_cell.value, templateM=templateM
-                )
-                asset_fn_exists_cell.value = new_asset_id
-                asset_fn_exists_cell.font = teal
-                print(f"   asset {new_asset_id} created")
-            else:
-                print(f"   asset exists already: {asset_fn_exists_cell.value}")
-
-            if asset_already_attached_cell.value == None:
-                ID = int(asset_fn_exists_cell.value)
-                print(f"   attaching {fn} {ID}")
-                ret = self.client.upload_attachment(file=fn, ID=ID)
-                # print(f"   success on upload? {ret}")
-                if ret.status_code == 204:
-                    asset_already_attached_cell.value = "x"
-                    shutil.move(fn, u_dir)
-                    print(f"   fn moved to dir '{u_dir}'")
-                else:
-                    print("   ATTACHING FAILED!")
-            else:
-                print("   asset already attached")
-            self._save_excel(path=excel_fn)  # save after every file/row
-
-    def init(self) -> None:
-        """
-        Creates a pre-structured, but essentially empty Excel file for configuration
-        and logging purposes.
-
-        Don't overwrite existing Excel file.
-        """
-
-        if excel_fn.exists():
-            print(f"WARN: Abort init since '{excel_fn}' exists already!")
-            return
-
-        self.wb = Workbook()
-        ws = self.wb.active
-        ws.title = "Assets"
 
         self.table_desc = {
             "filename": {
@@ -145,7 +54,7 @@ class AssetUploader(BaseApp):
                 "col": "B",
                 "width": 15,
             },
-            "assetUploaded": {
+            "asset_fn_exists": {
                 "label": "Assets mit diesem Dateinamen",
                 "desc": "mulId(s) aus RIA",
                 "col": "C",
@@ -157,13 +66,13 @@ class AssetUploader(BaseApp):
                 "col": "D",
                 "width": 15,
             },
-            "partsObjIds": {
+            "parts_objIds": {
                 "label": "Teile objId",
                 "desc": "für diese IdentNr",
                 "col": "E",
                 "width": 20,
             },
-            "reference": {
+            "ref": {
                 "label": "Objekte-Link",
                 "desc": "automatisierter Vorschlag",
                 "col": "F",
@@ -194,6 +103,80 @@ class AssetUploader(BaseApp):
                 "width": 15,
             },
         }
+
+    def go(self) -> None:
+        """
+        Do the actual upload based on the preparations in the Excel file
+
+        (a) create new multimedia (=asset) records from a template
+        (b) upload/attach files to an multimedia records
+        (c) create a reference usually from object to multimedia record
+        (d) update Excel to reflect changes
+        (e) move uploaded file in uploaded subdir.
+
+        """
+        print("Enter go")
+        self._go_checks()  # raise on error
+
+        templateM = self._prepare_template()
+
+        if not u_dir.exists():
+            print(f"Making new dir '{u_dir}'")
+            u_dir.mkdir()
+
+        for c, rno in self._loop_table2():
+            # relative path; assume dir hasn't changed since scandir run
+            fn = c["filename"].value
+
+            print(f"{rno}: {fn}")
+            if c["ref"].value == "None":
+                print(
+                    "   object reference unknown, not creating assets nor attachments"
+                )
+                continue
+            else:
+                print(f"   object reference known, continue {c['ref'].value}")
+
+            if c["asset_fn_exists"].value == "None":
+                new_asset_id = self._make_new_asset(
+                    fn=fn, moduleItemId=c["ref"].value, templateM=templateM
+                )
+                c["asset_fn_exists"].value = new_asset_id
+                c["asset_fn_exists"].font = teal
+                print(f"   asset {new_asset_id} created")
+            else:
+                print(f"   asset exists already: {c['asset_fn_exists'].value}")
+
+            if c["attached"].value == None:
+                ID = int(c["asset_fn_exists"].value)
+                print(f"   attaching {fn} {ID}")
+                ret = self.client.upload_attachment(file=fn, ID=ID)
+                # print(f"   success on upload? {ret}")
+                if ret.status_code == 204:
+                    c["attached"].value = "x"
+                    shutil.move(fn, u_dir)
+                    print(f"   fn moved to dir '{u_dir}'")
+                else:
+                    print("   ATTACHING FAILED!")
+            else:
+                print("   asset already attached")
+            self._save_excel(path=excel_fn)  # save after every file/row
+
+    def init(self) -> None:
+        """
+        Creates a pre-structured, but essentially empty Excel file for configuration
+        and logging purposes.
+
+        Don't overwrite existing Excel file.
+        """
+
+        if excel_fn.exists():
+            print(f"WARN: Abort init since '{excel_fn}' exists already!")
+            return
+
+        self.wb = Workbook()
+        ws = self.wb.active
+        ws.title = "Assets"
 
         for itemId in self.table_desc:
             col = self.table_desc[itemId]["col"]  # letter
@@ -245,11 +228,11 @@ class AssetUploader(BaseApp):
         # die if not writable so that user can close it before waste of time
         self._save_excel(path=excel_fn)
         try:
-            ws = self.wb["Assets"]
+            self.ws = self.wb["Assets"]
         except:
             raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
 
-        if ws.max_row > 2:
+        if self.ws.max_row > 2:
             raise ConfigError("ERROR: Scandir info already filled in!")
         # For the development we want to be able to run scandir multiple times
         # We do not want to overwrite Excel cells that have already been filled in
@@ -263,63 +246,60 @@ class AssetUploader(BaseApp):
             orgUnit = None
         print(f"Using orgUnit = {orgUnit}")
 
-        def _per_row(*, c: int, path: Path) -> None:
+        def _per_row(*, rno: int, path: Path) -> None:
             # labels are more readable
-            filename_cell = ws[f"A{c}"]
-            ident_cell = ws[f"B{c}"]
-            asset_fn_exists_cell = ws[f"C{c}"]
-            objId_cell = ws[f"D{c}"]
-            parts_objId_cell = ws[f"E{c}"]
-            ref_cell = ws[f"F{c}"]
-            # G has comments which are exclusively for Excel user
-            fotografer_cell = ws[f"H{c}"]
-            fullpath_cell = ws[f"I{c}"]
-
+            cells = self._rno2dict(rno)
             identNr = extractIdentNr(path=path)  # returns Python's None on failure
             print(f"  {path.name}: {identNr}")
             # only write in empty fields
-            if filename_cell.value is None:
-                filename_cell.value = path.name
-            if ident_cell.value is None:
-                ident_cell.value = identNr
-            if fullpath_cell.value is None:
-                fullpath_cell.value = str(path.resolve())
+            if cells["filename"].value is None:
+                cells["filename"].value = path.name
+            if cells["identNr"].value is None:
+                cells["identNr"].value = identNr
+            if cells["fullpath"].value is None:
+                cells["fullpath"].value = str(path.resolve())
 
-            if asset_fn_exists_cell.value is None:
-                idL = self.client.fn_to_mulId(fn=filename_cell.value, orgUnit=orgUnit)
+            if cells["asset_fn_exists"].value is None:
+                idL = self.client.fn_to_mulId(
+                    fn=cells["filename"].value, orgUnit=orgUnit
+                )
                 if len(idL) == 0:
-                    asset_fn_exists_cell.value = "None"
+                    cells["asset_fn_exists"].value = "None"
                 else:
-                    asset_fn_exists_cell.value = "; ".join(idL)
+                    cells["asset_fn_exists"].value = "; ".join(idL)
 
             # in rare cases identNr_cell might be None, then we cant look up any objIds
-            if ident_cell.value is None:
+            if cells["identNr"].value is None:
+                print("WARNING: identNr cell is empty, cant continue!")
                 return None
 
-            if objId_cell.value == None:
-                objId_cell.value = self.client.get_objIds(
-                    identNr=ident_cell.value, strict=True
+            if cells["objIds"].value == None:
+                cells["objIds"].value = self.client.get_objIds(
+                    identNr=cells["identNr"].value, strict=True
                 )
 
-            if parts_objId_cell.value is None:
-                parts_objId_cell.value = self.client.get_objIds2(
-                    identNr=ident_cell.value, strict=False
+            if cells["parts_objIds"].value is None:
+                cells["parts_objIds"].value = self.client.get_objIds2(
+                    identNr=cells["identNr"].value, strict=False
                 )
-                parts_objId_cell.alignment = Alignment(wrap_text=True)
+                cells["parts_objIds"].alignment = Alignment(wrap_text=True)
 
-            if ref_cell.value is None:
+            if cells["ref"].value is None:
+                # if asset_fn exists we assume that asset has already been uploaded
+                # if no single objId has been indentified, we will not create asset
                 if (
-                    asset_fn_exists_cell.value == "None"
-                    and objId_cell.value != "None"
-                    and ";" not in objId_cell.value
+                    cells["asset_fn_exists"].value == "None"
+                    and cells["objIds"].value != "None"
+                    and ";" not in cells["objIds"].value
                 ):
-                    ref_cell.value = objId_cell.value
-                    ref_cell.font = teal
+                    # if single reference objId has been identified, color it teal
+                    cells["ref"].value = cells["objIds"].value
+                    cells["ref"].font = teal
                 else:
-                    ref_cell.value = "None"
-                    ref_cell.font = red
+                    cells["ref"].value = "None"
+                    cells["ref"].font = red
 
-            if fotografer_cell.value is None:
+            if cells["photographer"].value is None:
                 with pyexiv2.Image(str(path)) as img:
                     data = img.read_iptc()
                 try:
@@ -327,7 +307,9 @@ class AssetUploader(BaseApp):
                 except:
                     pass
                 else:
-                    fotografer_cell.value = "; ".join(data["Iptc.Application2.Byline"])
+                    cells["photographer"].value = "; ".join(
+                        data["Iptc.Application2.Byline"]
+                    )
 
         # looping thru files (usually pwd)
         if Dir is None:
@@ -336,7 +318,7 @@ class AssetUploader(BaseApp):
             src_dir = Path(Dir)
         print(f"Scanning pwd {src_dir}")
 
-        c = 3  # line counter, begin at 3rd line
+        rno = 3  # line counter, begin at 3rd line
         for p in src_dir.glob("*"):
             if str(p).startswith("."):
                 continue
@@ -350,14 +332,34 @@ class AssetUploader(BaseApp):
                 continue
             # print(f" {p}")
 
-            _per_row(c=c, path=p)
-            c += 1
+            _per_row(rno=rno, path=p)
+            rno += 1
 
         self._save_excel(path=excel_fn)
 
     #
     #
     #
+
+    def _go_checks(self) -> None:
+        """
+        Checks requirements for go command. Raises on error.
+        """
+        # check if excel exists, has the expected shape and is writable
+        if not excel_fn.exists():
+            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
+
+        # die if not writable so that user can close it before waste of time
+        self._save_excel(path=excel_fn)
+
+        try:
+            self.ws = self.wb["Assets"]
+        except:
+            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+
+        ws2 = self.wb["Conf"]
+        if ws2["B1"] is None:
+            raise ConfigError("ERROR: no templateID provided")
 
     def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
         if moduleItemId is None or moduleItemId == "None":
