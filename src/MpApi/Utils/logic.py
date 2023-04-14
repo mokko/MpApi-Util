@@ -21,8 +21,19 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
     # stem = str(path).split(".")[0]  # stem is everything before first .
     stem = path.stem
 
-    m = re.search(r"([\w\d +.,-]+)", stem)
+    # VII c 86 a -A x.tif    -> VII c 86 a
+    # VII c 86 a <1>-A x.tif -> VII c 86 a <1>
+    m = re.search(r"([\w\d +.,<>-]+)", stem)
     if m:
-        return m.group(1).strip()
+        astr = m.group(1).strip()
+        alist = astr.split(" ")
+        if "<" in astr:
+            new = " ".join(alist[0:5])
+        else:
+            new = " ".join(alist[0:4])
+
+        new2 = re.sub(r"-[A-Z]+", "", new).strip()
+        print(new2)
+        return new2
     # else
     #     return None
