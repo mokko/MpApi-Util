@@ -36,7 +36,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
 
         new2 = re.sub(r"-[A-Z]+", "", new).strip()
         # if there is a trailing + oder -, delete that
-        new3 = re.sub(r"[\+-] *$", "", new2).strip()
+        new3 = re.sub(r"[\+-] *$| -3D|_ct", "", new2).strip()
         print(new3)
         return new3
     # else

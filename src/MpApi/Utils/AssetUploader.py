@@ -214,7 +214,7 @@ class AssetUploader(BaseApp):
         ws2["A4"] = "Uploaded Directory"
         ws2[
             "C4"
-        ] = "Für hochgeladene Verzeichnisse. UNC-Pfade brauchen in Python jetzt wohl zweifache Backslash."
+        ] = "Für hochgeladene Verzeichnisse. UNC-Pfade brauchen in Python zweifache Backslash."
 
         ws2.column_dimensions["A"].width = 25
         ws2.column_dimensions["B"].width = 25
@@ -229,7 +229,12 @@ class AssetUploader(BaseApp):
         """
         Scans local directory and enters values for each file in the Excel
 
-        Now it should be possible to add new files, manually delete rows from Excel and
+        It is possible to re-run scandir. While re-running files in list that no longer
+        exist will be deleted from the list and new files on disk will be added at the
+        end of the list. The upshot is that user can rename files on disk or delete
+        rows in Excel to re-index files by a scandir re-run.
+
+        add new files, manually delete rows from Excel and
         to update the table by re-running scandir.
         """
 
@@ -276,8 +281,6 @@ class AssetUploader(BaseApp):
                 continue
             elif str(p).lower() in ("thumbs.db", "desktop.ini", "debug.xml"):
                 continue
-            if self.limit != -1:
-                print(f"Counting proper files: {c}")
             rno = self._path_in_list(p)  # returns None if not in list, else rno
             self._file_to_list(path=p, rno=rno)  # update or new row in table
             if self.limit == c:
@@ -320,7 +323,7 @@ class AssetUploader(BaseApp):
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
         cells = self._rno2dict(rno)
         identNr = extractIdentNr(path=path)  # returns Python's None on failure
-        print(f"  {path.name}: {identNr}")
+        print(f"   {rno}: {path.name}")
         # only write in empty fields
         if cells["filename"].value is None:
             cells["filename"].value = path.name
@@ -376,15 +379,23 @@ class AssetUploader(BaseApp):
                 cells["ref"].font = red
 
         if cells["photographer"].value is None:
-            with pyexiv2.Image(str(path)) as img:
-                data = img.read_iptc()
             try:
-                data["Iptc.Application2.Byline"]
+
+                with pyexiv2.Image(str(path)) as img:
+                    img_data = img.read_iptc()
             except:
-                pass
+                print("   Couldn't open for exif")
+                cells["photographer"].value = "None"
+                return
+            try:
+                img_data["Iptc.Application2.Byline"]
+            except:
+                print("   Didn't find photographer info")
+                cells["photographer"].value = "None"
+                return
             else:
                 cells["photographer"].value = "; ".join(
-                    data["Iptc.Application2.Byline"]
+                    img_data["Iptc.Application2.Byline"]
                 )
 
     def _go_checks(self) -> None:
