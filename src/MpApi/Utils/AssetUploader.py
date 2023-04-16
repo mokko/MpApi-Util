@@ -180,20 +180,8 @@ class AssetUploader(BaseApp):
         ws = self.wb.active
         ws.title = "Assets"
 
-        for itemId in self.table_desc:
-            col = self.table_desc[itemId]["col"]  # letter
-            ws[f"{col}1"] = self.table_desc[itemId]["label"]
-            ws[f"{col}1"].font = Font(bold=True)
-            # print (f"{col} {self.table_desc[itemId]['label']}")
-            if "desc" in self.table_desc[itemId]:
-                desc = self.table_desc[itemId]["desc"]
-                ws[f"{col}2"] = desc
-                ws[f"{col}2"].font = Font(size=9, italic=True)
-                # print (f"\t{desc}")
-            if "width" in self.table_desc[itemId]:
-                width = self.table_desc[itemId]["width"]
-                # print (f"\t{width}")
-                ws.column_dimensions[col].width = width
+        self._write_table_description(ws)
+
         #
         # Conf Sheet
         #

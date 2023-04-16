@@ -196,6 +196,52 @@ class BaseApp:
         print(f"Saving {path}")
         self.wb.save(filename=path)
 
+    def _set_orgUnit(self, cell: str) -> None:
+        """
+        Stores the value specified in the paramter cell in self.orgUnit.
+        cell is a string like B2.
+
+        Some empty values (isspace) are turned into None
+        """
+        conf_ws = self.wb["Conf"]
+        orgUnit = conf_ws[cell].value.strip()  # can be None
+        if orgUnit == "" or orgUnit.isspace():
+            orgUnit = None
+        return orgUnit
+
     def _suspicous_character(self, *, identNr: str):
         if identNr is None or any("-", ";") in str(identNr):
             return True
+
+    def _write_table_description(ws):
+        """
+        Take the table description and write it to the top of the specified worksheet.
+
+        Expect a table description at self.table_desc and use that to write the first
+        two lines to an empty Excel sheet.
+
+        The table description is a dictionary structured as follows
+        self.table_desc = {
+            "filename": {
+                "label": "Asset Dateiname",
+                "desc": "aus Verzeichnis",
+                "col": "A",
+                "width": 20,
+            },
+        }
+
+        """
+        for itemId in self.table_desc:
+            col = self.table_desc[itemId]["col"]  # letter
+            ws[f"{col}1"] = self.table_desc[itemId]["label"]
+            ws[f"{col}1"].font = Font(bold=True)
+            # print (f"{col} {self.table_desc[itemId]['label']}")
+            if "desc" in self.table_desc[itemId]:
+                desc = self.table_desc[itemId]["desc"]
+                ws[f"{col}2"] = desc
+                ws[f"{col}2"].font = Font(size=9, italic=True)
+                # print (f"\t{desc}")
+            if "width" in self.table_desc[itemId]:
+                width = self.table_desc[itemId]["width"]
+                # print (f"\t{width}")
+                ws.column_dimensions[col].width = width

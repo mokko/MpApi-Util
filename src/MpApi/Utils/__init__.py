@@ -10,6 +10,8 @@ from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.du import Du
 from MpApi.Utils.rename import Rename
+from MpApi.Utils.reportX import ReportX
+from MpApi.Utils.mover import Mover
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
 from MpApi.Utils.unzipChunks import iter_chunks
 
@@ -61,19 +63,43 @@ def du():
     du = Du(cmd=args.cmd, Input=args.input, baseURL=baseURL, pw=pw, user=user)
 
 
+def move():
+    parser = argparse.ArgumentParser(
+        description="move asset files that are alreay in RIA to storage location"
+    )
+    parser.add_argument("first", help="command, either init, scandir or move")
+    parser.add_argument("-l", "--limit", help="stop after number of files", default=-1)
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
+
+    args = parser.parse_args()
+    if args.version:
+        print(f"Version: {__version__}")
+        sys.exit(0)
+    m = Mover()
+    if args.first == "init":
+        m.init()
+    elif args.first == "scandir":
+        m.scandir()
+    elif args.first == "move":
+        m.move()
+    else:
+        print(f"Unknown command '{args.cmd}'")
+
+
 def prepareUpload():
     parser = argparse.ArgumentParser(description="prepare - prepare for asset upload")
+    parser.add_argument(
+        "phase",
+        help="phase to run",
+        choices=["checkria", "createobjects", "movedupes", "scandisk"],
+    )
     parser.add_argument(
         "-c", "--conf", help="location of configuration file", default="prepare.ini"
     )
     parser.add_argument("-j", "--job", help="pick a job from the config file")
     parser.add_argument("-l", "--limit", help="stop after number of items", default=-1)
-    parser.add_argument(
-        "-p",
-        "--phase",
-        help="phase to run",
-        choices=["scandisk", "checkria", "createobjects", "movedupes"],
-    )
     parser.add_argument(
         "-v", "--version", help="display version information", action="store_true"
     )
@@ -132,6 +158,20 @@ def rename():
         r.execute(xls_fn=args.xsl)
 
 
+def reportX():
+    """
+    Write an xlsx report on the files present in the current directory (recursively)
+    """
+    # parser = argparse.ArgumentParser(
+    #    description="Write an xlsx report on the files present in the current directory"
+    # )
+    # parser.add_argument("-s", "--src", help="Scan source directory")
+    # args = parser.parse_args()
+
+    r = ReportX()
+    r.write_report("reportx.xlsx")
+
+
 def upload():
     """
     CLI USAGE:
@@ -170,7 +210,7 @@ def upload():
     elif args.cmd == "go":
         u.go()
     else:
-        print("Unknown command")
+        print(f"Unknown command '{args.cmd}'")
 
 
 def update_schemas():
