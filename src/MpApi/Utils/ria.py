@@ -277,7 +277,7 @@ class RIA:
             return []
 
         results = list()
-        m.toFile(path="debug.xml")
+        # m.toFile(path="debug.xml")
         for itemN in m.iter(module="Object"):
             objId = int(itemN.xpath("@id")[0])
             identNrL = itemN.xpath(
@@ -287,7 +287,7 @@ class RIA:
         return results
 
     # a simple lookup
-    def fn_to_mulId(self, *, fn, orgUnit=None) -> set:
+    def fn_to_mulId(self, *, fn: str, orgUnit=None) -> set:
         """
         For a given filename check if there is one or more assets with that same filename
         in RIA.
@@ -296,6 +296,8 @@ class RIA:
         """
         # print (f"* Getting assets for filename '{fn}'")
         # print (f"----------{orgUnit}")
+        if fn is None:
+            raise SyntaxError("ERROR: fn can't be None")
         q = Search(module="Multimedia")
         if orgUnit is not None:
             q.AND()
@@ -303,6 +305,7 @@ class RIA:
         if orgUnit is not None:
             q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
         q.addField(field="__id")
+        # q.toFile(path=".debug.search.xml")
         q.validate(mode="search")
         m = self.mpapi.search2(query=q)
         positiveIDs = set()

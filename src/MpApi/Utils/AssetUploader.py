@@ -9,6 +9,8 @@ Should emulate the hotfolder eventually. That is we
 
 In order to make the process transparent it is carried out in several steps
 
+AssetUploader does not work RECURSIVELY
+
 
 """
 import copy
@@ -225,29 +227,7 @@ class AssetUploader(BaseApp):
         add new files, manually delete rows from Excel and
         to update the table by re-running scandir.
         """
-
-        # check if excel exists, has the expected shape and is writable
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-
-        # die if not writable so that user can close it before waste of time
-        self._save_excel(path=excel_fn)
-        try:
-            self.ws = self.wb["Assets"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
-
-        if self.ws.max_row < 2:
-            raise ConfigError(
-                f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
-            )
-
-        conf_ws = self.wb["Conf"]
-        orgUnit = conf_ws["B3"].value  # can be None
-        if orgUnit == "" or orgUnit.isspace():
-            orgUnit = None
-
-        self.orgUnit = orgUnit
+        self._scandir_checks()
 
         # looping thru files (usually pwd)
         if Dir is None:
@@ -258,12 +238,10 @@ class AssetUploader(BaseApp):
 
         self._drop_rows_if_file_gone()
         c = 1
-        for p in src_dir.glob("*"):
-            if str(p).startswith("."):
+        for p in src_dir.glob("*"):  # dont try recursive!
+            if str(p).startswith(".") or p == excel_fn:
                 continue
-            elif p.suffix == ".py" or p.suffix == ".ini":
-                continue
-            elif p == excel_fn:
+            elif p.suffix == ".py" or p.suffix == ".ini" or p.suffix in (".lnk"):
                 continue
             elif p.is_dir():
                 continue
@@ -311,19 +289,20 @@ class AssetUploader(BaseApp):
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
         cells = self._rno2dict(rno)
         identNr = extractIdentNr(path=path)  # returns Python's None on failure
-        print(f"   {rno}: {path.name}")
         # only write in empty fields
         if cells["filename"].value is None:
-            cells["filename"].value = path.name
+            cells[
+                "filename"
+            ].value = (
+                path.name
+            )  # was a relative path, but not if we use this recursively
         if cells["identNr"].value is None:
             cells["identNr"].value = identNr
         if cells["fullpath"].value is None:
             cells["fullpath"].value = str(path.resolve())
-
+        # print (f"***{path}")
         if cells["asset_fn_exists"].value is None:
-            idL = self.client.fn_to_mulId(
-                fn=cells["filename"].value, orgUnit=self.orgUnit
-            )
+            idL = self.client.fn_to_mulId(fn=str(path), orgUnit=self.orgUnit)
             if len(idL) == 0:
                 cells["asset_fn_exists"].value = "None"
             else:
@@ -331,7 +310,7 @@ class AssetUploader(BaseApp):
 
         # in rare cases identNr_cell might be None, then we cant look up any objIds
         if cells["identNr"].value is None:
-            print("WARNING: identNr cell is empty, cant continue!")
+            print("WARNING: identNr cell is empty!")
             return None
 
         if cells["objIds"].value == None:
@@ -366,9 +345,14 @@ class AssetUploader(BaseApp):
                 cells["ref"].value = "None"
                 cells["ref"].font = red
 
+        print(f"   {rno}: {path.name} -> {identNr} [{cells['ref'].value}]")
         if cells["photographer"].value is None:
-            try:
+            # known extensions that dont work with exif
+            if path.suffix == ".jpg" or path.suffix == ".pdf":
+                cells["photographer"].value = "None"
+                return
 
+            try:
                 with pyexiv2.Image(str(path)) as img:
                     img_data = img.read_iptc()
             except:
@@ -425,7 +409,32 @@ class AssetUploader(BaseApp):
         )
         return new_asset_id
 
-    def _path_in_list(self, path):
+    def _scandir_checks(self) -> None:
+        # check if excel exists, has the expected shape and is writable
+        if not excel_fn.exists():
+            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
+
+        # die if not writable so that user can close it before waste of time
+        self._save_excel(path=excel_fn)
+        try:
+            self.ws = self.wb["Assets"]
+        except:
+            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+
+        if self.ws.max_row < 2:
+            raise ConfigError(
+                f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
+            )
+
+        conf_ws = self.wb["Conf"]
+        orgUnit = conf_ws["B3"].value  # can be None
+        if orgUnit is None:
+            pass
+        elif orgUnit.strip() == "":
+            orgUnit = None
+        self.orgUnit = orgUnit
+
+    def _path_in_list(self, path) -> None:
         """Returns True of filename is already in list (column A), else False."""
         rno = 3
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row

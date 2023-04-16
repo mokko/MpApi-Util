@@ -40,9 +40,6 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
 
         # only allow patterns that have one space separated number
         # number can be sole item if objId is used as identNr
-        match = re.search(r" \d+", new3)
+        match = re.search(r"\w \d+|d+", new3)
         if match:
-            #print(new3)
             return new3
-    # else
-    #     return None

@@ -29,6 +29,8 @@ import logging
 from MpApi.Utils.Ria import RIA
 from pathlib import Path
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment, Font
+
 import sys
 import tomllib
 from typing import Iterator, Union
@@ -213,7 +215,7 @@ class BaseApp:
         if identNr is None or any("-", ";") in str(identNr):
             return True
 
-    def _write_table_description(ws):
+    def _write_table_description(self, ws):
         """
         Take the table description and write it to the top of the specified worksheet.
 
