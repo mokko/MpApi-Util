@@ -37,7 +37,12 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         new2 = re.sub(r"-[A-Z]+", "", new).strip()
         # if there is a trailing + oder -, delete that
         new3 = re.sub(r"[\+-] *$| -3D|_ct", "", new2).strip()
-        print(new3)
-        return new3
+
+        # only allow patterns that have one space separated number
+        # number can be sole item if objId is used as identNr
+        match = re.search(r" \d+", new3)
+        if match:
+            #print(new3)
+            return new3
     # else
     #     return None
