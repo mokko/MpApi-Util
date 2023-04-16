@@ -56,19 +56,19 @@ class Mover(BaseApp):
                 "label": "relativer Pfad",
                 "desc": "aus Verzeichnis",
                 "col": "G",
-                "width": 15,
+                "width": 30,
             },
             "fullpath": {
                 "label": "absoluter Pfad",
                 "desc": "aus Verzeichnis",
                 "col": "H",
-                "width": 20,
+                "width": 40,
             },
             "targetpath": {
                 "label": "Zielpfad",
                 "desc": "",
                 "col": "I",
-                "width": 20,
+                "width": 40,
             },
         }
 
@@ -106,14 +106,17 @@ class Mover(BaseApp):
 
     def move(self):
         self._check_move()
-
+        mrow = self.ws.max_row
         for c, rno in self._loop_table2():
-            fro = Path(c["relpath"].value)
-            to = Path(c["targetpath"].value)
-            if not to.parent.exists():
-                to.parent.mkdir(parents=True)
-            print(f"{fro}")
-            shutil.move(fro, to)
+            if c["targetpath"].value is not None:
+                fro = Path(c["relpath"].value)
+                to = Path(c["targetpath"].value)
+                if not to.parent.exists():
+                    to.parent.mkdir(parents=True)
+                print(f"{rno}/{mrow}: {fro}")
+                # print(f"   {to}")
+                if fro.exists():
+                    shutil.move(fro, to)
 
     def scandir(self):
         # check if excel exists, has the expected shape and is writable
