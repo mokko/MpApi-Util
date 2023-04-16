@@ -310,7 +310,7 @@ class AssetUploader(BaseApp):
 
         # in rare cases identNr_cell might be None, then we cant look up any objIds
         if cells["identNr"].value is None:
-            print("WARNING: identNr cell is empty!")
+            print(f"WARNING: identNr cell is empty! {path.name}")
             return None
 
         if cells["objIds"].value == None:

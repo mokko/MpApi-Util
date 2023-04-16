@@ -67,7 +67,11 @@ def move():
     parser = argparse.ArgumentParser(
         description="move asset files that are alreay in RIA to storage location"
     )
-    parser.add_argument("first", help="command, either init, scandir or move")
+    parser.add_argument(
+        "first",
+        help="command, either init, scandir or move",
+        choices=["init", "scandir", "move"],
+    )
     parser.add_argument("-l", "--limit", help="stop after number of files", default=-1)
     parser.add_argument(
         "-v", "--version", help="display version information", action="store_true"
@@ -77,7 +81,7 @@ def move():
     if args.version:
         print(f"Version: {__version__}")
         sys.exit(0)
-    m = Mover()
+    m = Mover(limit=args.limit)
     if args.first == "init":
         m.init()
     elif args.first == "scandir":

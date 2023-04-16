@@ -161,7 +161,10 @@ class BaseApp:
             rno += 1
 
     def _rno2dict(self, rno: int) -> dict:
-
+        """
+        We read the provide a dict with labels as keys based on table description
+        (self.table_desc).
+        """
         cells = dict()
         for label in self.table_desc:
             col = self.table_desc[label]["col"]
@@ -206,8 +209,10 @@ class BaseApp:
         Some empty values (isspace) are turned into None
         """
         conf_ws = self.wb["Conf"]
-        orgUnit = conf_ws[cell].value.strip()  # can be None
-        if orgUnit == "" or orgUnit.isspace():
+        orgUnit = conf_ws[cell].value  # can be None
+        if orgUnit is None:
+            pass
+        elif orgUnit.strip() == "":
             orgUnit = None
         return orgUnit
 
