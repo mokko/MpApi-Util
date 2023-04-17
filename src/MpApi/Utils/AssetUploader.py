@@ -292,12 +292,9 @@ class AssetUploader(BaseApp):
         cells = self._rno2dict(rno)
         identNr = extractIdentNr(path=path)  # returns Python's None on failure
         # only write in empty fields
+        # relative path, but not if we use this recursively
         if cells["filename"].value is None:
-            cells[
-                "filename"
-            ].value = (
-                path.name
-            )  # was a relative path, but not if we use this recursively
+            cells["filename"].value = path.name
         if cells["identNr"].value is None:
             cells["identNr"].value = identNr
         if cells["fullpath"].value is None:
