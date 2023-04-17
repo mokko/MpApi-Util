@@ -278,7 +278,7 @@ class AssetUploader(BaseApp):
                     )
                     self.ws.delete_rows(c)
                     continue
-                c += 1
+            c += 1
 
     def _file_to_list(self, *, path: Path, rno=None):
         """
