@@ -99,9 +99,9 @@ class Mover(BaseApp):
 
         ws2.column_dimensions["A"].width = 25
 
-        for each in "A1":  # , "A2", "A3", "A4"
-            pass
-            # ws2[each].font = Font(bold=True)
+        for each in "A1", "A2":  # "A3", "A4"
+            # pass
+            ws2[each].font = Font(bold=True)
         self._save_excel(path=excel_fn)
 
     def move(self):
@@ -119,10 +119,14 @@ class Mover(BaseApp):
                     # don't overwrite existing files
                     # since files with same name can exist in muliple folders
                     # it's quite possible that files with same name exist multiple times
-                    if not to.exists():
-                        shutil.move(fro, to)
-                    else:
+                    if to.exists():
+                        # should not happen, as conflicts should be resolved earlier
+                        self.ws[f"I{rno}"].font = red
                         print(f"file exists already: '{to}'")
+                    else:
+                        shutil.move(fro, to)
+                        self.ws[f"I{rno}"].font = teal
+        self._save_excel(path=excel_fn)
 
     def scandir(self):
         # check if excel exists, has the expected shape and is writable
@@ -242,6 +246,8 @@ class Mover(BaseApp):
             fro = Path(c["relpath"].value)
             to = self.target_dir / fro
             c["targetpath"].value = str(to)
+            if to.exists():
+                c["targetpath"].font = red
         print(f"{count}: {path.name} [{c['move'].value}]")
 
         # if (count/200).is_integer():

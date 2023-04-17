@@ -93,13 +93,19 @@ class AssetUploader(BaseApp):
                 "label": "absoluter Pfad",
                 "desc": "aus Verzeichnis",
                 "col": "I",
-                "width": 115,
+                "width": 90,
             },
             "attached": {
                 "label": "Asset hochgeladen?",
                 "desc": "wenn Upload erfolgreich",
                 "col": "J",
                 "width": 15,
+            },
+            "targetpath": {
+                "label": "nach Bewegen der Datei",
+                "desc": "wenn Upload erfolgreich",
+                "col": "J",
+                "width": 30,
             },
         }
 
@@ -129,7 +135,7 @@ class AssetUploader(BaseApp):
         for c, rno in self._loop_table2():
             # relative path; assume dir hasn't changed since scandir run
             fn = c["filename"].value
-            # almost impossible to have a ref id here, except if filled in by hand
+            # almost impossible to have no ref id here, except if filled in by hand
             print(f"{rno}: {c['identNr'].value}")
             if c["ref"].value is None:
                 print(
@@ -150,17 +156,11 @@ class AssetUploader(BaseApp):
             #    print(f"   asset exists already: {c['asset_fn_exists'].value}")
 
             if c["attached"].value == None:
+                target_path = c[targetpath].value
                 if c["ref"].value is not None:
                     ID = int(c["asset_fn_exists"].value)
-                    print(f"   attaching {fn} {ID}")
-                    ret = self.client.upload_attachment(file=fn, ID=ID)
-                    # print(f"   success on upload? {ret}")
-                    if ret.status_code == 204:
+                    if self._attach_asset(path=fn, mulId=ID, target_path=target_path):
                         c["attached"].value = "x"
-                        shutil.move(fn, u_dir)
-                        print(f"   fn moved to dir '{u_dir}'")
-                    else:
-                        print("   ATTACHING FAILED!")
             else:
                 print("   asset already attached")
             self._save_excel(path=excel_fn)  # save after every file/row
@@ -257,6 +257,25 @@ class AssetUploader(BaseApp):
     #
     # private
     #
+    def _attach_asset(self, *, path: str, mulId: int, target_path: str) -> bool:
+        """
+        attach an asset file (at path) and, if successful, move the asset file to new
+        location (target_path).
+        """
+        if target_path is None:
+            raise SyntaxError("ERROR: target path should not be None")
+
+        print(f"   attaching {path} {mulId}")
+        ret = self.client.upload_attachment(file=path, ID=mulId)
+        # print(f"   success on upload? {ret}")
+        if ret.status_code == 204:
+            self._move_file(src=fn, dst=target_path)
+            return True
+        else:
+            # should this raise an error?
+            print("   ATTACHING FAILED (HTTP REQUEST)!")
+            return False
+
     def _drop_rows_if_file_gone(self) -> None:
         """
         Loop thru Excel sheet "Assets" and check if the files still exist. We use
@@ -296,7 +315,7 @@ class AssetUploader(BaseApp):
         if cells["identNr"].value is None:
             cells["identNr"].value = identNr
         if cells["fullpath"].value is None:
-            cells["fullpath"].value = str(path.resolve())
+            cells["fullpath"].value = str(path.absolute())  # .resolve() problems on UNC
         # print (f"***{path}")
         if cells["asset_fn_exists"].value is None:
             idL = self.client.fn_to_mulId(fn=str(path), orgUnit=self.orgUnit)
@@ -341,6 +360,16 @@ class AssetUploader(BaseApp):
             else:
                 cells["ref"].value = "None"
                 cells["ref"].font = red
+        if cells["targetpath"].value is None:
+            u_dir = Path(ws2["B4"].value)
+            fn = Path(c["filename"].value)
+            t = u_dir / fn
+            if t.exists():
+                cells["targetpath"].value = str(t)
+                cells["targetpath"].font = red
+            else:
+                cells["targetpath"].value = str(t)
+                cells["targetpath"].font = teal
 
         print(f"   {rno}: {path.name} -> {identNr} [{cells['ref'].value}]")
         if cells["photographer"].value is None:
@@ -406,6 +435,17 @@ class AssetUploader(BaseApp):
         )
         return new_asset_id
 
+    def _move_file(self, *, src: str, dst: str) -> None:
+        """
+        What do I do if src or dst are None?
+        """
+        dstp = Path(dst)
+        if not dstp.exists():
+            shutil.move(src, dst)
+            print(f"   fn moved to target '{dst}'")
+        else:
+            raise SyntaxError(f"ERROR: target location already used! {dst}")
+
     def _scandir_checks(self) -> None:
         # check if excel exists, has the expected shape and is writable
         if not excel_fn.exists():
@@ -430,6 +470,10 @@ class AssetUploader(BaseApp):
         elif orgUnit.strip() == "":
             orgUnit = None
         self.orgUnit = orgUnit
+
+        # todo: check that target_dir is filled-in
+        if conf_ws["C4"].value is None:
+            raise ConfigError("ERROR: Need target dir in B4")
 
     def _path_in_list(self, path) -> None:
         """Returns True of filename is already in list (column A), else False."""
