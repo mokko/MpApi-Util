@@ -116,7 +116,13 @@ class Mover(BaseApp):
                 print(f"{rno}/{mrow}: {fro}")
                 # print(f"   {to}")
                 if fro.exists():
-                    shutil.move(fro, to)
+                    # don't overwrite existing files
+                    # since files with same name can exist in muliple folders
+                    # it's quite possible that files with same name exist multiple times
+                    if not to.exists():
+                        shutil.move(fro, to)
+                    else:
+                        print(f"file exists already: '{to}'")
 
     def scandir(self):
         # check if excel exists, has the expected shape and is writable

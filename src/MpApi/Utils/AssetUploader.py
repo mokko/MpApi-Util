@@ -10,8 +10,6 @@ Should emulate the hotfolder eventually. That is we
 In order to make the process transparent it is carried out in several steps
 
 AssetUploader does not work RECURSIVELY
-
-
 """
 import copy
 from lxml import etree
