@@ -116,7 +116,7 @@ class AssetUploader(BaseApp):
         (e) move uploaded file in uploaded subdir.
 
         """
-        print("Enter go")
+        # print("Enter go")
         self._go_checks()  # raise on error
 
         templateM = self._prepare_template()
@@ -131,9 +131,9 @@ class AssetUploader(BaseApp):
         for c, rno in self._loop_table2():
             # relative path; assume dir hasn't changed since scandir run
             fn = c["filename"].value
-
+            # almost impossible to have a ref id here, except if filled in by hand
             print(f"{rno}: {c['identNr'].value}")
-            if c["ref"].value == "None":
+            if c["ref"].value is None:
                 print(
                     "   object reference unknown, not creating assets nor attachments"
                 )
@@ -148,20 +148,21 @@ class AssetUploader(BaseApp):
                 c["asset_fn_exists"].value = new_asset_id
                 c["asset_fn_exists"].font = teal
                 print(f"   asset {new_asset_id} created")
-            else:
-                print(f"   asset exists already: {c['asset_fn_exists'].value}")
+            # else:
+            #    print(f"   asset exists already: {c['asset_fn_exists'].value}")
 
             if c["attached"].value == None:
-                ID = int(c["asset_fn_exists"].value)
-                print(f"   attaching {fn} {ID}")
-                ret = self.client.upload_attachment(file=fn, ID=ID)
-                # print(f"   success on upload? {ret}")
-                if ret.status_code == 204:
-                    c["attached"].value = "x"
-                    shutil.move(fn, u_dir)
-                    print(f"   fn moved to dir '{u_dir}'")
-                else:
-                    print("   ATTACHING FAILED!")
+                if c["ref"].value is not None:
+                    ID = int(c["asset_fn_exists"].value)
+                    print(f"   attaching {fn} {ID}")
+                    ret = self.client.upload_attachment(file=fn, ID=ID)
+                    # print(f"   success on upload? {ret}")
+                    if ret.status_code == 204:
+                        c["attached"].value = "x"
+                        shutil.move(fn, u_dir)
+                        print(f"   fn moved to dir '{u_dir}'")
+                    else:
+                        print("   ATTACHING FAILED!")
             else:
                 print("   asset already attached")
             self._save_excel(path=excel_fn)  # save after every file/row
@@ -270,13 +271,14 @@ class AssetUploader(BaseApp):
         c = 3
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
             filename = self.ws[f"A{c}"].value
-            if not Path(filename).exists():
-                print(
-                    f"Deleting Excel row {c} since file '{filename}' no longer exists"
-                )
-                self.ws.delete_rows(c)
-                continue
-            c += 1
+            if filename is not None:
+                if not Path(filename).exists():
+                    print(
+                        f"Deleting Excel row {c} since file '{filename}' no longer exists"
+                    )
+                    self.ws.delete_rows(c)
+                    continue
+                c += 1
 
     def _file_to_list(self, *, path: Path, rno=None):
         """

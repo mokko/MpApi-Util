@@ -25,8 +25,9 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
 
     # VII c 86 a -A x.tif    -> VII c 86 a
     # VII c 86 a <1>-A x.tif -> VII c 86 a <1>
-    m = re.search(r"([\w\d +.,<>-]+)", stem)
+    m = re.search(r"([\w\d +.,<>-]+)[ *|__]-KK", stem)
     if m:
+        # restrict to max length of elements
         astr = m.group(1).strip()
         alist = astr.split(" ")
         if "<" in astr:
