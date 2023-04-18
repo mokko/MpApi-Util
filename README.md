@@ -1,13 +1,13 @@
 # MpApi-Utils
 
-is a package with advanced utilities and scripts for MpApi. It's also experimental and 
-work in progress. 
+MpApi-Utils is a package that extends MpApi with command line scripts. 
 
-Many of these utils will assemble data in an Excel file, so that user
-can study the results and manually correct them. Only after this intermediary step 
-changes will be made (e.g. to the RIA or files will be moved).
+Many of these utils will assemble data in an Excel file in a first step, so that user
+can study the results and manually correct them in a second step. Only after these 
+intermediary steps, real changes will be made in third step (e.g. to the RIA or files 
+will be moved).
 
-The Excel file also functions as somewhat of a log file, documenting what has been done. 
+The Excel file also functions somewhat as a log file, documenting what has been done. 
 
 ## New Functioning Projects
 - reportx: writes a report on files scanning a directory recursively 
