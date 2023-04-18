@@ -1,6 +1,26 @@
+--------------------------
 MpApi-Utils
+--------------------------
 is a package with advanced utilities and scripts for MpApi. It's also experimental and 
-work in progress.
+work in progress. 
+
+Many of these utils will assemble data in an Excel file, so that user
+can study the results and manually correct them. Only after this intermediary step 
+changes will typically be made, e.g. to the database or files will be moved away.
+
+The Excel file also functions as a log file, documenting what has been done. 
+
+NEW FUNCTIONING PROJECTS
+--------------------------
+reportx - writes a report on files scanning a directory recursively 
+mover - move files that are already in RIA to save location
+prepare - create object records
+upload - upload files in one directory (not recursive) to RIA
+attach - upload a single file to RIA
+
+
+OLD UNFINISHED PROJECTS
+--------------------------
 
 du (i.e. download/upload)
 		I am working on a script that can download data from RIA via the API to Excel 
@@ -26,17 +46,3 @@ rename.py
 		column C: new name
 		column D: target directory
 
-bcreate.py 
-		for every file matching a specific pattern, 
-		- extract a identNr from file name
-		- check if record with this identNr exists already
-		- if does not exist: 
-			- create a new record in RIA 
-			- copy a template record to the new record
-			- fill in this identNr
-			
-		Let's also write initial configuration to program quick-and-dirty style.
-		What is the cli?
-		create -d path/to/dir
-		
-		Eventually we'll want a logger, but that can wait.
