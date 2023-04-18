@@ -38,7 +38,6 @@ class AssetUploader(BaseApp):
         self.limit = int(limit)  # allows to break the go loop after number of items
         creds = self._read_credentials()
         self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
-        self.wb = self._init_excel(path=excel_fn)
 
         self.table_desc = {
             "filename": {
@@ -176,11 +175,9 @@ class AssetUploader(BaseApp):
         if excel_fn.exists():
             print(f"WARN: Abort init since '{excel_fn}' exists already!")
             return
-
         self.wb = Workbook()
         ws = self.wb.active
         ws.title = "Assets"
-
         self._write_table_description(ws)
 
         #
@@ -319,7 +316,8 @@ class AssetUploader(BaseApp):
         if cells["identNr"].value is None:
             cells["identNr"].value = identNr
         if cells["fullpath"].value is None:
-            cells["fullpath"].value = str(path.absolute())  # .resolve() problems on UNC
+            # .resolve() problems on UNC
+            cells["fullpath"].value = str(path.absolute())
         # print (f"***{path}")
         if cells["asset_fn_exists"].value is None:
             idL = self.client.fn_to_mulId(fn=str(path), orgUnit=self.orgUnit)
@@ -408,6 +406,8 @@ class AssetUploader(BaseApp):
         if not excel_fn.exists():
             raise ConfigError(f"ERROR: {excel_fn} NOT found!")
 
+        self.wb = self._init_excel(path=excel_fn)
+
         # die if not writable so that user can close it before waste of time
         self._save_excel(path=excel_fn)
 
@@ -425,6 +425,9 @@ class AssetUploader(BaseApp):
             raise ConfigError(
                 "ERROR: Missing configuration value: no dir for uploaded files"
             )
+
+        if not Path(self.ws["A3"].value).exists():
+            raise Exception("ERROR: File doesn't exist (anymore). Already uploaded?")
 
     def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
         if moduleItemId is None or moduleItemId == "None":
@@ -472,6 +475,8 @@ class AssetUploader(BaseApp):
         # check if excel exists, has the expected shape and is writable
         if not excel_fn.exists():
             raise ConfigError(f"ERROR: {excel_fn} NOT found!")
+
+        self.wb = self._init_excel(path=excel_fn)
 
         # die if not writable so that user can close it before waste of time
         self._save_excel(path=excel_fn)
