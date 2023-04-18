@@ -1,26 +1,22 @@
---------------------------
-MpApi-Utils
---------------------------
+# MpApi-Utils
+
 is a package with advanced utilities and scripts for MpApi. It's also experimental and 
 work in progress. 
 
 Many of these utils will assemble data in an Excel file, so that user
 can study the results and manually correct them. Only after this intermediary step 
-changes will typically be made, e.g. to the database or files will be moved away.
+changes will be made (e.g. to the RIA or files will be moved).
 
-The Excel file also functions as a log file, documenting what has been done. 
+The Excel file also functions as somewhat of a log file, documenting what has been done. 
 
-NEW FUNCTIONING PROJECTS
---------------------------
-reportx - writes a report on files scanning a directory recursively 
-mover - move files that are already in RIA to save location
-prepare - create object records
-upload - upload files in one directory (not recursive) to RIA
-attach - upload a single file to RIA
+## New Functioning Projects
+- reportx: writes a report on files scanning a directory recursively 
+- mover: move files that are already in RIA to save location
+- prepare: create object records
+- upload: upload files in one directory (not recursive) to RIA
+- attach: upload a single file to RIA
 
-
-OLD UNFINISHED PROJECTS
---------------------------
+## Old Unfinished Projects
 
 du (i.e. download/upload)
 		I am working on a script that can download data from RIA via the API to Excel 
