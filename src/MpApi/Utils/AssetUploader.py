@@ -135,7 +135,7 @@ class AssetUploader(BaseApp):
         for c, rno in self._loop_table2():
             # relative path; assume dir hasn't changed since scandir run
             fn = c["filename"].value
-            # almost impossible to have no ref id here, except if filled in by hand
+
             print(f"{rno}: {c['identNr'].value}")
             if c["ref"].value is None:
                 print(
@@ -265,6 +265,10 @@ class AssetUploader(BaseApp):
         if target_path is None:
             raise SyntaxError("ERROR: target path should not be None")
 
+        # if the file doesn't exist (anymore) it indicates major issues!
+        if not Path(path).exists():
+            raise Exception("ERROR 101: Path doesn't exist. Already uploaded?")
+
         print(f"   attaching {path} {mulId}")
         ret = self.client.upload_attachment(file=path, ID=mulId)
         # print(f"   success on upload? {ret}")
@@ -344,11 +348,11 @@ class AssetUploader(BaseApp):
             # if asset_fn exists we assume that asset has already been uploaded
             # if no single objId has been indentified, we will not create asset
             if cells["asset_fn_exists"].value == "None":
-                # if single reference objId has been identified
+                # if single objId has been identified use it as ref
                 if cells["objIds"].value != "None" and ";" not in cells["objIds"].value:
                     cells["ref"].value = cells["objIds"].value
                     cells["ref"].font = teal
-                # if single reference part objId has been identified
+                # if single part objId has been identified use it as ref
                 elif (
                     cells["parts_objIds"].value != "None"
                     and ";" not in cells["parts_objIds"].value
@@ -360,13 +364,13 @@ class AssetUploader(BaseApp):
             else:
                 cells["ref"].value = "None"
                 cells["ref"].font = red
+
         if cells["targetpath"].value is None:
             u_dir = Path(ws2["B4"].value)
             fn = Path(c["filename"].value)
             t = u_dir / fn
-            if t.exists():
-                cells["targetpath"].value = str(t)
-                cells["targetpath"].font = red
+            while t.exists():
+                t = self._plus_one(t)
             else:
                 cells["targetpath"].value = str(t)
                 cells["targetpath"].font = teal
@@ -445,6 +449,24 @@ class AssetUploader(BaseApp):
             print(f"   fn moved to target '{dst}'")
         else:
             raise SyntaxError(f"ERROR: target location already used! {dst}")
+
+    def _plus_one(self, t: Path) -> Path:
+        """
+        Receive a path and add or increase the number at the end to make filename unique
+        """
+        suffix = t.suffix  # returns str
+        stem = t.stem  # returns str
+        parent = t.parent  # returns Path
+        m = re.search(r"_(\d+)$", "", stem)
+        if m:
+            digits = int(m.group(1))
+            stem_no_digits = stem.replace(f"_{digits}", "")
+            digits += 1
+            new = parent / f"{stem_no_digits}_{digits}{suffix}"
+        else:
+            digits = 1
+            new = parent / f"{stem}_{digits}{suffix}"
+        return new
 
     def _scandir_checks(self) -> None:
         # check if excel exists, has the expected shape and is writable
