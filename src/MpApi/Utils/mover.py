@@ -3,7 +3,7 @@ Mover - moves files that are already in RIA to storage location.
 
 mover init	   initialize Excel
 mover scanir   recursively scan a dir
-mover move     go the actual moving of the files
+mover move     do the actual moving of the files
 
 """
 
@@ -122,18 +122,38 @@ class Mover(BaseApp):
                     if to.exists():
                         # should not happen, as conflicts should be resolved earlier
                         self.ws[f"I{rno}"].font = red
-                        print(f"file exists already: '{to}'")
+                        self._save_excel(path=excel_fn)
+                        raise Exception(f"file exists already: '{to}'")
                     else:
                         shutil.move(fro, to)
                         self.ws[f"I{rno}"].font = teal
         self._save_excel(path=excel_fn)
 
+    def rescan(self):
+        """
+        Should we make a different command to re-run scandir, but this time we only
+        fill in missing information?
+        """
+        self._check_scandir()
+
+        count = 3
+        for c, rno in self._loop_table2():
+            if c["filename"].value is not None:
+                p = Path(c["filename"].value)
+                self._scan_per_file(path=p, count=count)
+            else:
+                raise TypeError("ERROR: File not found!")
+            count += 1
+        self._save_excel(path=excel_fn)  # save after every file/row
+
     def scandir(self):
         # check if excel exists, has the expected shape and is writable
         self._check_scandir()
-        src_dir = Path()
+        if self.ws.max_row > 2:
+            raise ConfigError(f"ERROR: Mover's scandir can't re-run scandir!")
+
         c = 3
-        for p in src_dir.rglob("*"):
+        for p in Path().rglob("*"):
             if p.name.startswith(".") or p.name.startswith("~") or p == excel_fn:
                 continue
             elif p.suffix in (".lnk"):
@@ -180,8 +200,6 @@ class Mover(BaseApp):
             raise ConfigError(
                 f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
             )
-        elif self.ws.max_row > 2:
-            raise ConfigError(f"ERROR: Mover's scandir can't re-run scandir!")
         self.orgUnit = self._set_orgUnit("B2")
 
         conf_ws = self.wb["Conf"]
@@ -245,10 +263,11 @@ class Mover(BaseApp):
         if c["move"].value == "x":
             fro = Path(c["relpath"].value)
             to = self.target_dir / fro
+            while to.exists():
+                to = self._plus_one(to)
             c["targetpath"].value = str(to)
-            if to.exists():
-                c["targetpath"].font = red
-        print(f"{count}: {path.name} [{c['move'].value}]")
+            c["targetpath"].font = teal
+        print(f"{count}: {path.name} [{c['move'].value}] {path.parent}")
 
         # if (count/200).is_integer():
         #    self._save_excel(path=excel_fn)

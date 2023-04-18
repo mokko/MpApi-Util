@@ -160,6 +160,24 @@ class BaseApp:
                 break
             rno += 1
 
+    def _plus_one(self, p: Path) -> Path:
+        """
+        Receive a path and add or increase the number at the end to make filename unique
+        """
+        suffix = p.suffix  # returns str
+        stem = p.stem  # returns str
+        parent = p.parent  # returns Path
+        m = re.search(r"_(\d+)$", "", stem)
+        if m:
+            digits = int(m.group(1))
+            stem_no_digits = stem.replace(f"_{digits}", "")
+            digits += 1
+            new = parent / f"{stem_no_digits}_{digits}{suffix}"
+        else:
+            digits = 1
+            new = parent / f"{stem}_{digits}{suffix}"
+        return new
+
     def _rno2dict(self, rno: int) -> dict:
         """
         We read the provide a dict with labels as keys based on table description
