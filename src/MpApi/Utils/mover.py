@@ -114,7 +114,7 @@ class Mover(BaseApp):
         self._check_move()
         mrow = self.ws.max_row
         for c, rno in self._loop_table2():
-            if c["targetpath"].value == "x":
+            if c["move"].value == "x":
                 if c["targetpath"].value is None:
                     raise SyntaxError(
                         "ERROR: Move says move, but targetpath has no info!"
@@ -137,6 +137,8 @@ class Mover(BaseApp):
                     else:
                         shutil.move(fro, to)
                         self.ws[f"I{rno}"].font = teal
+                else:
+                    print(f"   doesn't exist (anymore)")
         self._save_excel(path=excel_fn)
 
     def rescan(self):
