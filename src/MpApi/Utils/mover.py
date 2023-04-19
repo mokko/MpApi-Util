@@ -52,6 +52,12 @@ class Mover(BaseApp):
                 "col": "D",
                 "width": 8,
             },
+            "notes": {
+                "label": "Notizen",
+                "desc": "werden nicht automatisch überschrieben",
+                "col": "E",
+                "width": 12,
+            },
             "relpath": {
                 "label": "relativer Pfad",
                 "desc": "aus Verzeichnis",
@@ -88,7 +94,7 @@ class Mover(BaseApp):
         ws = self.wb.active
         ws.title = "Dateien"
 
-        self._write_table_description(ws)
+        self._write_table_description(description=self.table_desc, sheet=ws)
 
         #
         # Conf Sheet
@@ -108,7 +114,11 @@ class Mover(BaseApp):
         self._check_move()
         mrow = self.ws.max_row
         for c, rno in self._loop_table2():
-            if c["targetpath"].value is not None:
+            if c["targetpath"].value == "x":
+                if c["targetpath"].value is None:
+                    raise SyntaxError(
+                        "ERROR: Move says move, but targetpath has no info!"
+                    )
                 fro = Path(c["relpath"].value)
                 to = Path(c["targetpath"].value)
                 if not to.parent.exists():
@@ -135,8 +145,15 @@ class Mover(BaseApp):
         fill in missing information?
         """
         self._check_scandir()
+        print("Dropping files from Excel that don't exist anymore")
+        self._drop_rows_if_file_gone(col="H")
+        # raise Exception ("rescan not implementd yet")
+        # currently we're deleting files that have been moved from Excel
+        # and we re-parse the rest of the Excel entries
+        # but we dont do a completely new scandir
 
         count = 3
+        print("re-scanning remaining items in Excel only")
         for c, rno in self._loop_table2():
             if c["filename"].value is not None:
                 p = Path(c["filename"].value)
@@ -147,6 +164,9 @@ class Mover(BaseApp):
         self._save_excel(path=excel_fn)  # save after every file/row
 
     def scandir(self):
+        """
+        I dont want to fill in targetpath if move != x
+        """
         # check if excel exists, has the expected shape and is writable
         self._check_scandir()
         if self.ws.max_row > 2:
@@ -255,7 +275,7 @@ class Mover(BaseApp):
             ):
                 c["move"].value = "x"
             else:
-                c["move"].value = "None"
+                c["move"].value = None
         if c["relpath"].value is None:
             c["relpath"].value = str(path)
         if c["fullpath"].value is None:

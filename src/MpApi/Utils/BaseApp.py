@@ -28,7 +28,7 @@ import configparser
 import logging
 from MpApi.Utils.Ria import RIA
 from pathlib import Path
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.styles import Alignment, Font
 
 import sys
@@ -76,6 +76,24 @@ class BaseApp:
             return self.client
         else:
             return RiaUtil(baseURL=self.baseURL, user=self.user, pw=self.pw)
+
+    def _drop_rows_if_file_gone(self, *, col: str = "A") -> None:
+        """
+        Loop thru Excel sheet "Assets" and check if the files still exist. We use
+        relative filename for that, so update has to be executed in right dir.
+        If the file no longer exists on disk (e.g. because it has been renamed),
+        we delete it from the excel sheet by deleting the row.
+
+        This is for the scandir step.
+        """
+        c = 3
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            filename = self.ws[f"{col}{c}"].value
+            if filename is not None:
+                if not Path(filename).exists():
+                    print(f"Deleting Excel row {c} file gone '{filename}'")
+                    self.ws.delete_rows(c)
+            c += 1
 
     # should we require conf_fn as a Path to be more consistent?
     def _init_conf(self, *, path: Path, job: str) -> dict:
@@ -238,7 +256,7 @@ class BaseApp:
         if identNr is None or any("-", ";") in str(identNr):
             return True
 
-    def _write_table_description(self, ws):
+    def _write_table_description(self, *, description: dict, sheet: worksheet):
         """
         Take the table description and write it to the top of the specified worksheet.
 
@@ -256,17 +274,18 @@ class BaseApp:
         }
 
         """
-        for itemId in self.table_desc:
-            col = self.table_desc[itemId]["col"]  # letter
-            ws[f"{col}1"] = self.table_desc[itemId]["label"]
-            ws[f"{col}1"].font = Font(bold=True)
+
+        for itemId in description:
+            col = description[itemId]["col"]  # letter
+            sheet[f"{col}1"] = description[itemId]["label"]
+            sheet[f"{col}1"].font = Font(bold=True)
             # print (f"{col} {self.table_desc[itemId]['label']}")
-            if "desc" in self.table_desc[itemId]:
-                desc = self.table_desc[itemId]["desc"]
-                ws[f"{col}2"] = desc
-                ws[f"{col}2"].font = Font(size=9, italic=True)
-                # print (f"\t{desc}")
-            if "width" in self.table_desc[itemId]:
-                width = self.table_desc[itemId]["width"]
+            if "desc" in description[itemId]:
+                desc_txt = description[itemId]["desc"]
+                sheet[f"{col}2"] = desc_txt
+                sheet[f"{col}2"].font = Font(size=9, italic=True)
+                # print (f"\t{desc_txt}")
+            if "width" in description[itemId]:
+                width = description[itemId]["width"]
                 # print (f"\t{width}")
-                ws.column_dimensions[col].width = width
+                sheet.column_dimensions[col].width = width
