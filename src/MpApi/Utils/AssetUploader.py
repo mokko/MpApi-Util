@@ -97,7 +97,7 @@ class AssetUploader(BaseApp):
             "attached": {
                 "label": "Asset hochgeladen?",
                 "desc": "wenn Upload erfolgreich",
-                "col": "J",
+                "col": "K",
                 "width": 15,
             },
             "targetpath": {
@@ -117,6 +117,10 @@ class AssetUploader(BaseApp):
         (c) create a reference usually from object to multimedia record
         (d) update Excel to reflect changes
         (e) move uploaded file in uploaded subdir.
+
+        Should we rename from "go" to "upload" for consistency?
+
+        Is it allowed to re-run go multiple time, e.g. to restart attachment?
 
         """
         # print("Enter go")
@@ -155,14 +159,16 @@ class AssetUploader(BaseApp):
             #    print(f"   asset exists already: {c['asset_fn_exists'].value}")
 
             if c["attached"].value == None:
-                target_path = c[targetpath].value
                 if c["ref"].value is not None:
                     ID = int(c["asset_fn_exists"].value)
-                    if self._attach_asset(path=fn, mulId=ID, target_path=target_path):
+                    if self._attach_asset(
+                        path=fn, mulId=ID, target_path=c["targetpath"].value
+                    ):
                         c["attached"].value = "x"
+                        # self._save_excel(path=excel_fn)  # save after every file
             else:
                 print("   asset already attached")
-            self._save_excel(path=excel_fn)  # save after every file/row
+            self._save_excel(path=excel_fn)
 
     def init(self) -> None:
         """
@@ -178,7 +184,7 @@ class AssetUploader(BaseApp):
         self.wb = Workbook()
         ws = self.wb.active
         ws.title = "Assets"
-        self._write_table_description(ws)
+        self._write_table_description(description=self.table_desc, sheet=ws)
 
         #
         # Conf Sheet
@@ -270,33 +276,12 @@ class AssetUploader(BaseApp):
         ret = self.client.upload_attachment(file=path, ID=mulId)
         # print(f"   success on upload? {ret}")
         if ret.status_code == 204:
-            self._move_file(src=fn, dst=target_path)
+            self._move_file(src=path, dst=target_path)
             return True
         else:
             # should this raise an error?
             print("   ATTACHING FAILED (HTTP REQUEST)!")
             return False
-
-    def _drop_rows_if_file_gone(self) -> None:
-        """
-        Loop thru Excel sheet "Assets" and check if the files still exist. We use
-        relative filename for that, so update has to be executed in right dir.
-        If the file no longer exists on disk (e.g. because it has been renamed),
-        we delete it from the excel sheet by deleting the row.
-
-        This is for the scandir step.
-        """
-        c = 3
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            filename = self.ws[f"A{c}"].value
-            if filename is not None:
-                if not Path(filename).exists():
-                    print(
-                        f"Deleting Excel row {c} since file '{filename}' no longer exists"
-                    )
-                    self.ws.delete_rows(c)
-                    continue
-            c += 1
 
     def _file_to_list(self, *, path: Path, rno=None):
         """
@@ -347,8 +332,9 @@ class AssetUploader(BaseApp):
             # if no single objId has been indentified, we will not create asset
             if cells["asset_fn_exists"].value == "None":
                 # if single objId has been identified use it as ref
-                if cells["objIds"].value != "None" and ";" not in cells["objIds"].value:
-                    cells["ref"].value = cells["objIds"].value
+                objIds = int(cells["objIds"].value)
+                if objIds != "None":  # ";" not in str(objIds)
+                    cells["ref"].value = objIds
                     cells["ref"].font = teal
                 # if single part objId has been identified use it as ref
                 elif (
@@ -364,8 +350,12 @@ class AssetUploader(BaseApp):
                 cells["ref"].font = red
 
         if cells["targetpath"].value is None:
-            u_dir = Path(ws2["B4"].value)
-            fn = Path(c["filename"].value)
+            ws2 = self.wb["Conf"]
+            if ws2["B4"].value is None:
+                raise ConfigError("WARNING: orgUnit not filled in!")
+            else:
+                u_dir = Path(ws2["B4"].value)
+            fn = Path(cells["filename"].value)
             t = u_dir / fn
             while t.exists():
                 t = self._plus_one(t)
@@ -449,27 +439,9 @@ class AssetUploader(BaseApp):
         dstp = Path(dst)
         if not dstp.exists():
             shutil.move(src, dst)
-            print(f"   fn moved to target '{dst}'")
+            print(f"   moved to target '{dst}'")
         else:
             raise SyntaxError(f"ERROR: target location already used! {dst}")
-
-    def _plus_one(self, t: Path) -> Path:
-        """
-        Receive a path and add or increase the number at the end to make filename unique
-        """
-        suffix = t.suffix  # returns str
-        stem = t.stem  # returns str
-        parent = t.parent  # returns Path
-        m = re.search(r"_(\d+)$", "", stem)
-        if m:
-            digits = int(m.group(1))
-            stem_no_digits = stem.replace(f"_{digits}", "")
-            digits += 1
-            new = parent / f"{stem_no_digits}_{digits}{suffix}"
-        else:
-            digits = 1
-            new = parent / f"{stem}_{digits}{suffix}"
-        return new
 
     def _scandir_checks(self) -> None:
         # check if excel exists, has the expected shape and is writable
