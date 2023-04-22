@@ -94,17 +94,17 @@ class AssetUploader(BaseApp):
                 "col": "I",
                 "width": 90,
             },
-            "attached": {
-                "label": "Asset hochgeladen?",
-                "desc": "wenn Upload erfolgreich",
-                "col": "K",
-                "width": 15,
-            },
             "targetpath": {
                 "label": "nach Bewegen der Datei",
                 "desc": "wenn Upload erfolgreich",
                 "col": "J",
                 "width": 30,
+            },
+            "attached": {
+                "label": "Asset hochgeladen?",
+                "desc": "wenn Upload erfolgreich",
+                "col": "K",
+                "width": 15,
             },
         }
 
@@ -118,9 +118,9 @@ class AssetUploader(BaseApp):
         (d) update Excel to reflect changes
         (e) move uploaded file in uploaded subdir.
 
-        Should we rename from "go" to "upload" for consistency?
+        Is it allowed to re-run go multiple time, e.g. to restart attachment? Yes!
 
-        Is it allowed to re-run go multiple time, e.g. to restart attachment?
+        BTW: go is now called up in command line interface.
 
         """
         # print("Enter go")
@@ -128,8 +128,6 @@ class AssetUploader(BaseApp):
 
         templateM = self._prepare_template()
         ws2 = self.wb["Conf"]
-        if ws2["B4"].value is None:
-            raise Exception("ERROR: Destination directory empty!")
         u_dir = Path(ws2["B4"].value)
         if not u_dir.exists():
             print(f"Making new dir '{u_dir}'")
@@ -332,9 +330,9 @@ class AssetUploader(BaseApp):
             # if no single objId has been indentified, we will not create asset
             if cells["asset_fn_exists"].value == "None":
                 # if single objId has been identified use it as ref
-                objIds = int(cells["objIds"].value)
+                objIds = cells["objIds"].value
                 if objIds != "None":  # ";" not in str(objIds)
-                    cells["ref"].value = objIds
+                    cells["ref"].value = int(objIds)
                     cells["ref"].font = teal
                 # if single part objId has been identified use it as ref
                 elif (
@@ -352,7 +350,7 @@ class AssetUploader(BaseApp):
         if cells["targetpath"].value is None:
             ws2 = self.wb["Conf"]
             if ws2["B4"].value is None:
-                raise ConfigError("WARNING: orgUnit not filled in!")
+                raise ConfigError("ERROR: orgUnit not filled in!")
             else:
                 u_dir = Path(ws2["B4"].value)
             fn = Path(cells["filename"].value)
@@ -366,7 +364,8 @@ class AssetUploader(BaseApp):
         print(f"   {rno}: {path.name} -> {identNr} [{cells['ref'].value}]")
         if cells["photographer"].value is None:
             # known extensions that dont work with exif
-            if path.suffix == ".jpg" or path.suffix == ".pdf":
+            exclude_exts = (".jpg", ".exr", ".obj", ".pdf", ".xml")
+            if path.suffix.lower() in exclude_exts:
                 cells["photographer"].value = "None"
                 return
 
@@ -409,11 +408,16 @@ class AssetUploader(BaseApp):
         ws2 = self.wb["Conf"]
         if ws2["B1"] is None:
             raise ConfigError(
-                "ERROR: Missing configuration value: no templateID provided"
+                "ERROR: Missing configuration value: No templateID provided!"
             )
         if ws2["B3"] is None:
             raise ConfigError(
-                "ERROR: Missing configuration value: no dir for uploaded files"
+                "ERROR: Missing configuration value: orgUnit not filled in!"
+            )
+
+        if ws2["B4"].value is None:
+            raise ConfigError(
+                "ERROR: Missing configuration value: Target directory empty!"
             )
 
         if not Path(self.ws["A3"].value).exists():
@@ -441,7 +445,7 @@ class AssetUploader(BaseApp):
             shutil.move(src, dst)
             print(f"   moved to target '{dst}'")
         else:
-            raise SyntaxError(f"ERROR: target location already used! {dst}")
+            raise SyntaxError(f"ERROR: Target location already used! {dst}")
 
     def _scandir_checks(self) -> None:
         # check if excel exists, has the expected shape and is writable
@@ -489,5 +493,5 @@ class AssetUploader(BaseApp):
         templateID = int(ws2["B1"].value)
         print(f"Using asset {templateID} as template")
         template = self.client.get_template(ID=templateID, mtype="Multimedia")
-        template.toFile(path=f".template{templateID}.orig.xml")
+        # template.toFile(path=f".template{templateID}.orig.xml")
         return template

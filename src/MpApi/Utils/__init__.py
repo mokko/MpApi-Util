@@ -183,7 +183,7 @@ def upload():
     CLI USAGE:
     upload init    # writes empty excel file at conf.xlsx; existing files not overwritten
     upload scandir # scans current directory preparing for upload
-    upload go      # initiates or continues for upload process
+    upload up      # initiates or continues for upload process
 
     """
 
@@ -194,7 +194,9 @@ def upload():
         (c) creates a reference to object record."""
     )
     parser.add_argument(
-        "cmd", help="use one of the following commands: init, scandir or go"
+        "cmd",
+        help="use one of the following commands",
+        choices=("init", "scandir", "up"),
     )
     parser.add_argument(
         "-l", "--limit", help="break the go after number of items", default=-1
@@ -213,7 +215,7 @@ def upload():
         u.init()
     elif args.cmd == "scandir":
         u.scandir()
-    elif args.cmd == "go":
+    elif args.cmd == "up":
         u.go()
     else:
         print(f"Unknown command '{args.cmd}'")
