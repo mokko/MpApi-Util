@@ -124,7 +124,7 @@ class AssetUploader(BaseApp):
 
         """
         # print("Enter go")
-        self._go_checks()  # raise on error
+        self._check_go()  # raise on error
 
         templateM = self._prepare_template()
         ws2 = self.wb["Conf"]
@@ -227,7 +227,7 @@ class AssetUploader(BaseApp):
         add new files, manually delete rows from Excel and
         to update the table by re-running scandir.
         """
-        self._scandir_checks()
+        self._check_scandir()
 
         # looping thru files (usually pwd)
         if Dir is None:
@@ -282,6 +282,73 @@ class AssetUploader(BaseApp):
             # should this raise an error?
             print("   ATTACHING FAILED (HTTP REQUEST)!")
             return False
+
+    def _check_go(self) -> None:
+        """
+        Checks requirements for go command. Raises on error.
+
+        Saves workbook to self.wb
+        """
+        # check if excel exists, has the expected shape and is writable
+        if not excel_fn.exists():
+            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
+
+        self.wb = self._init_excel(path=excel_fn)
+
+        # die if not writable so that user can close it before waste of time
+        self._save_excel(path=excel_fn)
+
+        try:
+            self.ws = self.wb["Assets"]
+        except:
+            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+
+        check_if_none = {
+            "B1": "ERROR: Missing configuration value: No templateID provided!",
+            "B3": "ERROR: Missing configuration value: orgUnit not filled in!",
+            "B4": "ERROR: Missing configuration value: Target directory empty!",
+        }
+        ws2 = self.wb["Conf"]
+        for cell in check_if_none:
+            if ws2[cell].value is None:
+                raise ConfigError(check_if_none[cell])
+
+        if not Path(self.ws["A3"].value).exists():
+            raise Exception("ERROR: File doesn't exist (anymore). Already uploaded?")
+
+    def _check_scandir(self) -> None:
+        """
+        A couple of checks for scandir. Saves worksheet to self.wb.
+        """
+        # check if excel exists, has the expected shape and is writable
+        if not excel_fn.exists():
+            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
+
+        self.wb = self._init_excel(path=excel_fn)
+
+        # die if not writable so that user can close it before waste of time
+        self._save_excel(path=excel_fn)
+        try:
+            self.ws = self.wb["Assets"]
+        except:
+            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+
+        if self.ws.max_row < 2:
+            raise ConfigError(
+                f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
+            )
+
+        conf_ws = self.wb["Conf"]
+        orgUnit = conf_ws["B3"].value  # can be None
+        if orgUnit is None:
+            pass
+        elif orgUnit.strip() == "":
+            orgUnit = None
+        self.orgUnit = orgUnit
+
+        # todo: check that target_dir is filled-in
+        if conf_ws["C4"].value is None:
+            raise ConfigError("ERROR: Need target dir in B4")
 
     def _exiv_creator(self, *, path: Path) -> Optional[str]:
         """
@@ -359,6 +426,7 @@ class AssetUploader(BaseApp):
             cells["parts_objIds"].alignment = Alignment(wrap_text=True)
 
         if cells["ref"].value is None:
+            print("in ref")
             # if asset_fn exists we assume that asset has already been uploaded
             # if no single objId has been indentified, we will not create asset
             if cells["asset_fn_exists"].value == "None":
@@ -380,6 +448,7 @@ class AssetUploader(BaseApp):
                 cells["ref"].font = red
 
         if cells["targetpath"].value is None:
+            print("in targetpath")
             ws2 = self.wb["Conf"]
             u_dir = Path(ws2["B4"].value)
             fn = Path(cells["filename"].value)
@@ -392,42 +461,12 @@ class AssetUploader(BaseApp):
 
         print(f"   {rno}: {path.name} -> {identNr} [{cells['ref'].value}]")
         if cells["photographer"].value is None:
+            print("in photographer")
             creator = self._exiv_creator(path=path)
             if creator is None:
                 cells["photographer"].value = "None"
             else:
                 cells["photographer"].value = creator
-
-    def _go_checks(self) -> None:
-        """
-        Checks requirements for go command. Raises on error.
-        """
-        # check if excel exists, has the expected shape and is writable
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-
-        self.wb = self._init_excel(path=excel_fn)
-
-        # die if not writable so that user can close it before waste of time
-        self._save_excel(path=excel_fn)
-
-        try:
-            self.ws = self.wb["Assets"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
-
-        check_if_none = {
-            "B1": "ERROR: Missing configuration value: No templateID provided!",
-            "B3": "ERROR: Missing configuration value: orgUnit not filled in!",
-            "B4": "ERROR: Missing configuration value: Target directory empty!",
-        }
-        ws2 = self.wb["Conf"]
-        for cell in check_if_none:
-            if ws2[cell].value is None:
-                raise ConfigError(check_if_none[cell])
-
-        if not Path(self.ws["A3"].value).exists():
-            raise Exception("ERROR: File doesn't exist (anymore). Already uploaded?")
 
     def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
         if moduleItemId is None or moduleItemId == "None":
@@ -470,34 +509,3 @@ class AssetUploader(BaseApp):
         template = self.client.get_template(ID=templateID, mtype="Multimedia")
         # template.toFile(path=f".template{templateID}.orig.xml")
         return template
-
-    def _scandir_checks(self) -> None:
-        # check if excel exists, has the expected shape and is writable
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-
-        self.wb = self._init_excel(path=excel_fn)
-
-        # die if not writable so that user can close it before waste of time
-        self._save_excel(path=excel_fn)
-        try:
-            self.ws = self.wb["Assets"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
-
-        if self.ws.max_row < 2:
-            raise ConfigError(
-                f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
-            )
-
-        conf_ws = self.wb["Conf"]
-        orgUnit = conf_ws["B3"].value  # can be None
-        if orgUnit is None:
-            pass
-        elif orgUnit.strip() == "":
-            orgUnit = None
-        self.orgUnit = orgUnit
-
-        # todo: check that target_dir is filled-in
-        if conf_ws["C4"].value is None:
-            raise ConfigError("ERROR: Need target dir in B4")
