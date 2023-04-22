@@ -201,10 +201,10 @@ class AssetUploader(BaseApp):
         ] = "OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen)"
         ws2["C3"].alignment = Alignment(wrap_text=True)
 
-        ws2["A4"] = "Uploaded Directory"
+        ws2["A4"] = "Zielverzeichnis"
         ws2[
             "C4"
-        ] = "Für hochgeladene Verzeichnisse. UNC-Pfade brauchen in Python zweifache Backslash."
+        ] = "Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen in Python zweifachen Backslash."
 
         ws2.column_dimensions["A"].width = 25
         ws2.column_dimensions["B"].width = 25
@@ -247,8 +247,10 @@ class AssetUploader(BaseApp):
                 continue
             elif str(p).lower() in ("thumbs.db", "desktop.ini", "debug.xml"):
                 continue
-            rno = self._path_in_list(p)  # returns None if not in list, else rno
-            self._file_to_list(path=p, rno=rno)  # update or new row in table
+            # returns None if not in list, else rno
+            rno = self._path_in_list(p)
+            # if rno is None _file_to_list adds a new line
+            self._file_to_list(path=p, rno=rno)
             if self.limit == c:
                 print("* Limit reached")
                 break
@@ -281,10 +283,41 @@ class AssetUploader(BaseApp):
             print("   ATTACHING FAILED (HTTP REQUEST)!")
             return False
 
+    def _exiv_creator(self, *, path: Path) -> Optional[str]:
+        """
+        Expect a pathlib path, try to read that file with exiv and return
+        (a) a string with a single creator,
+        (b) a semicolon separated list of creators as a str or
+        (c) None if no creator could be found.
+
+        A few file types are exempt from checking.
+        """
+
+        # known extensions that dont work with exif
+        exclude_exts = (".jpg", ".exr", ".obj", ".pdf", ".xml", ".zip")
+        if path.suffix.lower() in exclude_exts:
+            print(f"\tExif: ignoring suffix {path}")
+            return
+
+        try:
+            with pyexiv2.Image(str(path)) as img:
+                img_data = img.read_iptc()
+        except:
+            print("   Exif:Couldn't open for exif")
+            return
+
+        try:
+            img_data["Iptc.Application2.Byline"]
+        except:
+            print("   Exif:Didn't find photographer info")
+            return
+        else:
+            return "; ".join(img_data["Iptc.Application2.Byline"])
+
     def _file_to_list(self, *, path: Path, rno=None):
         """
-        if rno is None add a new file to the end of te Excel list, else update the row specified by
-        rno.
+        If rno is None add a new file to the end of the Excel list, else update the row
+        specified by rno.
 
         This is for the scandir step.
         """
@@ -309,7 +342,7 @@ class AssetUploader(BaseApp):
             else:
                 cells["asset_fn_exists"].value = "; ".join(idL)
 
-        # in rare cases identNr_cell might be None, then we cant look up any objIds
+        # identNr_cell might be None, then we cant look up any objIds
         if cells["identNr"].value is None:
             print(f"WARNING: identNr cell is empty! {path.name}")
             return None
@@ -331,13 +364,12 @@ class AssetUploader(BaseApp):
             if cells["asset_fn_exists"].value == "None":
                 # if single objId has been identified use it as ref
                 objIds = cells["objIds"].value
-                if objIds != "None":  # ";" not in str(objIds)
+                if objIds != "None" and ";" not in str(objIds):
                     cells["ref"].value = int(objIds)
                     cells["ref"].font = teal
                 # if single part objId has been identified use it as ref
-                elif (
-                    cells["parts_objIds"].value != "None"
-                    and ";" not in cells["parts_objIds"].value
+                elif cells["parts_objIds"].value != "None" and ";" not in str(
+                    cells["parts_objIds"].value
                 ):
                     cells["ref"].value = (
                         cells["parts_objIds"].value.split(" ")[0].strip()
@@ -349,10 +381,7 @@ class AssetUploader(BaseApp):
 
         if cells["targetpath"].value is None:
             ws2 = self.wb["Conf"]
-            if ws2["B4"].value is None:
-                raise ConfigError("ERROR: orgUnit not filled in!")
-            else:
-                u_dir = Path(ws2["B4"].value)
+            u_dir = Path(ws2["B4"].value)
             fn = Path(cells["filename"].value)
             t = u_dir / fn
             while t.exists():
@@ -363,29 +392,11 @@ class AssetUploader(BaseApp):
 
         print(f"   {rno}: {path.name} -> {identNr} [{cells['ref'].value}]")
         if cells["photographer"].value is None:
-            # known extensions that dont work with exif
-            exclude_exts = (".jpg", ".exr", ".obj", ".pdf", ".xml")
-            if path.suffix.lower() in exclude_exts:
+            creator = self._exiv_creator(path=path)
+            if creator is None:
                 cells["photographer"].value = "None"
-                return
-
-            try:
-                with pyexiv2.Image(str(path)) as img:
-                    img_data = img.read_iptc()
-            except:
-                print("   Couldn't open for exif")
-                cells["photographer"].value = "None"
-                return
-            try:
-                img_data["Iptc.Application2.Byline"]
-            except:
-                print("   Didn't find photographer info")
-                cells["photographer"].value = "None"
-                return
             else:
-                cells["photographer"].value = "; ".join(
-                    img_data["Iptc.Application2.Byline"]
-                )
+                cells["photographer"].value = creator
 
     def _go_checks(self) -> None:
         """
@@ -405,20 +416,15 @@ class AssetUploader(BaseApp):
         except:
             raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
 
+        check_if_none = {
+            "B1": "ERROR: Missing configuration value: No templateID provided!",
+            "B3": "ERROR: Missing configuration value: orgUnit not filled in!",
+            "B4": "ERROR: Missing configuration value: Target directory empty!",
+        }
         ws2 = self.wb["Conf"]
-        if ws2["B1"] is None:
-            raise ConfigError(
-                "ERROR: Missing configuration value: No templateID provided!"
-            )
-        if ws2["B3"] is None:
-            raise ConfigError(
-                "ERROR: Missing configuration value: orgUnit not filled in!"
-            )
-
-        if ws2["B4"].value is None:
-            raise ConfigError(
-                "ERROR: Missing configuration value: Target directory empty!"
-            )
+        for cell in check_if_none:
+            if ws2[cell].value is None:
+                raise ConfigError(check_if_none[cell])
 
         if not Path(self.ws["A3"].value).exists():
             raise Exception("ERROR: File doesn't exist (anymore). Already uploaded?")
@@ -446,6 +452,24 @@ class AssetUploader(BaseApp):
             print(f"   moved to target '{dst}'")
         else:
             raise SyntaxError(f"ERROR: Target location already used! {dst}")
+
+    def _path_in_list(self, path) -> None:
+        """Returns True if filename is already in list (column A), else None."""
+        rno = 3
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            fn = row[0].value
+            if fn == str(path):
+                return rno
+            rno += 1
+        return None
+
+    def _prepare_template(self) -> Module:
+        ws2 = self.wb["Conf"]
+        templateID = int(ws2["B1"].value)
+        print(f"Using asset {templateID} as template")
+        template = self.client.get_template(ID=templateID, mtype="Multimedia")
+        # template.toFile(path=f".template{templateID}.orig.xml")
+        return template
 
     def _scandir_checks(self) -> None:
         # check if excel exists, has the expected shape and is writable
@@ -477,21 +501,3 @@ class AssetUploader(BaseApp):
         # todo: check that target_dir is filled-in
         if conf_ws["C4"].value is None:
             raise ConfigError("ERROR: Need target dir in B4")
-
-    def _path_in_list(self, path) -> None:
-        """Returns True of filename is already in list (column A), else False."""
-        rno = 3
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            fn = row[0].value
-            if fn == str(path):
-                return rno
-            rno += 1
-        return None
-
-    def _prepare_template(self) -> Module:
-        ws2 = self.wb["Conf"]
-        templateID = int(ws2["B1"].value)
-        print(f"Using asset {templateID} as template")
-        template = self.client.get_template(ID=templateID, mtype="Multimedia")
-        # template.toFile(path=f".template{templateID}.orig.xml")
-        return template
