@@ -147,6 +147,7 @@ class AssetUploader(BaseApp):
                 print(f"   object reference known, continue {c['ref'].value}")
 
             if c["asset_fn_exists"].value == "None":
+                print(f"fn: {fn}")
                 new_asset_id = self._make_new_asset(
                     fn=fn, moduleItemId=c["ref"].value, templateM=templateM
                 )
@@ -314,7 +315,7 @@ class AssetUploader(BaseApp):
                 raise ConfigError(check_if_none[cell])
 
         if not Path(self.ws["A3"].value).exists():
-            raise Exception("ERROR: File doesn't exist (anymore). Already uploaded?")
+            print("WARNING: File doesn't exist (anymore). Already uploaded?")
 
     def _check_scandir(self) -> None:
         """
@@ -421,7 +422,9 @@ class AssetUploader(BaseApp):
 
         if cells["parts_objIds"].value is None:
             cells["parts_objIds"].value = self.client.get_objIds2(
-                identNr=cells["identNr"].value, strict=False
+                # no orgUnit. Should that remain that way?
+                identNr=cells["identNr"].value,
+                strict=False,
             )
             cells["parts_objIds"].alignment = Alignment(wrap_text=True)
 
