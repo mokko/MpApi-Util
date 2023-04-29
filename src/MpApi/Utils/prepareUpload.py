@@ -105,7 +105,7 @@ class PrepareUpload(BaseApp):
 
         creds = self._read_credentials()
         self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
-
+        print(f"Logged in as '{creds['user']}'")
         self.limit = int(limit)
 
         self._init_log()
@@ -200,8 +200,7 @@ class PrepareUpload(BaseApp):
         # ws2 = self.wb["Conf"]
         # orgUnit = self._get_orgUnit(cell="B2") # can return None
         for c, rno in self._loop_table2(sheet=self.ws):
-            print(f"{rno} of {self.ws.max_row}")
-            # , end="\r", flush=True
+            print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
             self._asset_exists_already(c)
             self._objId_for_ident(c)
             self._fill_in_candidate(c)
@@ -219,10 +218,10 @@ class PrepareUpload(BaseApp):
 
         def _create_object(*, identNrs: str, template) -> str:
             identL = identNrs.split(";")
-
             objIds = set()  # unique list of objIds from Excel
             for ident in identL:
                 identNr = ident.strip()
+                print(f"***trying to create new object '{identNr}' from template")
                 new_id = self.client.create_from_template(
                     template=template, identNr=identNr
                 )
@@ -231,39 +230,41 @@ class PrepareUpload(BaseApp):
             objIds_str = "; ".join(str(objId) for objId in objIds)
             return objIds_str
 
+        ws2 = self.wb["Conf"]
         try:
-            self.conf["template"]
+            temp_str = ws2["B1"].value  # was "Object 12345". Keep that?
         except:
             raise ConfigError("Config value 'template' not defined!")
 
-        ttype, tid = self.conf["template"].split()  # do i need to strip?
-        ttype = ttype.strip()
-        tid = tid.strip()
+        ttype, tid = temp_str.split()
+        ttype = ttype.strip()  # do i need to strip?
+        tid = int(tid.strip())
         print(f"***template: {ttype} {tid}")
 
         self._raise_if_excel_has_no_content()
-        # self.client = self._init_client()
         # we want the same template for all records
+
         templateM = self.client.get_template(ID=tid, mtype=ttype)
+        # print ("Got template")
         # templateM.toFile(path="debug.template.xml")
 
-        for row, c in self._loop_table():
-            ident_cell = row[1]  # in Excel from filename; can have multiple
-            candidate_cell = row[5]  # to write into
-            if ident_cell.value is None:
+        for c, rno in self._loop_table2(sheet=self.ws):
+            if c["identNr"].value is None:
                 # without a identNr we cant fill in a identNr in template
                 # should not happen, that identNr is empty and cadinate = x
                 # maybe log this case?
                 return
-            if candidate_cell.value is not None:
-                cand_str = candidate_cell.value.strip()
-                if cand_str.lower() == "x":
+            if c["candidate"].value is not None:
+                cand_str = c["candidate"].value.strip().lower()
+                if cand_str == "x":
                     objIds_str = _create_object(
-                        identNrs=ident_cell.value, template=templateM
+                        identNrs=c["identNr"].value, template=templateM
                     )
-                    candidate_cell.value = objIds_str
+                    c["objIds"].value = objIds_str
+                    c["candidate"].value = None
                     # save immediately since likely to die
                     self._save_excel(path=self.excel_fn)
+        self._save_excel(path=self.excel_fn)
 
     def mv_dupes(self) -> None:
         def mk_dupes_dir():
@@ -305,39 +306,38 @@ class PrepareUpload(BaseApp):
 
             writes to self.ws
             """
-            if not path.is_dir():
-                identNr = extractIdentNr(path=path)
-                print(f"{identNr} : {path.name}")
-                self.ws[f"A{c}"] = path.name
-                self.ws[f"B{c}"] = identNr
-                self.ws[f"H{c}"] = str(path.absolute())
-                if identNr is not None:
-                    schema = identNrF._extract_schema(text=identNr)
-                else:
-                    schema = "None"
-                self.ws[f"I{c}"] = schema
+            identNr = extractIdentNr(path=path)
+            print(f"   {path.name} -> {identNr}")
+            self.ws[f"A{c}"] = path.name
+            self.ws[f"B{c}"] = identNr
+            self.ws[f"H{c}"] = str(path.absolute())
+            if identNr is not None:
+                schema = identNrF._extract_schema(text=identNr)
+            else:
+                schema = "None"
+            self.ws[f"I{c}"] = schema
 
-                try:
-                    schemaId = self.schemas[schema]["schemaId"]
-                    self.ws[f"J{c}"] = schemaId
-                except:
-                    self.ws[f"J{c}"] = "None"
-                    self.ws[f"J{c}"].font = red
+            try:
+                schemaId = self.schemas[schema]["schemaId"]
+                self.ws[f"J{c}"] = schemaId
+            except:
+                self.ws[f"J{c}"] = "None"
+                self.ws[f"J{c}"].font = red
 
-                if self._suspicious_characters(identNr=identNr):
-                    for x in "ABCDEF":
-                        self.ws[f"{x}{c}"].font = red
-                    print(
-                        f"WARNING: identNr is suspicious - file correctly named? {identNr}"
-                    )
-                # If the original files are misnamed, perhaps best to correct them instead of
-                # adapting the parser to errors.
+            if self._suspicious_characters(identNr=identNr):
+                for x in "ABCDEF":
+                    self.ws[f"{x}{c}"].font = red
+                print(
+                    f"WARNING: identNr is suspicious - file correctly named? {identNr}"
+                )
+            # If the original files are misnamed, perhaps best to correct them instead of
+            # adapting the parser to errors.
 
-                if identNr in known_idents:
-                    self.ws[f"B{c}"].font = red
-                    self.ws[f"K{c}"] = "Duplikat"
-                    print(f"Duplikat {identNr}")
-                known_idents.add(identNr)
+            if identNr in known_idents:
+                self.ws[f"B{c}"].font = red
+                self.ws[f"K{c}"] = "Duplikat"
+                # print(f"Duplikat {identNr}")
+            known_idents.add(identNr)
 
         # let's not overwrite or modify file information in Excel if already written
         # 2 lines are getting written by initialization
@@ -380,8 +380,8 @@ class PrepareUpload(BaseApp):
             if self.limit == c:
                 print("* Limit reached")
                 break
-            print(f"{c} of {len(file_list)}")  # DDD{filemask2}
             _per_row(c=c, path=path)
+            print(f"{c} of {len(file_list)}")  # DDD{filemask2}
             c += 1
         self._save_excel(path=self.excel_fn)
 
@@ -432,7 +432,7 @@ class PrepareUpload(BaseApp):
                 and c["partsObjIds"].value == "None"
                 and c["duplicate"].value != "Duplikat"
             ):
-                print("setting candidate")
+                print(f"{c['filename'].value} -> {c['identNr'].value} candidate")
                 c["candidate"].value = "x"
 
     def _get_objIds(self, *, identNr: str, strict: bool) -> str:
