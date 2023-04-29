@@ -1,15 +1,14 @@
 """
-Prepare for assets upload (e.g with regular Bildimport)
+Prepare for assets for upload (e.g with regular Bildimport)
 
-At heart, this tool creates Object records for properly named asset files, if they don't 
-exist yet. New records are copied from a template record, but they have the identNr from
-the file.
+At heart, this tool creates Object records for properly named asset files. New records 
+are copied from a template record and get the identNr from the file.
 
 With this tool we 
 - recursively scan a directory
 - filter for specific files (e.g. with "-KK" or only *.jpg)
 - extract the identNr from filename
-- check if asset has already been uploaded (sort of a Dublette)
+- check if asset has already been uploaded (sort of a "Dublette")
 - lookup objId by identNr
 - mark cases where extracted identNr are suspicious
 - figure out cases where object record doesn't exit yet
@@ -18,17 +17,17 @@ With this tool we
 - write the new identNr in the new record
 
 This tool is meant to be used by an editor. The editor runs the script multiple times
-in different phases. For each phase, the edior checks the results in the Excel file
-and, if necessary, corrects something. There are three phases
-(1) scandisk
+in different phases. For each phase, the edior checks the results in the Excel file and, 
+if necessary, corrects something. There are three phases
+(1) scandir (formerly: scandisk)
 (2) checkria and
 (3) createobjects
 (4) movedupes:
 
-   $ prepare -j JobName -p scandisk  
-   $ prepare -j JobName -p checkria  
-   $ prepare -j JobName -p createobjects  
-   $ prepare -j JobName -p movedupes  
+   $ prepare scandir -j JobName
+   $ prepare checkria -j JobName 
+   $ prepare createobjects -j JobName   
+   $ prepare movedupes -j JobName   
 
 Preparation
 - write/edit/update configuration (e.g. prepare.ini)
@@ -50,6 +49,22 @@ After running checkria
 
 After running createobjects
 - preserve Excel file for documentation; contains ids of newly created records
+
+How should prepare.ini be structured?
+excel_fn = Excel filename, e.g. test.xlsx
+
+Update April 2023
+- We make prepare work a lot more like the mover and upload, so 
+  (1) no more separate config file, instead we use prepare.xlsx 
+  (2) We now scan current working directory 
+  (3) We get RIA credentials from $HOME\.RIA file  
+  (4) command line changd to type upload scandir (without -p for phase)
+  (5) hardcoded "prepare.xlsx" file name
+  (6) scandisk renamed to scandir with alias init to be more similar to mover and upload
+  (7) currently filemask is not configurable so always falls back to default
+TODO
+- I want to put the two checks from checkria into a single loop. Is this feasable?
+- Do we make scandir re-runnable?
 """
 
 
@@ -67,10 +82,11 @@ from typing import Any, Optional
 # from MpApi.Util.prepare.scandisk import Scandisk
 # from MpApi.Util.prepare.aea import Aea
 # from mpapi.sar import Sar
+from mpapi.module import Module
 from MpApi.Utils.BaseApp import BaseApp, NoContentError
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.identNr import IdentNrFactory
-from mpapi.module import Module
+from MpApi.Utils.logic import extractIdentNr
 
 # worksheet: openpyxl.worksheet
 
@@ -84,23 +100,16 @@ class PrepareUpload(BaseApp):
     def __init__(
         self,
         *,
-        baseURL: str,
-        conf_fn: str,
-        job: str,
-        user: str,
-        pw: str,
         limit: int = -1,
     ) -> None:
-        self.baseURL = baseURL
-        self.conf_fn = Path(conf_fn)
-        self.job = job  # let's not load RiaUtil here, bc we dont need it yet
+
+        creds = self._read_credentials()
+        self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
+
         self.limit = int(limit)
-        self.user = user  # scandisk phase
-        self.pw = pw
 
         self._init_log()
-        self.conf = self._init_conf(path=self.conf_fn, job=job)
-        self.excel_fn = Path(self.conf["excel_fn"])
+        self.excel_fn = Path("prepare.xlsx")
         if self.excel_fn.exists():
             print(f"* {self.excel_fn} exists already")
         else:
@@ -174,132 +183,30 @@ class PrepareUpload(BaseApp):
 
         self.wb = self._init_excel(path=self.excel_fn)
         self.ws = self._init_sheet(workbook=self.wb)  # explicit is better than implicit
-        self._conf_to_excel(
-            conf=self.conf, wb=self.wb
-        )  # overwrites existing conf values, so only values of last run are listed
-
         # die if not writable so that user can close it before waste of time
         self._save_excel(path=self.excel_fn)
-
-    def _init_sheet(self, workbook: Workbook) -> openpyxl.worksheet.worksheet.Worksheet:
-        """
-        Defines the Excel format of this app. Needs to be specific to app.
-        """
-        sheet_title = "prepareUpload"
-        try:
-            ws = workbook[sheet_title]
-        except:  # new sheet
-            ws = self.wb.active
-        else:
-            return ws  # sheet exists already
-
-        # this is a new sheet
-        ws.title = sheet_title
-        for itemId in self.table_desc:
-            col = self.table_desc[itemId]["col"]  # letter
-            ws[f"{col}1"] = self.table_desc[itemId]["label"]
-            ws[f"{col}1"].font = Font(bold=True)
-            # print (f"{col} {self.table_desc[itemId]['label']}")
-            if "desc" in self.table_desc[itemId]:
-                desc = self.table_desc[itemId]["desc"]
-                ws[f"{col}2"] = desc
-                ws[f"{col}2"].font = Font(size=9, italic=True)
-                # print (f"\t{desc}")
-            if "width" in self.table_desc[itemId]:
-                width = self.table_desc[itemId]["width"]
-                # print (f"\t{width}")
-                ws.column_dimensions[col].width = width
-        return ws
-
-    def _raise_if_excel_has_no_content(self) -> bool:
-        # assuming that after scandisk excel has to have more than 2 lines
-        if self.ws.max_row < 3:
-            raise NoContentError(
-                f"ERROR: no data found; excel contains {self.ws.max_row} rows!"
-            )
-        return True
-        # else:
-        #    print(f"* Excel has data: {self.ws.max_row} rows")
-
-    def _suspicious_characters(self, *, identNr: str) -> bool:
-        # print (f"***suspicious? {identNr}")
-
-        msg = "suspicious_characters:"
-
-        if identNr is None:
-            # print ("return bc None")
-            return True
-        elif "  " in identNr:
-            logging.info(f"{msg} double space {identNr}")
-            return True
-        elif "." in identNr:
-            # TODO seems that identNr with . are not mrked
-            logging.info(f"{msg} unwanted symbol {identNr}")
-            return True
-        elif " " not in identNr:
-            logging.info(f"{msg} missing space {identNr}")
-            return True
-        elif "-a" in identNr:
-            logging.info(f"{msg} combination -a {identNr}")
-            return True
-        elif identNr.count(",") > 1:
-            logging.info(f"{msg} number of commas {identNr}")
-            return True
-
-        # print (" -> not suspicious")
-        return False
 
     #
     # public
     #
 
-    def asset_exists_already(self) -> None:
+    def checkria(self) -> None:
         """
-        Fills in the "already uploaded?" cell in Excel (column C).
-
-        Checks if an asset with that filename exists already in RIA. If so, it lists the
-        corresponding mulId(s); if not None
-
-        If config value mv_dupes exists, move asset files to the directory from the
-        mv_dupes config value.
-
-        Creates the dupes dir if it doesn't exist.
-
-        New:
-        - The check is now specific to an OrgUnit which is the internal name of a Bereich
-        (e.g. EMSudseeAustralien).
-        - The search is not exact. RIA ignores Sonderzeichen like _; i.e. if we search
-          for an asset with  name x_x.jog and we learn that this one exists already
-          according to this method then we dont know if the filename is really x_x.jpg
-          or any number of variants such as x__x.jpg.
-
-        If the Excel cell is empty, we still need to run the test. If it has one, multiple
-        mulIds or "None" we don't need to run it again.
+        Attempt to unify two steps into one loop
+            p.asset_exists_already()
+            p.objId_for_ident()
         """
         self._raise_if_excel_has_no_content()
-        self.client = self._init_client()
+        # ws2 = self.wb["Conf"]
+        # orgUnit = self._get_orgUnit(cell="B2") # can return None
+        for c, rno in self._loop_table2(sheet=self.ws):
+            print(f"{rno} of {self.ws.max_row}")
+            # , end="\r", flush=True
+            self._asset_exists_already(c)
+            self._objId_for_ident(c)
+            self._fill_in_candidate(c)
 
-        c = 1  # counter; start counting at row 3, so counts the entries more than the rows
-        changed = False
-        for row, c in self._loop_table():
-            filename_cell = row[0]  # 0-index
-            uploaded_cell = row[2]
-            print(
-                f"* mulId for filename {c} of {self.ws.max_row-2}", end="\r", flush=True
-            )
-            if uploaded_cell.value == None:
-                # Let's not make org_unit optional!
-                idL = self.client.fn_to_mulId(
-                    fn=filename_cell.value, orgUnit=self.conf["org_unit"]
-                )
-                if len(idL) == 0:
-                    uploaded_cell.value = "None"
-                else:
-                    uploaded_cell.value = "; ".join(idL)
-                changed = True
-        print()
-        if changed is True:
-            self._save_excel(path=self.excel_fn)
+        self._save_excel(path=self.excel_fn)
 
     def create_objects(self) -> None:
         """
@@ -335,7 +242,7 @@ class PrepareUpload(BaseApp):
         print(f"***template: {ttype} {tid}")
 
         self._raise_if_excel_has_no_content()
-        self.client = self._init_client()
+        # self.client = self._init_client()
         # we want the same template for all records
         templateM = self.client.get_template(ID=tid, mtype=ttype)
         # templateM.toFile(path="debug.template.xml")
@@ -382,103 +289,6 @@ class PrepareUpload(BaseApp):
                 print(f"* Moving Dupe to {dest_fn}")
                 shutil.move(src_cell.value, dest_dir)
 
-    def objId_for_ident(self) -> None:
-        """
-        Writes in two cells: objIds and candidate
-
-        Lookup objIds for IdentNr. Write the objId(s) to Excel. If none is found, write
-        the string "None".
-
-        Also writes x in candidate cell if uploaded and objId cell both have "None";
-        write y if schemaId is missing.
-
-
-        """
-
-        def get_objIds(*, identNr: str, strict: bool) -> str:
-            for single in identNr.split(";"):
-                ident = single.strip()
-                objIdL = self.client.identNr_exists(
-                    nr=ident, orgUnit=self.conf["org_unit"], strict=strict
-                )
-                if not objIdL:
-                    return "None"
-                return self._rm_garbage("; ".join(str(objId) for objId in objIdL))
-
-        def get_objIds2(*, identNr: str, strict: bool) -> str:
-            """
-            Superloaded version of get_objIds that only lets real parts through. Not very
-            fast, but since RIA cant search for Sonderzeichen there is no way around it.
-
-            We could move the logic that identifies parts to the RIA module though. But
-            we have to move the garbage eliminator as well. Not today.
-            """
-            for single in identNr.split(";"):
-                identNr = single.strip()
-                resL = self.client.identNr_exists2(
-                    nr=identNr, orgUnit=self.conf["org_unit"], strict=strict
-                )
-                if not resL:
-                    return "None"
-                real_parts = []
-                for result in resL:
-                    objId = result[0]
-                    identNr_part = self._rm_garbage(result[1])
-                    if f"{identNr} " in identNr_part:
-                        real_parts.append(f"{objId} [{identNr_part}]")
-                # if we tested some results, but didnt find any real parts
-                # we dont want to test them again
-                if not real_parts:
-                    return "None"
-                return "; ".join(real_parts)
-
-        self._raise_if_excel_has_no_content()
-        self.client = self._init_client()
-
-        changed = False
-        for row, c in self._loop_table():
-            print(
-                f"* objId for identNr {c} of {self.ws.max_row-2}"
-            )  # , end="\r", flush=True
-            ident_cell = row[1]  # in Excel from filename; can have multiple
-            uploaded_cell = row[2]  # can have multiple
-            objId_cell = row[3]  # to write into
-            parts_objId_cell = row[4]  # objIds of potential parts
-            candidate_cell = row[5]  # to write into
-            schema_id_cell = row[9]  # to color candidate
-
-            # in rare cases identNr_cell might be None, then we cant look up anything
-            if ident_cell.value is None:
-                return changed
-
-            if objId_cell.value == None:
-                changed = True
-                objId_cell.value = get_objIds(identNr=ident_cell.value, strict=True)
-
-            if objId_cell.value == "None" and parts_objId_cell.value is None:
-                changed = True
-                # print ("Looking for parts")
-                parts_objId_cell.value = get_objIds2(
-                    identNr=ident_cell.value, strict=False
-                )
-                parts_objId_cell.alignment = Alignment(wrap_text=True)
-
-            if (
-                uploaded_cell.value == "None"
-                and objId_cell.value == "None"
-                and parts_objId_cell.value == "None"
-                and candidate_cell.value is None
-            ):
-                changed = True
-                if schema_id_cell.value is None:
-                    candidate_cell.value = "y"
-                    candidate_cell.font = red
-                else:
-                    candidate_cell.value = "x"
-
-        if changed is True:  # let's only save if we changed something
-            self._save_excel(path=self.excel_fn)
-
     def scan_disk(self) -> None:
         """
         Recursively scan a dir (src_dir) for *-KK*. List the files in an Excel file trying
@@ -488,23 +298,6 @@ class PrepareUpload(BaseApp):
         them red.
         """
 
-        def _extractIdentNr(*, path: Path) -> Optional[str]:
-            """
-            extracts IdentNr (=identifier, Signatur) from filename specifically for KK.
-
-            Writes to multiple columns (filename, fullpath, schema, schemaId)
-            TODO
-            We will need other identNr parsers in the future so we have to find load
-            plugins from conf.
-            """
-            # stem = str(path).split(".")[0]  # stem is everything before first .
-            stem = path.stem
-
-            # not sure that it works without filemask
-            m = re.search(r"([\w\d +.,-]+)" + filemask, stem)
-            if m:
-                return m.group(1).strip()
-
         def _per_row(*, c: int, path: Path) -> None:
             """
             c: row count
@@ -513,11 +306,11 @@ class PrepareUpload(BaseApp):
             writes to self.ws
             """
             if not path.is_dir():
-                identNr = _extractIdentNr(path=path)
+                identNr = extractIdentNr(path=path)
                 print(f"{identNr} : {path.name}")
                 self.ws[f"A{c}"] = path.name
                 self.ws[f"B{c}"] = identNr
-                self.ws[f"H{c}"] = str(path)
+                self.ws[f"H{c}"] = str(path.absolute())
                 if identNr is not None:
                     schema = identNrF._extract_schema(text=identNr)
                 else:
@@ -551,7 +344,7 @@ class PrepareUpload(BaseApp):
         if self.ws.max_row > 2:
             raise Exception("Error: Scan dir info already filled in")
 
-        src_dir = Path(self.conf["src_dir"])
+        src_dir = Path()  # Path(self.conf["src_dir"])
         print(f"* Scanning source dir: {src_dir}")
 
         identNrF = IdentNrFactory()
@@ -569,19 +362,208 @@ class PrepareUpload(BaseApp):
         file_list = sorted(src_dir.rglob(filemask2))
         # print (f"{filemask2} {file_list}")
         known_idents = set()  # mark duplicates
+        ignore_names = (
+            "thumbs.db",
+            "desktop.ini",
+            "prepare.ini",
+            "prepare.log",
+            "prepare.xlsx",
+        )
+
         for path in file_list:
-            print(f"{c-2} of {len(file_list)}")  # DDD{filemask2}
-            name = path.name
-            if name.lower().strip() == "thumbs.db":
-                next
-            if name.lower().strip() == "desktop.ini":
-                next
+            if path.is_dir():
+                continue
+            if path.name.startswith("."):
+                continue
+            if path.name.lower().strip() in ignore_names:
+                continue
             if self.limit == c:
                 print("* Limit reached")
                 break
+            print(f"{c} of {len(file_list)}")  # DDD{filemask2}
             _per_row(c=c, path=path)
             c += 1
         self._save_excel(path=self.excel_fn)
+
+    #
+    # PRIVATE
+    #
+
+    def _asset_exists_already(self, c) -> None:
+        """
+        Mainly fills in the "already uploaded?" cell in Excel (column C).
+
+        Checks if an asset with that filename exists already in RIA. If so, it lists the
+        corresponding mulId(s); if not None
+
+        If config value mv_dupes exists, move asset files to the directory from the
+        mv_dupes config value.
+
+        Creates the dupes dir if it doesn't exist.
+
+        New:
+        - The check is now specific to an OrgUnit which is the internal name of a Bereich
+        (e.g. EMSudseeAustralien).
+        - The search is not exact. RIA ignores Sonderzeichen like _; i.e. if we search
+          for an asset with  name x_x.jog and we learn that this one exists already
+          according to this method then we dont know if the filename is really x_x.jpg
+          or any number of variants such as x__x.jpg.
+
+        If the Excel cell is empty, we still need to run the test. If it has one, multiple
+        mulIds or "None" we don't need to run it again.
+        """
+        ws2 = self.wb["Conf"]
+        orgUnit = self._get_orgUnit(cell="B2")  # can return None
+        if c["assetUploaded"].value == None:
+            # Let's not make org_unit optional!
+            idL = self.client.fn_to_mulId(fn=c["filename"].value, orgUnit=orgUnit)
+            if len(idL) == 0:
+                c["assetUploaded"].value = "None"
+            else:
+                c["assetUploaded"].value = "; ".join(idL)
+
+    def _fill_in_candidate(self, c) -> None:
+        if c["schemaId"].value is None:
+            c["candidate"].font = red
+        if c["candidate"].value is None:
+            if (
+                c["assetUploaded"].value == "None"
+                and c["objIds"].value == "None"
+                and c["partsObjIds"].value == "None"
+                and c["duplicate"].value != "Duplikat"
+            ):
+                print("setting candidate")
+                c["candidate"].value = "x"
+
+    def _get_objIds(self, *, identNr: str, strict: bool) -> str:
+        orgUnit = self._get_orgUnit(cell="B2")  # can return None
+        for single in identNr.split(";"):
+            ident = single.strip()
+            objIdL = self.client.identNr_exists(
+                nr=ident, orgUnit=orgUnit, strict=strict
+            )
+            if not objIdL:
+                return "None"
+            return self._rm_garbage("; ".join(str(objId) for objId in objIdL))
+
+    def _get_objIds2(self, *, identNr: str, strict: bool) -> str:
+        """
+        Superloaded version of get_objIds that only lets real parts through. Not very
+        fast, but since RIA cant search for Sonderzeichen there is no way around it.
+
+        We could move the logic that identifies parts to the RIA module though. But
+        we have to move the garbage eliminator as well. Not today.
+        """
+        orgUnit = self._get_orgUnit(cell="B2")  # can return None
+        for single in identNr.split(";"):
+            identNr = single.strip()
+            resL = self.client.identNr_exists2(
+                nr=identNr, orgUnit=orgUnit, strict=strict
+            )
+            if not resL:
+                return "None"
+            real_parts = []
+            for result in resL:
+                objId = result[0]
+                identNr_part = self._rm_garbage(result[1])
+                if f"{identNr} " in identNr_part:
+                    real_parts.append(f"{objId} [{identNr_part}]")
+            # if we tested some results, but didnt find any real parts
+            # we dont want to test them again
+            if not real_parts:
+                return "None"
+            return "; ".join(real_parts)
+
+    def _init_sheet(self, workbook: Workbook) -> openpyxl.worksheet.worksheet.Worksheet:
+        """
+        Defines the Excel format of this app. Needs to be specific to app.
+        """
+        sheet_title = "prepareUpload"
+        try:
+            ws = workbook[sheet_title]
+        except:  # new sheet
+            ws = self.wb.active
+        else:
+            return ws  # sheet exists already
+
+        # this is a new sheet
+        ws.title = sheet_title
+        self._write_table_description(description=self.table_desc, sheet=ws)
+
+        try:
+            ws_conf = workbook["Conf"]
+        except:  # new sheet
+            ws_conf = self.wb.create_sheet("Conf")
+            ws_conf["A1"] = "template ID"
+            ws_conf["C1"] = "object"
+            ws_conf["A2"] = "orgUnit"
+        return ws
+
+    def _objId_for_ident(self, c) -> None:
+        """
+        Writes in two cells: objIds and candidate
+
+        Lookup objIds for IdentNr. Write the objId(s) to Excel. If none is found, write
+        the string "None".
+
+        Also writes x in candidate cell if uploaded and objId cell both have "None";
+        write y if schemaId is missing.
+        """
+
+        # in rare cases identNr_cell might be None, then we cant look up anything
+        if c["identNr"].value is None:
+            return
+
+        if c["objIds"].value == None:
+            c["objIds"].value = self._get_objIds(
+                identNr=c["identNr"].value, strict=True
+            )
+
+        # used to check if c["objIds"].value == "None"
+        if c["partsObjIds"].value is None:
+            # print ("Looking for parts")
+            c["partsObjIds"].value = self._get_objIds2(
+                identNr=c["identNr"].value, strict=False
+            )
+            c["partsObjIds"].alignment = Alignment(wrap_text=True)
+
+    def _raise_if_excel_has_no_content(self) -> bool:
+        # assuming that after scandisk excel has to have more than 2 lines
+        if self.ws.max_row < 3:
+            raise NoContentError(
+                f"ERROR: no data found; excel contains {self.ws.max_row} rows!"
+            )
+        return True
+        # else:
+        #    print(f"* Excel has data: {self.ws.max_row} rows")
+
+    def _suspicious_characters(self, *, identNr: str) -> bool:
+        # print (f"***suspicious? {identNr}")
+
+        msg = "suspicious_characters:"
+
+        if identNr is None:
+            # print ("return bc None")
+            return True
+        elif "  " in identNr:
+            logging.info(f"{msg} double space {identNr}")
+            return True
+        elif "." in identNr:
+            # TODO seems that identNr with . are not mrked
+            logging.info(f"{msg} unwanted symbol {identNr}")
+            return True
+        elif " " not in identNr:
+            logging.info(f"{msg} missing space {identNr}")
+            return True
+        elif "-a" in identNr:
+            logging.info(f"{msg} combination -a {identNr}")
+            return True
+        elif identNr.count(",") > 1:
+            logging.info(f"{msg} number of commas {identNr}")
+            return True
+
+        # print (" -> not suspicious")
+        return False
 
 
 if __name__ == "__main__":

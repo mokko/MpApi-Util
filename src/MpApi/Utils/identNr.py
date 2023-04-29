@@ -122,6 +122,7 @@ class IdentNrFactory:
                 self.schemas = {}
 
     def _save_schemas(self) -> None:
+        print(f"saving schema at {self.schemas_fn}")
         with open(self.schemas_fn, "w") as outfile:
             json.dump(self.schemas, outfile, indent=True, sort_keys=True)
 
@@ -177,13 +178,18 @@ class IdentNrFactory:
         return iNr
 
     def new_from_node(self, *, node: lxml.etree._Element) -> IdentNr:
+        """
+        node is repeatableGroup[@name='ObjObjectNumberGrp']/repeatableGroupItem. There
+        may only be one such item. Not sure
+        """
         iNr = IdentNr()
         try:
             iNr.text = node.xpath(
-                "m:dataField[@name = 'InventarNrSTxt']/m:value/text()", namespaces=NSMAP
+                "m:virtualField[@name = 'NumberVrt']/m:value/text()", namespaces=NSMAP
             )[0]
         except:
             # without text, i cant make schema and without schema I cant save in json...
+            # print ("GH1")
             raise ValueError(
                 "No InventarNrSTxt found!"
                 + etree.tostring(node, pretty_print=True, encoding="unicode")
@@ -193,18 +199,21 @@ class IdentNrFactory:
                 "m:dataField[@name = 'Part1Txt']/m:value/text()", namespaces=NSMAP
             )[0]
         except:
+            # print ("GH2")
             iNr.part1 = None
         try:
             iNr.part2 = node.xpath(
                 "m:dataField[@name = 'Part2Txt']/m:value/text()", namespaces=NSMAP
             )[0]
         except:
+            # print ("GH3")
             iNr.part2 = None
         try:
             iNr.part3 = node.xpath(
                 "m:dataField[@name = 'Part3Txt']/m:value/text()", namespaces=NSMAP
             )[0]
         except:
+            # print ("GH4")
             iNr.part3 = None
 
         iNr.schemaId = int(

@@ -7,6 +7,7 @@ from mpapi.client import MpApi
 from mpapi.search import Search
 from mpapi.constants import credentials
 from MpApi.Utils.AssetUploader import AssetUploader
+from MpApi.Utils.BaseApp import BaseApp  # , NoContentError
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.du import Du
 from MpApi.Utils.rename import Rename
@@ -20,11 +21,12 @@ from MpApi.Utils.prepareUpload import PrepareUpload  # mpapi.util.
 from pathlib import Path
 import sys
 
-# we require to run these apps from the a directory which has credentials file
-# not ideal. We could put it User Home dir instead if that bothers us.
-if Path(credentials).exists():
-    with open(credentials) as f:
-        exec(f.read())
+# new style
+base = BaseApp()
+creds = base._read_credentials()
+user = creds["user"]
+pw = creds["pw"]
+baseURL = creds["baseURL"]
 
 
 def attacher():
@@ -99,12 +101,8 @@ def prepareUpload():
     parser.add_argument(
         "phase",
         help="phase to run",
-        choices=["checkria", "createobjects", "movedupes", "scandisk"],
+        choices=["checkria", "createobjects", "init", "scandir"],
     )
-    parser.add_argument(
-        "-c", "--conf", help="location of configuration file", default="prepare.ini"
-    )
-    parser.add_argument("-j", "--job", help="pick a job from the config file")
     parser.add_argument("-l", "--limit", help="stop after number of items", default=-1)
     parser.add_argument(
         "-v", "--version", help="display version information", action="store_true"
@@ -120,18 +118,12 @@ def prepareUpload():
         raise SyntaxError("-p parameter required!")
 
     p = PrepareUpload(
-        baseURL=baseURL,
-        conf_fn=args.conf,
-        job=args.job,
         limit=args.limit,
-        pw=pw,
-        user=user,
     )
-    if args.phase == "scandisk":
+    if args.phase == "scandir" or args.phase == "init":
         p.scan_disk()
     elif args.phase == "checkria":
-        p.asset_exists_already()
-        p.objId_for_ident()
+        p.checkria()
     elif args.phase == "movedupes":
         print("* About to move dupes; make sure you have called checkria before.")
         p.mv_dupes()
@@ -270,14 +262,17 @@ def update_schemas():
     elif args.identNr is not None:
         c = MpApi(baseURL=baseURL, user=user, pw=pw)
         q = Search(module="Object")
+        print(f"looking for {args.identNr}")
+        # we used to use ObjObjectNumberGrp.InventarNrSTxt
         q.addCriterion(
             operator="startsWithField",
-            field="ObjObjectNumberGrp.InventarNrSTxt",
+            field="ObjObjectNumberVrt",
             value=args.identNr,
         )
         m = c.search2(query=q)
         print(f"{len(m)} objects found...")
-        f.update_schemas(data=m)
+        if len(m) > 0:
+            f.update_schemas(data=m)
         sys.exit(0)
     else:
         raise ValueError("Nothing to do!")

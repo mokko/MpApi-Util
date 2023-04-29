@@ -133,7 +133,7 @@ class AssetUploader(BaseApp):
             print(f"Making new dir '{u_dir}'")
             u_dir.mkdir()
 
-        for c, rno in self._loop_table2():
+        for c, rno in self._loop_table2(sheet=self.ws):
             # relative path; assume dir hasn't changed since scandir run
             fn = c["filename"].value
 
@@ -315,6 +315,7 @@ class AssetUploader(BaseApp):
                 raise ConfigError(check_if_none[cell])
 
         if not Path(self.ws["A3"].value).exists():
+            # got here after I manually uploaded one file somehow
             print("WARNING: File doesn't exist (anymore). Already uploaded?")
 
     def _check_scandir(self) -> None:
@@ -340,12 +341,7 @@ class AssetUploader(BaseApp):
             )
 
         conf_ws = self.wb["Conf"]
-        orgUnit = conf_ws["B3"].value  # can be None
-        if orgUnit is None:
-            pass
-        elif orgUnit.strip() == "":
-            orgUnit = None
-        self.orgUnit = orgUnit
+        self.orgUnit = self._get_orgUnit(cell="B3")  # can be None
 
         # todo: check that target_dir is filled-in
         if conf_ws["C4"].value is None:
