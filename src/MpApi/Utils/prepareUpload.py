@@ -221,7 +221,7 @@ class PrepareUpload(BaseApp):
             objIds = set()  # unique list of objIds from Excel
             for ident in identL:
                 identNr = ident.strip()
-                print(f"***trying to create new object '{identNr}' from template")
+                # print(f"***trying to create new object '{identNr}' from template")
                 new_id = self.client.create_from_template(
                     template=template, identNr=identNr
                 )
@@ -249,6 +249,7 @@ class PrepareUpload(BaseApp):
         # templateM.toFile(path="debug.template.xml")
 
         for c, rno in self._loop_table2(sheet=self.ws):
+            print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
             if c["identNr"].value is None:
                 # without a identNr we cant fill in a identNr in template
                 # should not happen, that identNr is empty and cadinate = x

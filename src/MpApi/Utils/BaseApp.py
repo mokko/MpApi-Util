@@ -194,7 +194,7 @@ class BaseApp:
     def _save_excel(self, path: Path) -> None:
         """Made this only to have same print msgs all the time"""
 
-        print(f"Saving {path}")
+        # print(f"*** saving {path}")
         self.wb.save(filename=path)
 
     def _get_orgUnit(self, *, cell: str) -> Optional[str]:
