@@ -425,7 +425,7 @@ class AssetUploader(BaseApp):
             cells["parts_objIds"].alignment = Alignment(wrap_text=True)
 
         if cells["ref"].value is None:
-            print("in ref")
+            # print("in ref")
             # if asset_fn exists we assume that asset has already been uploaded
             # if no single objId has been indentified, we will not create asset
             if cells["asset_fn_exists"].value == "None":
@@ -447,7 +447,7 @@ class AssetUploader(BaseApp):
                 cells["ref"].font = red
 
         if cells["targetpath"].value is None:
-            print("in targetpath")
+            # print("in targetpath")
             ws2 = self.wb["Conf"]
             u_dir = Path(ws2["B4"].value)
             fn = Path(cells["filename"].value)
@@ -460,7 +460,7 @@ class AssetUploader(BaseApp):
 
         print(f"   {rno}: {path.name} -> {identNr} [{cells['ref'].value}]")
         if cells["photographer"].value is None:
-            print("in photographer")
+            # print("in photographer")
             creator = self._exiv_creator(path=path)
             if creator is None:
                 cells["photographer"].value = "None"
