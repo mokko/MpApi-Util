@@ -54,23 +54,32 @@ How should prepare.ini be structured?
 excel_fn = Excel filename, e.g. test.xlsx
 
 Update April 2023
-- We make prepare work a lot more like the mover and upload, so 
-  (1) no more separate config file, instead we use prepare.xlsx 
+- changes to cli frontend
+  (1) no more separate config file ('prepare.ini'), instead we use prepare.xlsx 
   (2) We now scan current working directory 
   (3) We get RIA credentials from $HOME\.RIA file  
-  (4) command line changd to type upload scandir (without -p for phase)
+  (4) 'prepare scandir' (without -p for phase)
   (5) hardcoded "prepare.xlsx" file name
   (6) scandisk renamed to scandir with alias init to be more similar to mover and upload
   (7) currently filemask is not configurable so always falls back to default
+- changes inside
+  (8) the indivdual checks from checkria into a single loop
+  (9) got rid of old code
+  (10) use the filename identNr parser from logic
 TODO
-- I want to put the two checks from checkria into a single loop. Is this feasable?
-- Do we make scandir re-runnable?
+- scandir should be re-runnable
+- we should be able to set Standardbild
+- Make use of the log file
 """
-
 
 import configparser  # todo replace with toml in future
 import logging
 from lxml import etree
+from mpapi.module import Module
+from MpApi.Utils.BaseApp import BaseApp, ConfigError, NoContentError
+from MpApi.Utils.identNr import IdentNrFactory
+from MpApi.Utils.logic import extractIdentNr
+from MpApi.Utils.Ria import RIA
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font
 import openpyxl.cell.cell
@@ -79,21 +88,7 @@ import re
 import shutil
 from typing import Any, Optional
 
-# from MpApi.Util.prepare.scandisk import Scandisk
-# from MpApi.Util.prepare.aea import Aea
-# from mpapi.sar import Sar
-from mpapi.module import Module
-from MpApi.Utils.BaseApp import BaseApp, NoContentError
-from MpApi.Utils.Ria import RIA
-from MpApi.Utils.identNr import IdentNrFactory
-from MpApi.Utils.logic import extractIdentNr
-
-# worksheet: openpyxl.worksheet
-
-
 red = Font(color="FF0000")
-
-from MpApi.Utils.BaseApp import ConfigError
 
 
 class PrepareUpload(BaseApp):
@@ -107,8 +102,7 @@ class PrepareUpload(BaseApp):
         self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
         print(f"Logged in as '{creds['user']}'")
         self.limit = int(limit)
-
-        self._init_log()
+        # self._init_log()
         self.excel_fn = Path("prepare.xlsx")
         if self.excel_fn.exists():
             print(f"* {self.excel_fn} exists already")
@@ -192,19 +186,17 @@ class PrepareUpload(BaseApp):
 
     def checkria(self) -> None:
         """
-        Attempt to unify two steps into one loop
-            p.asset_exists_already()
-            p.objId_for_ident()
+        We loop thru the Excel table, test if
+        (a) assets with the given filename exist already
+        (b) figure out the objId for the identNr
+        (c) based on this information, fill in the candidate cell
         """
         self._raise_if_excel_has_no_content()
-        # ws2 = self.wb["Conf"]
-        # orgUnit = self._get_orgUnit(cell="B2") # can return None
-        for c, rno in self._loop_table2(sheet=self.ws):
+        for cells, rno in self._loop_table2(sheet=self.ws):
             print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
-            self._asset_exists_already(c)
-            self._objId_for_ident(c)
-            self._fill_in_candidate(c)
-
+            self._asset_exists_already(cells)
+            self._objId_for_ident(cells)
+            self._fill_in_candidate(cells)
         self._save_excel(path=self.excel_fn)
 
     def create_objects(self) -> None:
@@ -293,7 +285,7 @@ class PrepareUpload(BaseApp):
 
     def scan_disk(self) -> None:
         """
-        Recursively scan a dir (src_dir) for *-KK*. List the files in an Excel file trying
+        Recursively scan a dir (src_dir). List the files in an Excel file trying
         to extract the proper identNr.
 
         Filenames with suspicious characters (e.g. '-' or ';') are flagged by coloring

@@ -341,6 +341,146 @@ class RIA:
             text = text.replace("<body>", "").replace("</body>", "")
         return text
 
+    def mk_asset_standardbild2(self, *, objId: int, mulId: int) -> None:
+        """
+        Let's try another version where we only change one moduleReferenceItem, and not
+        the whole record. In other words: let's use mpapi.updateRepeatableGroup()
+
+        Now it works. I assume that previous attempts didn't work, because I needed to
+        provide all the items, not only the changed one.
+        """
+        # print (f"Getting whole record object {objId}")
+        m = self.mpapi.getItem2(mtype="Object", ID=objId)
+        # the xpath could fail, but only if that object doesn't exist or doesn't have
+        # this asset. These are good reasons to fail/die
+        objMultimediaRefN = m.xpath(
+            f"""/m:application/m:modules/m:module[
+                @name = 'Object'
+            ]/m:moduleItem[
+                @id = '{objId}'
+            ]/m:moduleReference[
+                @name='ObjMultimediaRef'
+            ]"""
+        )[0]
+        mRefItemN = objMultimediaRefN.xpath(
+            f"""m:moduleReferenceItem[
+                @moduleItemId = '{mulId}'
+            ]""",
+            namespaces=NSMAP,
+        )[0]
+        xml = """
+            <dataField dataType="Boolean" name="ThumbnailBoo">
+                <value>true</value>
+            </dataField>"""
+        frag = etree.XML(xml, parser=parser)
+        mRefItemN.append(frag)
+
+        mref_str = etree.tostring(
+            objMultimediaRefN, pretty_print=True, encoding="unicode"
+        )
+        # print(mref_str)
+
+        xml = f"""
+            <application xmlns="http://www.zetcom.com/ria/ws/module">
+              <modules>
+                <module name="Object">
+                  <moduleItem id="{objId}">
+                    {mref_str}
+                  </moduleItem>
+                </module>
+              </modules>
+            </application>"""
+
+        # is there already a Standardbild?
+        resL = objMultimediaRefN.xpath(
+            "m:moduleReferenceItem/m:dataField[@name = 'ThumbnailBoo']",
+            namespaces=NSMAP,
+        )
+        if len(resL) == 0:
+            print(
+                "no Standardbild yet, so trying to make one objId {objId} mulId {mulId}"
+            )
+            # print (xml)
+            r = self.mpapi.updateRepeatableGroup(
+                module="Object",
+                id=objId,
+                referenceId=mulId,
+                repeatableGroup="ObjMultimediaRef",
+                xml=xml,
+            )
+            print(r)
+        else:
+            print("Seems like there is already a Standardbild, aborting")
+
+    def mk_asset_standardbild(self, *, objId: int, mulId: int) -> None:
+        """
+        For a given objId that references a known mulId, make that mulId a Standardbild.
+        Probably, the asset has to be already linked to object.
+
+        This version downloads the whole object recrd, changes it and uploads it back. This
+        is not optimal because several fields get updated.
+
+        BEFORE
+        <moduleReference name="ObjMultimediaRef" targetModule="Multimedia" multiplicity="M:N" size="1">
+          <moduleReferenceItem moduleItemId="6572162" uuid="5d9773fc-c746-43cb-8af6-ff8ae708bfe4" seqNo="0"/>
+        </moduleReference>
+
+        AFTER
+        <moduleReference name="ObjMultimediaRef" targetModule="Multimedia" multiplicity="M:N" size="1">
+          <moduleReferenceItem moduleItemId="6571823" uuid="b45e7114-8933-4e52-8cc2-9008b4dc48cb" seqNo="0">
+            <dataField dataType="Boolean" name="ThumbnailBoo">
+              <value>true</value>
+            </dataField>
+          </moduleReferenceItem>
+
+        Get the whole record, add one static dataField and upload everything
+        """
+        print(f"Getting whole record object {objId}")
+        m = self.mpapi.getItem2(mtype="Object", ID=objId)
+        # the xpath could fail, but only if that object doesn't exist or doesn't have
+        # this asset. These are good reasons to fail/die
+        objMultimediaRefN = m.xpath(
+            f"""/m:application/m:modules/m:module[
+                @name = 'Object'
+            ]/m:moduleItem[
+                @id = '{objId}'
+            ]/m:moduleReference[
+                @name='ObjMultimediaRef'
+            ]"""
+        )[0]
+        mRefItemN = objMultimediaRefN.xpath(
+            f"""m:moduleReferenceItem[
+                @moduleItemId = '{mulId}'
+            ]""",
+            namespaces=NSMAP,
+        )[0]
+        # only add a Standardbild-marker if it does not exist yet
+        # at first we checked only the current asset and not all assets for a Thumbnail,
+        # but one object can have only a single one Standardbild
+        # Let's not set Standardbild, if object already has one, since then eyes are necessary
+        # to decided which one is best.
+        resL = objMultimediaRefN.xpath(
+            "m:moduleReferenceItem/m:dataField[@name = 'ThumbnailBoo']",
+            namespaces=NSMAP,
+        )
+        if len(resL) == 0:
+            xml = """
+                <dataField dataType="Boolean" name="ThumbnailBoo">
+                    <value>true</value>
+                </dataField>"""
+            frag = etree.XML(xml, parser=parser)
+            mRefItemN.append(frag)
+            print(m.toString())
+            print("Updating record in RIA...")
+            #  since we're uploading the whole document, RIA logs changes to multiple
+            #  fields. This is not good, but it works.
+            client.mpapi.updateItem2(mtype="Object", ID=objId, data=m)
+        else:
+            print("Thumbnail already set!?")
+            print(
+                etree.tostring(objMultimediaRefN, pretty_print=True, encoding="unicode")
+            )
+
     def upload_attachment(self, *, file: str, ID: int):
         """
         Save attachment to asset/Multmedia record identified by id.
@@ -358,3 +498,7 @@ class RIA:
             raise TypeError(f"ERROR: Path '{file}' is a dir")
 
         return self.mpapi.updateAttachment(module="Multimedia", path=file, id=ID)
+
+
+if __name__ == "__main__":
+    pass

@@ -32,6 +32,8 @@ red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
 
+IGNORE_NAMES = ("thumbs.db", "desktop.ini", "debug.xml", "prepare.log", "prepare.ini")
+
 
 class AssetUploader(BaseApp):
     def __init__(self, *, limit: int = -1) -> None:
@@ -74,7 +76,7 @@ class AssetUploader(BaseApp):
                 "label": "Objekte-Link",
                 "desc": "automatisierter Vorschlag",
                 "col": "F",
-                "width": 7,
+                "width": 9,
             },
             "notes": {
                 "label": "Bemerkung",
@@ -105,6 +107,12 @@ class AssetUploader(BaseApp):
                 "desc": "wenn Upload erfolgreich",
                 "col": "K",
                 "width": 15,
+            },
+            "standardbild": {
+                "label": "Standardbild",
+                "desc": "Standardbild setzen, wenn noch keines existiert",
+                "col": "L",
+                "width": 5,
             },
         }
 
@@ -143,31 +151,12 @@ class AssetUploader(BaseApp):
                     "   object reference unknown, not creating assets nor attachments"
                 )
                 continue
-            else:
-                print(f"   object reference known, continue {c['ref'].value}")
+            #  print(f"   object reference known, continue {c['ref'].value}")
 
-            if c["asset_fn_exists"].value == "None":
-                print(f"fn: {fn}")
-                new_asset_id = self._make_new_asset(
-                    fn=fn, moduleItemId=c["ref"].value, templateM=templateM
-                )
-                c["asset_fn_exists"].value = new_asset_id
-                c["asset_fn_exists"].font = teal
-                print(f"   asset {new_asset_id} created")
-            # else:
-            #    print(f"   asset exists already: {c['asset_fn_exists'].value}")
-
-            if c["attached"].value == None:
-                if c["ref"].value is not None:
-                    ID = int(c["asset_fn_exists"].value)
-                    if self._attach_asset(
-                        path=fn, mulId=ID, target_path=c["targetpath"].value
-                    ):
-                        c["attached"].value = "x"
-                        # self._save_excel(path=excel_fn)  # save after every file
-            else:
-                print("   asset already attached")
-            self._save_excel(path=excel_fn)
+            self._create_new_asset(c)
+            self._upload_file(c)
+            self._set_Standardbild(c)
+        self._save_excel(path=excel_fn)
 
     def init(self) -> None:
         """
@@ -246,7 +235,7 @@ class AssetUploader(BaseApp):
                 continue
             elif p.is_dir():
                 continue
-            elif str(p).lower() in ("thumbs.db", "desktop.ini", "debug.xml"):
+            elif str(p).lower() in IGNORE_NAMES:
                 continue
             # returns None if not in list, else rno
             rno = self._path_in_list(p)
@@ -254,8 +243,24 @@ class AssetUploader(BaseApp):
             self._file_to_list(path=p, rno=rno)
             if self.limit == c:
                 print("* Limit reached")
-                break
+                break  # breaks for loop
             c += 1
+        self._save_excel(path=excel_fn)
+
+    def standardbild(self) -> None:
+        print("Only setting Standardbild")
+        self._check_scandir()
+        for c, rno in self._loop_table2(sheet=self.ws):
+            # relative path; assume dir hasn't changed since scandir run
+            fn = c["filename"].value
+
+            print(f"{rno}: {c['identNr'].value}")
+            if c["ref"].value is None:
+                print(
+                    "   object reference unknown, not creating assets nor attachments"
+                )
+                continue
+            self._set_Standardbild(c)
         self._save_excel(path=excel_fn)
 
     #
@@ -346,6 +351,16 @@ class AssetUploader(BaseApp):
         # todo: check that target_dir is filled-in
         if conf_ws["C4"].value is None:
             raise ConfigError("ERROR: Need target dir in B4")
+
+    def _create_new_asset(self, c) -> None:
+        if c["asset_fn_exists"].value == "None":
+            # print(f"fn: {fn}")
+            new_asset_id = self._make_new_asset(
+                fn=fn, moduleItemId=c["ref"].value, templateM=templateM
+            )
+            c["asset_fn_exists"].value = new_asset_id
+            c["asset_fn_exists"].font = teal
+            print(f"   asset {new_asset_id} created")
 
     def _exiv_creator(self, *, path: Path) -> Optional[str]:
         """
@@ -508,3 +523,31 @@ class AssetUploader(BaseApp):
         template = self.client.get_template(ID=templateID, mtype="Multimedia")
         # template.toFile(path=f".template{templateID}.orig.xml")
         return template
+
+    def _upload_file(self, c) -> None:
+        if c["attached"].value == None:
+            if c["ref"].value is not None:
+                ID = int(c["asset_fn_exists"].value)
+                if self._attach_asset(
+                    path=fn, mulId=ID, target_path=c["targetpath"].value
+                ):
+                    c["attached"].value = "x"
+                self._save_excel(
+                    path=excel_fn
+                )  # we rather save after every file that is uploaded
+        else:
+            print("   asset already attached")
+
+    def _set_Standardbild(self, c) -> None:
+        """
+        If column standardbild = x, try to set asset as standardbild for known object;
+        only succeeds if object has no Standardbild yet.
+        """
+        print(c["standardbild"].value)
+        if c["standardbild"].value is not None:
+            if c["standardbild"].value.lower() == "x":
+                objId = int(c["objIds"].value)
+                mulId = int(c["asset_fn_exists"].value)
+                self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
+                c["standardbild"].value = "erledigt"
+                self._save_excel(path=excel_fn)

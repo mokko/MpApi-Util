@@ -176,7 +176,7 @@ def upload():
     upload init    # writes empty excel file at conf.xlsx; existing files not overwritten
     upload scandir # scans current directory preparing for upload
     upload up      # initiates or continues for upload process
-
+    upload standardbild # only set standardbild
     """
 
     parser = argparse.ArgumentParser(
@@ -188,7 +188,7 @@ def upload():
     parser.add_argument(
         "cmd",
         help="use one of the following commands",
-        choices=("init", "scandir", "up"),
+        choices=("init", "scandir", "standardbild", "up"),
     )
     parser.add_argument(
         "-l", "--limit", help="break the go after number of items", default=-1
@@ -209,6 +209,8 @@ def upload():
         u.scandir()
     elif args.cmd == "up":
         u.go()
+    elif args.cmd == "standardbild":
+        u.standardbild()
     else:
         print(f"Unknown command '{args.cmd}'")
 

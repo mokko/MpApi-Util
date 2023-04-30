@@ -28,7 +28,7 @@ from MpApi.Utils.Ria import RIA
 from pathlib import Path
 from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.styles import Alignment, Font
-
+import re
 import sys
 import tomllib
 from typing import Iterator, Optional, Union
@@ -76,7 +76,7 @@ class BaseApp:
         # let's avoid side effects, although we're not doing this everywhere
         if path.exists():
             # print (f"* Loading existing excel: '{data_fn}'")
-            return load_workbook(path)
+            return load_workbook(path, data_only=True)
             # self.wb = load_workbook(path)
         else:
             # print (f"* Starting new excel: '{data_fn}'")
@@ -141,11 +141,13 @@ class BaseApp:
     def _plus_one(self, p: Path) -> Path:
         """
         Receive a path and add or increase the number at the end to make filename unique
+
+        We're adding "_1" before the suffix.
         """
         suffix = p.suffix  # returns str
         stem = p.stem  # returns str
         parent = p.parent  # returns Path
-        m = re.search(r"_(\d+)$", "", stem)
+        m = re.search(r"_(\d+)$", stem)
         if m:
             digits = int(m.group(1))
             stem_no_digits = stem.replace(f"_{digits}", "")
