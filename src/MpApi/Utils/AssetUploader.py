@@ -33,6 +33,7 @@ parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
 
 IGNORE_NAMES = ("thumbs.db", "desktop.ini", "debug.xml", "prepare.log", "prepare.ini")
+IGNORE_SUFFIXES = (".py", ".ini", ".lnk")
 
 
 class AssetUploader(BaseApp):
@@ -202,7 +203,6 @@ class AssetUploader(BaseApp):
 
         for each in "A1", "A2", "A3", "A4":
             ws2[each].font = Font(bold=True)
-
         self._save_excel(path=excel_fn)
 
     def scandir(self, *, Dir=None) -> None:
@@ -228,12 +228,13 @@ class AssetUploader(BaseApp):
 
         self._drop_rows_if_file_gone()
         c = 1
-        for p in src_dir.glob("*"):  # dont try recursive!
+        file_list = sorted(src_dir.rglob("*"))
+        for p in file_list:  # dont try recursive!
             if str(p).startswith(".") or p == excel_fn:
                 continue
-            elif p.suffix == ".py" or p.suffix == ".ini" or p.suffix in (".lnk"):
-                continue
             elif p.is_dir():
+                continue
+            elif p.suffix in IGNORE_SUFFIXES:
                 continue
             elif str(p).lower() in IGNORE_NAMES:
                 continue
