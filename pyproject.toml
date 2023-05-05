@@ -38,5 +38,6 @@ brename ='MpApi.Utils:rename'
 mover = 'MpApi.Utils:move'
 prepare = 'MpApi.Utils:prepareUpload'
 reportx = 'MpApi.Utils:reportX'
+ren2 = 'MpApi.Utils:ren2'
 update_schemas = 'MpApi.Utils:update_schemas'
 upload = 'MpApi.Utils:upload' # asset uploader

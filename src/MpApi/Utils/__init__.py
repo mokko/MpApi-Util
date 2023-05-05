@@ -1,6 +1,6 @@
 """Higer-level tools for MpApi, the unofficial MuseumPlus Client"""
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 import argparse
 
 from mpapi.client import MpApi
@@ -19,6 +19,7 @@ from MpApi.Utils.unzipChunks import iter_chunks
 # from MpApi.Util.scandisk import Scandisk #mpapi.util.
 from MpApi.Utils.prepareUpload import PrepareUpload  # mpapi.util.
 from pathlib import Path
+import shutil
 import sys
 
 # new style
@@ -131,7 +132,79 @@ def prepareUpload():
         p.create_objects()
 
 
-def rename():
+def ren2():
+    """
+    Rename files in current directory by adding a string before the suffix
+
+    Directories are untouched, current version is not recursive
+
+    before: ./file.jpg
+    after:  ./file{add}.jpg
+    """
+
+    parser = argparse.ArgumentParser(
+        description="renadd - rename files in current directory by adding a string before the suffix"
+    )
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
+
+    parser.add_argument(
+        "-a", "--act", help="actually do the changes", action="store_true"
+    )
+
+    parser.add_argument(
+        "cmd", help="string that will be added to end of every filename"
+    )
+
+    parser.add_argument(
+        "first",
+        help="first string, required",
+    )
+
+    parser.add_argument("second", help="second string", nargs="?", default=None)
+
+    args = parser.parse_args()
+
+    try:
+        args.second
+    except:
+        args.second = None
+    if args.version:
+        print(f"Version: {__version__}")
+        sys.exit(0)
+
+    def _add(p, first):
+        suffix = p.suffix
+        stem = p.stem
+        # parent = f.parent
+        return f"{stem}{first}{suffix}"
+
+    def _replace(p, first, second):
+        suffix = p.suffix
+        stem = p.stem
+        # parent = f.parent
+        new_stem = stem.replace(first, second)
+        return f"{new_stem}{suffix}"
+        print(f"{f} -> {new}")
+        if args.act:
+            shutil.move(f, new)
+
+    if not args.act:
+        print("Demo mode, not acting")
+    for f in sorted(Path().glob("*")):  # not recursive
+        if f.is_dir():
+            continue
+        if args.cmd == "add":
+            new = _add(f, args.first)
+        elif args.cmd == "replace":
+            new = _replace(f, args.first, args.second)
+        print(f"{f} -> {new}")
+        if args.act:
+            shutil.move(f, new)
+
+
+def ren():
     parser = argparse.ArgumentParser(
         description="Rename tool using an Excel spreadsheet for manual check and documentation"
     )

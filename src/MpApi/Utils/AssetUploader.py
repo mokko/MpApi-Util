@@ -142,21 +142,20 @@ class AssetUploader(BaseApp):
             print(f"Making new dir '{u_dir}'")
             u_dir.mkdir()
 
-        for c, rno in self._loop_table2(sheet=self.ws):
+        for cells, rno in self._loop_table2(sheet=self.ws):
             # relative path; assume dir hasn't changed since scandir run
-            fn = c["filename"].value
+            fn = cells["filename"].value
 
-            print(f"{rno}: {c['identNr'].value}")
-            if c["ref"].value is None:
+            print(f"{rno}: {cells['identNr'].value}")
+            if cells["ref"].value is None:
                 print(
                     "   object reference unknown, not creating assets nor attachments"
                 )
                 continue
-            #  print(f"   object reference known, continue {c['ref'].value}")
-
-            self._create_new_asset(c)
-            self._upload_file(c)
-            self._set_Standardbild(c)
+            #  print(f"   object reference known, continue {cells['ref'].value}")
+            self._create_new_asset(cells)
+            self._upload_file(cells)
+            self._set_Standardbild(cells)
         self._save_excel(path=excel_fn)
 
     def init(self) -> None:
