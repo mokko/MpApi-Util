@@ -134,12 +134,19 @@ def prepareUpload():
 
 def ren2():
     """
-    Rename files in current directory by adding a string before the suffix
+    Simple rename tool that renames all files in current directory.
 
-    Directories are untouched, current version is not recursive
+    You can add a string before the suffix
+        ren2 add ___-KK
+        before: ./file.jpg
+        after:  ./file___-KK.jpg
 
-    before: ./file.jpg
-    after:  ./file{add}.jpg
+    Or you can replace string A with another string B
+        ren relpace "-" "___-KK"
+        before: ./file -KK.jpg
+        after:  ./file ___-KK.jpg
+
+    Directories are untouched. Currently ren2 doesn't operate recursively.
     """
 
     parser = argparse.ArgumentParser(
@@ -166,10 +173,6 @@ def ren2():
 
     args = parser.parse_args()
 
-    try:
-        args.second
-    except:
-        args.second = None
     if args.version:
         print(f"Version: {__version__}")
         sys.exit(0)
@@ -177,18 +180,13 @@ def ren2():
     def _add(p, first):
         suffix = p.suffix
         stem = p.stem
-        # parent = f.parent
         return f"{stem}{first}{suffix}"
 
     def _replace(p, first, second):
         suffix = p.suffix
         stem = p.stem
-        # parent = f.parent
         new_stem = stem.replace(first, second)
         return f"{new_stem}{suffix}"
-        print(f"{f} -> {new}")
-        if args.act:
-            shutil.move(f, new)
 
     if not args.act:
         print("Demo mode, not acting")
@@ -199,6 +197,8 @@ def ren2():
             new = _add(f, args.first)
         elif args.cmd == "replace":
             new = _replace(f, args.first, args.second)
+        else:
+            raise TypeError("ERROR: Unknown Command!")
         print(f"{f} -> {new}")
         if args.act:
             shutil.move(f, new)
