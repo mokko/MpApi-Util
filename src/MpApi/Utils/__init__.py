@@ -10,10 +10,11 @@ from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.BaseApp import BaseApp  # , NoContentError
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.du import Du
+from MpApi.Utils.identNr import IdentNrFactory, IdentNr
+from MpApi.Utils.mover import Mover
 from MpApi.Utils.rename import Rename
 from MpApi.Utils.reportX import ReportX
-from MpApi.Utils.mover import Mover
-from MpApi.Utils.identNr import IdentNrFactory, IdentNr
+from MpApi.Utils.sren import Sren
 from MpApi.Utils.unzipChunks import iter_chunks
 
 # from MpApi.Util.scandisk import Scandisk #mpapi.util.
@@ -132,78 +133,6 @@ def prepareUpload():
         p.create_objects()
 
 
-def ren2():
-    """
-    Simple rename tool that renames all files in current directory.
-
-    You can add a string before the suffix
-        ren2 add ___-KK
-        before: ./file.jpg
-        after:  ./file___-KK.jpg
-
-    Or you can replace string A with another string B
-        ren relpace "-" "___-KK"
-        before: ./file -KK.jpg
-        after:  ./file ___-KK.jpg
-
-    Directories are untouched. Currently ren2 doesn't operate recursively.
-    """
-
-    parser = argparse.ArgumentParser(
-        description="renadd - rename files in current directory by adding a string before the suffix"
-    )
-    parser.add_argument(
-        "-v", "--version", help="display version information", action="store_true"
-    )
-
-    parser.add_argument(
-        "-a", "--act", help="actually do the changes", action="store_true"
-    )
-
-    parser.add_argument(
-        "cmd", help="string that will be added to end of every filename"
-    )
-
-    parser.add_argument(
-        "first",
-        help="first string, required",
-    )
-
-    parser.add_argument("second", help="second string", nargs="?", default=None)
-
-    args = parser.parse_args()
-
-    if args.version:
-        print(f"Version: {__version__}")
-        sys.exit(0)
-
-    def _add(p, first):
-        suffix = p.suffix
-        stem = p.stem
-        return f"{stem}{first}{suffix}"
-
-    def _replace(p, first, second):
-        suffix = p.suffix
-        stem = p.stem
-        new_stem = stem.replace(first, second)
-        return f"{new_stem}{suffix}"
-
-    if not args.act:
-        print("Demo mode, not acting")
-    for f in sorted(Path().glob("*")):  # not recursive
-        if f.is_dir():
-            continue
-        if args.cmd == "add":
-            new = _add(f, args.first)
-        elif args.cmd == "replace":
-            new = _replace(f, args.first, args.second)
-        else:
-            raise TypeError("ERROR: Unknown Command!")
-        print(f"{f} -> {new}")
-        if args.act:
-            shutil.move(f, new)
-
-
 def ren():
     parser = argparse.ArgumentParser(
         description="Rename tool using an Excel spreadsheet for manual check and documentation"
@@ -241,6 +170,55 @@ def reportX():
 
     r = ReportX()
     r.write_report("reportx.xlsx")
+
+
+def sren():
+    """
+    Simple rename tool that renames all files in current directory.
+    """
+
+    parser = argparse.ArgumentParser(
+        description="renadd - rename files in current directory by adding a string before the suffix"
+    )
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
+
+    parser.add_argument(
+        "-a", "--act", help="actually do the changes", action="store_true"
+    )
+
+    parser.add_argument(
+        "-f",
+        "--filemask",
+        help="supply filemask for pathlib",
+    )
+    parser.add_argument(
+        "cmd",
+        help="string that will be added to end of every filename",
+        choices=("add", "replace"),
+    )
+
+    parser.add_argument(
+        "first",
+        help="first string, required",
+    )
+
+    parser.add_argument("second", help="second string", nargs="?", default=False)
+
+    args = parser.parse_args()
+
+    if args.version:
+        print(f"Version: {__version__}")
+        sys.exit(0)
+
+    r = Sren(act=args.act, filemask=args.filemask)
+    if args.cmd == "add":
+        r.add(args.first)
+    elif args.cmd == "replace":
+        r.replace(args.first, args.second)
+    else:
+        raise SyntaxError(f"Error: Unknown command {cmd}")
 
 
 def upload():
