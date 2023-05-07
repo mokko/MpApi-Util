@@ -12,15 +12,13 @@ from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.du import Du
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
 from MpApi.Utils.mover import Mover
+from MpApi.Utils.prepareUpload import PrepareUpload
 from MpApi.Utils.rename import Rename
 from MpApi.Utils.reportX import ReportX
 from MpApi.Utils.sren import Sren
 from MpApi.Utils.unzipChunks import iter_chunks
 
-# from MpApi.Util.scandisk import Scandisk #mpapi.util.
-from MpApi.Utils.prepareUpload import PrepareUpload  # mpapi.util.
 from pathlib import Path
-import shutil
 import sys
 
 # new style
@@ -174,11 +172,19 @@ def reportX():
 
 def sren():
     """
-    Simple rename tool that renames all files in current directory.
+    Simple tool to rename files in current directory.
+    USAGE:
+        sren add -KK          # adds -KK before suffix to every file
+        sren add -KK -f **/*  # search is recursive
+        sren add -KK -f *.jpg # normal pathlib filemask
+        sren replace - _      # replace - with _ in filename excluding suffixes
+
+    By default, sren only shows what it would do, to actually rename something use the
+    -a switch.
     """
 
     parser = argparse.ArgumentParser(
-        description="renadd - rename files in current directory by adding a string before the suffix"
+        description="Simple tool to rename files in current directory"
     )
     parser.add_argument(
         "-v", "--version", help="display version information", action="store_true"
