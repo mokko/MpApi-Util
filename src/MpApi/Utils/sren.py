@@ -36,21 +36,21 @@ class Sren:
         self._debug(f"Using filemask {self.filemask}")
 
     def add(self, string) -> None:
-        for p in self._loop():
+        for p, c in self._loop():
             suffix = p.suffix
             stem = p.stem
             parent = p.parent
             dst = parent / f"{stem}{string}{suffix}"
-            self._move(p, dst)
+            self._move(p, dst, c)
 
     def replace(self, first, second) -> None:
-        for p in self._loop():
+        for p, c in self._loop():
             suffix = p.suffix
             stem = p.stem
             parent = p.parent
             new_stem = stem.replace(first, second)
             dst = parent / f"{new_stem}{suffix}"
-            self._move(p, dst)
+            self._move(p, dst, c)
 
     #
     # private
@@ -61,14 +61,21 @@ class Sren:
             print(msg)
 
     def _loop(self) -> Iterator:
+        """
+        Returns every file and counts the files returned. Dirs are not returned and not
+        counted. Filemask can trigger recursive search (**/). See Python's pathlib for
+        details.
+        """
+        c = 1
         for f in sorted(Path().glob(self.filemask)):
             if not f.is_dir():
-                yield f
+                yield f, c
+                c += 1
 
-    def _move(self, src, dst) -> None:
+    def _move(self, src, dst, count) -> None:
         if src == dst:
             print(f"{src} - name is not new, not moving")
             return
-        print(f"{src} -> {dst}")
+        print(f"{count}: {src} -> {dst}")
         if self.act:
             shutil.move(src, dst)
