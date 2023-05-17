@@ -26,8 +26,13 @@ DEBUG = True
 
 
 class Sren:
-    def __init__(self, *, act=False, filemask=None) -> None:
+    def __init__(self, *, act=False, filemask=None, rblock=True) -> None:
+        """
+        rblock blocks recursively adding a string that already exists in stem. By
+        default, we switch that on.
+        """
         self.act = act
+        self.rblock = rblock
         if filemask is None:
             self.filemask = "*"  # default
         else:
@@ -36,20 +41,46 @@ class Sren:
         self._debug(f"Using filemask {self.filemask}")
 
     def add(self, string) -> None:
+        """
+        add a string before the suffix
+
+        {path}{stem}{suffix}
+
+        Should we optionally prevent adding a string that is already present at the end
+        of the filename? This is the recursiveblock.
+        """
         for p, c in self._loop():
             suffix = p.suffix
             stem = p.stem
             parent = p.parent
-            dst = parent / f"{stem}{string}{suffix}"
+            # todo: test
+            if self.rblock and stem.endswith(string):
+                print(
+                    f"rblock: String '{string}' exists already in stem, blocking duplication"
+                )
+                dst = p
+            else:
+                dst = parent / f"{stem}{string}{suffix}"
             self._move(p, dst, c)
 
     def replace(self, first, second) -> None:
+        """
+        replace a string in the filename (before suffix) - not path.
+        """
         for p, c in self._loop():
             suffix = p.suffix
             stem = p.stem
             parent = p.parent
+            # should we introduce the rblock?
+            # If second string is already part of the stem
             new_stem = stem.replace(first, second)
-            dst = parent / f"{new_stem}{suffix}"
+            if self.rblock and string in stem:
+                print(
+                    f"rblock: Target string '{string}' exists already in stem, blocking replacment"
+                )
+                dst = p
+            else:
+                dst = parent / f"{new_stem}{suffix}"
             self._move(p, dst, c)
 
     #

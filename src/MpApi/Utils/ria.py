@@ -124,7 +124,7 @@ class RIA:
             # if there is one already replace it
             numberGrpN.getparent().replace(numberGrpN, new_numberGrpN)
 
-        new_item.toFile(path="DDrewritten.xml")
+        # new_item.toFile(path="DDrewritten.xml")
         print(f"About to create record {identNr}")
         objId = self.mpapi.createItem3(data=new_item)
         return objId

@@ -488,8 +488,9 @@ class PrepareUpload(BaseApp):
         except:  # new sheet
             ws_conf = self.wb.create_sheet("Conf")
             ws_conf["A1"] = "template ID"
-            ws_conf["C1"] = "object"
+            ws_conf["C1"] = "Format: Object 1234567"
             ws_conf["A2"] = "orgUnit"
+            ws_conf.column_dimensions["B"].width = 20
         return ws
 
     def _objId_for_ident(self, c) -> None:

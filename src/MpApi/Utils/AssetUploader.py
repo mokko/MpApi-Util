@@ -135,7 +135,6 @@ class AssetUploader(BaseApp):
         # print("Enter go")
         self._check_go()  # raise on error
 
-        templateM = self._prepare_template()
         ws2 = self.wb["Conf"]
         u_dir = Path(ws2["B4"].value)
         if not u_dir.exists():
@@ -144,8 +143,6 @@ class AssetUploader(BaseApp):
 
         for cells, rno in self._loop_table2(sheet=self.ws):
             # relative path; assume dir hasn't changed since scandir run
-            fn = cells["filename"].value
-
             print(f"{rno}: {cells['identNr'].value}")
             if cells["ref"].value is None:
                 print(
@@ -352,14 +349,16 @@ class AssetUploader(BaseApp):
         if conf_ws["C4"].value is None:
             raise ConfigError("ERROR: Need target dir in B4")
 
-    def _create_new_asset(self, c) -> None:
-        if c["asset_fn_exists"].value == "None":
+    def _create_new_asset(self, cells: dict) -> None:
+        if cells["asset_fn_exists"].value == "None":
+            templateM = self._prepare_template()
+            fn = cells["filename"].value
             # print(f"fn: {fn}")
             new_asset_id = self._make_new_asset(
-                fn=fn, moduleItemId=c["ref"].value, templateM=templateM
+                fn=fn, moduleItemId=cells["ref"].value, templateM=templateM
             )
-            c["asset_fn_exists"].value = new_asset_id
-            c["asset_fn_exists"].font = teal
+            cells["asset_fn_exists"].value = new_asset_id
+            cells["asset_fn_exists"].font = teal
             print(f"   asset {new_asset_id} created")
 
     def _exiv_creator(self, *, path: Path) -> Optional[str]:
@@ -517,24 +516,27 @@ class AssetUploader(BaseApp):
         return None
 
     def _prepare_template(self) -> Module:
-        ws2 = self.wb["Conf"]
-        templateID = int(ws2["B1"].value)
-        print(f"Using asset {templateID} as template")
-        template = self.client.get_template(ID=templateID, mtype="Multimedia")
-        # template.toFile(path=f".template{templateID}.orig.xml")
-        return template
+        try:
+            return self.templateM
+        except:
+            ws2 = self.wb["Conf"]
+            templateID = int(ws2["B1"].value)
+            print(f"Using asset {templateID} as template")
+            self.templateM = self.client.get_template(ID=templateID, mtype="Multimedia")
+            # template.toFile(path=f".template{templateID}.orig.xml")
+            return self.templateM
 
-    def _upload_file(self, c) -> None:
-        if c["attached"].value == None:
-            if c["ref"].value is not None:
-                ID = int(c["asset_fn_exists"].value)
+    def _upload_file(self, cells) -> None:
+        if cells["attached"].value == None:
+            if cells["ref"].value is not None:
+                fn = cells["filename"].value
+                ID = int(cells["asset_fn_exists"].value)
                 if self._attach_asset(
-                    path=fn, mulId=ID, target_path=c["targetpath"].value
+                    path=fn, mulId=ID, target_path=cells["targetpath"].value
                 ):
-                    c["attached"].value = "x"
-                self._save_excel(
-                    path=excel_fn
-                )  # we rather save after every file that is uploaded
+                    cells["attached"].value = "x"
+                # save after every file that is uploaded
+                self._save_excel(path=excel_fn)
         else:
             print("   asset already attached")
 
