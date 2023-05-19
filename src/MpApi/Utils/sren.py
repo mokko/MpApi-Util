@@ -26,7 +26,7 @@ DEBUG = True
 
 
 class Sren:
-    def __init__(self, *, act=False, filemask=None, rblock=True) -> None:
+    def __init__(self, *, act=False, filemask=None, rblock=False) -> None:
         """
         rblock blocks recursively adding a string that already exists in stem. By
         default, we switch that on.
@@ -74,9 +74,9 @@ class Sren:
             # should we introduce the rblock?
             # If second string is already part of the stem
             new_stem = stem.replace(first, second)
-            if self.rblock and string in stem:
+            if self.rblock and second in stem:
                 print(
-                    f"rblock: Target string '{string}' exists already in stem, blocking replacment"
+                    f"rblock: Target string '{second}' exists already in stem, blocking replacment"
                 )
                 dst = p
             else:

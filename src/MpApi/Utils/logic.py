@@ -23,7 +23,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
 
     # VII c 86 a -A x.tif    -> VII c 86 a
     # VII c 86 a <1>-A x.tif -> VII c 86 a <1>
-    m = re.search(r"([\w\d +.,<>-]+)| -KK| -\d", stem)  # [ *|__|^$|]-KK|-\d|
+    m = re.search(r"([\w\d +.,<>-]+)| -KK| -\d", stem)  
     if m:
         # restrict to max length of elements
         astr = m.group(1).strip()
@@ -33,7 +33,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         else:
             new = " ".join(alist[0:4])
 
-        new2 = re.sub(r"-[A-Z]+", "", new).strip()
+        new2 = re.sub(r"___|-[A-Z]+", "", new).strip()
         # if there is a trailing + oder -, delete that
         new3 = re.sub(r"[\+-] *$| -3D|_ct", "", new2).strip()
 
