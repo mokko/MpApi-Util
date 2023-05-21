@@ -545,7 +545,6 @@ class AssetUploader(BaseApp):
         If column standardbild = x, try to set asset as standardbild for known object;
         only succeeds if object has no Standardbild yet.
         """
-        print(c["standardbild"].value)
         if c["standardbild"].value is not None:
             if c["standardbild"].value.lower() == "x":
                 objId = int(c["objIds"].value)
@@ -553,3 +552,4 @@ class AssetUploader(BaseApp):
                 self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
                 c["standardbild"].value = "erledigt"
                 self._save_excel(path=excel_fn)
+                print("\tstandardbild set")

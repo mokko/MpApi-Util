@@ -397,10 +397,9 @@ class RIA:
             namespaces=NSMAP,
         )
         if len(resL) == 0:
-            print(
-                "no Standardbild yet, so trying to make one objId {objId} mulId {mulId}"
-            )
-            # print (xml)
+            # print(
+            #    f"no Standardbild yet, so trying to make one objId {objId} mulId {mulId}"
+            # )
             r = self.mpapi.updateRepeatableGroup(
                 module="Object",
                 id=objId,
@@ -410,7 +409,7 @@ class RIA:
             )
             print(r)
         else:
-            print("Seems like there is already a Standardbild, aborting")
+            print("Standardbild already exsts, aborting")
 
     def mk_asset_standardbild(self, *, objId: int, mulId: int) -> None:
         """
