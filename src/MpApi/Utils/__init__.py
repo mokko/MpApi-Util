@@ -5,7 +5,7 @@ import argparse
 
 from mpapi.client import MpApi
 from mpapi.search import Search
-from mpapi.constants import credentials
+from mpapi.constants import get_credentials
 from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.BaseApp import BaseApp  # , NoContentError
 from MpApi.Utils.Attacher import Attacher
@@ -21,12 +21,7 @@ from MpApi.Utils.unzipChunks import iter_chunks
 from pathlib import Path
 import sys
 
-# new style
-base = BaseApp()
-creds = base._read_credentials()
-user = creds["user"]
-pw = creds["pw"]
-baseURL = creds["baseURL"]
+user, pw, baseURL = get_credentials()
 
 
 def attacher():
@@ -36,6 +31,7 @@ def attacher():
     )
     parser.add_argument(
         "cmd",
+        choices=["up", "down"],
         help="up or down for uploading/attaching a file to an asset record or downloaing or getting it",
     )
     parser.add_argument("-f", "--file", help="path to file for upload")
@@ -231,7 +227,7 @@ def upload():
     """
     CLI USAGE:
     upload init    # writes empty excel file at conf.xlsx; existing files not overwritten
-    upload scandir # scans current directory preparing for upload
+                   # and scans current directory preparing for upload
     upload up      # initiates or continues for upload process
     upload standardbild # only set standardbild
     """

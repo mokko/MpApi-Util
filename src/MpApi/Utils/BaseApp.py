@@ -30,7 +30,6 @@ from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.styles import Alignment, Font
 import re
 import sys
-import tomllib
 from typing import Iterator, Optional, Union
 
 # from typing import Any
@@ -168,19 +167,6 @@ class BaseApp:
             col = self.table_desc[label]["col"]
             cells[label] = self.ws[f"{col}{rno}"]
         return cells
-
-    def _read_credentials(self) -> None:
-        """
-        New credentials systems where we read RIA credentials from a single file
-        in a home directory ($HOME/.ria) instead of multiple files in many directories. We could
-        also zip and encrypt this file.
-        """
-        cred_fn = Path.home() / ".ria"
-        if not cred_fn.exists():
-            raise ConfigError(f"RIA Credentials not found at {cred_fn}")
-
-        with open(cred_fn, "rb") as f:
-            return tomllib.load(f)
 
     # needs to go to Ria.py?
     def _rm_garbage(self, text: str) -> str:

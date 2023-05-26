@@ -6,6 +6,8 @@ Should emulate the hotfolder eventually. That is we
 (c) create new multimedia (=asset) records from a template
 (d) upload/attach files to an multimedia records
 (e) create a reference usually from object to multimedia record
+(f) potentially set Standardbild
+(g) move a successfully uploaded asset to another dir for safekeeping
 
 In order to make the process transparent it is carried out in several steps
 
@@ -125,7 +127,8 @@ class AssetUploader(BaseApp):
         (b) upload/attach files to an multimedia records
         (c) create a reference usually from object to multimedia record
         (d) update Excel to reflect changes
-        (e) move uploaded file in uploaded subdir.
+        (e) set Standardbild (if x in right place)
+        (f) move uploaded file in uploaded subdir.
 
         Is it allowed to re-run go multiple time, e.g. to restart attachment? Yes!
 
@@ -245,6 +248,9 @@ class AssetUploader(BaseApp):
         self._save_excel(path=excel_fn)
 
     def standardbild(self) -> None:
+        """
+        Loop thru Excel and only set standardbild if requested
+        """
         print("Only setting Standardbild")
         self._check_scandir()
         for c, rno in self._loop_table2(sheet=self.ws):
