@@ -30,6 +30,8 @@ class ReportX(BaseApp):
         ws2 = self.wb.create_sheet("Conf")
         rno = 2
         print("beginning recursive scandir")
+        # probably not better if we sort it first since we potentially have to wait to long.
+        # TODO: But then perhaps we should include identNr sort
         for p in Path().rglob("*"):
             if p.is_dir():
                 print(f" {p} dir")
@@ -40,13 +42,13 @@ class ReportX(BaseApp):
             print(f"   {rno}: {p} -> {identNr}")
             ws[f"A{rno}"].value = p.name
             if not fast:
-                ws[f"B{rno}"].value = p.stat().st_size
+                ws[f"B{rno}"].value = p.stat().st_size / 1024
                 ws[f"C{rno}"].value = p.stat().st_mtime
             ws[f"D{rno}"].value = identNr
-            ws[f"E{rno}"].value = str(p.parent)
+            ws[f"E{rno}"].value = str(p.parent.resolve)
             ws[f"F{rno}"].value = str(p.absolute())
             if (rno / 10000).is_integer():
-                # if we save periodically, we dont know when the run has completed
+                # save periodically
                 self._save_excel(path=xlsx_fn)
             rno += 1
         ws2["A1"].value = "done"

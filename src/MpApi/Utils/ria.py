@@ -14,7 +14,6 @@ Reusable methods that interface with the low-level mpapi client
     if id_exists(mtype="Object", ID=257778):
         do_something()
 
-
 (3) Lookups (return one for another)
 
     if identNrExists(mtype="Object", orgUnit="EMMusikethnologie" nr="VII f 123"):
@@ -32,8 +31,6 @@ Reusable methods that interface with the low-level mpapi client
 
 (4) Change RIA
     objId = self.create_from_template(tid=1234, ttype="Object", ident="VII c 123")
-
-
 """
 
 import copy
