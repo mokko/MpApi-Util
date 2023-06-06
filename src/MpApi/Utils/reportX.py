@@ -17,8 +17,8 @@ fast = False
 
 
 class ReportX(BaseApp):
-    def __init__(self) -> None:
-        pass
+    def __init__(self, limit=-1) -> None:
+        self.limit = int(limit)
 
     def write_report(self, fn: str) -> None:
         """
@@ -34,7 +34,7 @@ class ReportX(BaseApp):
         # TODO: But then perhaps we should include identNr sort
         for p in Path().rglob("*"):
             if p.is_dir():
-                print(f" {p} dir")
+                print(f" dir: {p}")
                 continue
             elif p.name.lower() == "thumbs.db" or p.name.lower() == "desktop.ini":
                 continue
@@ -42,15 +42,17 @@ class ReportX(BaseApp):
             print(f"   {rno}: {p} -> {identNr}")
             ws[f"A{rno}"].value = p.name
             if not fast:
-                ws[f"B{rno}"].value = p.stat().st_size / 1024
+                ws[f"B{rno}"].value = int(p.stat().st_size / 1024)
                 ws[f"C{rno}"].value = p.stat().st_mtime
             ws[f"D{rno}"].value = identNr
-            ws[f"E{rno}"].value = str(p.parent.resolve)
+            ws[f"E{rno}"].value = str(p)
             ws[f"F{rno}"].value = str(p.absolute())
             if (rno / 10000).is_integer():
                 # save periodically
                 self._save_excel(path=xlsx_fn)
             rno += 1
+            if self.limit == rno:
+                break
         ws2["A1"].value = "done"
         self._save_excel(path=xlsx_fn)
 

@@ -156,13 +156,17 @@ def reportX():
     """
     Write an xlsx report on the files present in the current directory (recursively)
     """
-    # parser = argparse.ArgumentParser(
-    #    description="Write an xlsx report on the files present in the current directory"
-    # )
-    # parser.add_argument("-s", "--src", help="Scan source directory")
-    # args = parser.parse_args()
-
-    r = ReportX()
+    parser = argparse.ArgumentParser(
+        description="Write an xlsx report on the files present in the current directory"
+    )
+    parser.add_argument(
+        "-l",
+        "--limit",
+        help="Stop the scan after specified number of files",
+        default=-1,
+    )
+    args = parser.parse_args()
+    r = ReportX(limit=args.limit)
     r.write_report("reportx.xlsx")
 
 
