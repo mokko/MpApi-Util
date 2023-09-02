@@ -76,6 +76,7 @@ import configparser  # todo replace with toml in future
 import logging
 from lxml import etree
 from mpapi.module import Module
+from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError, NoContentError
 from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.logic import extractIdentNr
@@ -98,9 +99,9 @@ class PrepareUpload(BaseApp):
         limit: int = -1,
     ) -> None:
 
-        creds = self._read_credentials()
-        self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
-        print(f"Logged in as '{creds['user']}'")
+        user, pw, baseURL = get_credentials()
+        self.client = RIA(baseURL=baseURL, user=user, pw=pw)
+        print(f"Logged in as '{user}'")
         self.limit = int(limit)
         # self._init_log()
         self.excel_fn = Path("prepare.xlsx")

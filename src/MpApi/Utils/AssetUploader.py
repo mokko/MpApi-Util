@@ -15,6 +15,7 @@ AssetUploader does not work RECURSIVELY
 """
 import copy
 from lxml import etree
+from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.logic import extractIdentNr
 from MpApi.Utils.Ria import RIA
@@ -41,8 +42,8 @@ IGNORE_SUFFIXES = (".py", ".ini", ".lnk")
 class AssetUploader(BaseApp):
     def __init__(self, *, limit: int = -1) -> None:
         self.limit = int(limit)  # allows to break the go loop after number of items
-        creds = self._read_credentials()
-        self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
+        user, pw, baseURL = get_credentials()
+        self.client = RIA(baseURL=baseURL, user=user, pw=pw)
 
         self.table_desc = {
             "filename": {
