@@ -136,8 +136,8 @@ class PrepareUpload(BaseApp):
                 "width": 15,
             },
             "partsObjIds": {
-                "label": "Teile objId?",
-                "desc": "für diese IdentNr",
+                "label": "Teile/Ganzes",
+                "desc": "objId für Teile/Ganzes",
                 "col": "E",
                 "width": 20,
             },
@@ -517,9 +517,11 @@ class PrepareUpload(BaseApp):
         # used to check if c["objIds"].value == "None"
         if c["partsObjIds"].value is None:
             # print ("Looking for parts")
-            c["partsObjIds"].value = self._get_objIds2(
-                identNr=c["identNr"].value, strict=False
-            )
+            objIdL = self._get_objIds_for_whole_or_parts(identNr=c["identNr"].value)
+            if objIdL:
+                c["partsObjIds"].value = "; ".join(objIdL)
+            else:
+                c["partsObjIds"].value = "None"
             c["partsObjIds"].alignment = Alignment(wrap_text=True)
 
     def _raise_if_excel_has_no_content(self) -> bool:

@@ -23,7 +23,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
 
     # VII c 86 a -A x.tif    -> VII c 86 a
     # VII c 86 a <1>-A x.tif -> VII c 86 a <1>
-    m = re.search(r"([\w\d +.,<>-]+)| -KK| -\d", stem)
+    m = re.search(r"([\w\d +.,<>-_]+)| -KK| -\d|__\d+", stem)
     if m:
         # restrict to max length of elements
         astr = m.group(1).strip()
@@ -42,3 +42,18 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         match = re.search(r"\w \d+|d+", new3)
         if match:
             return new3
+
+def extractIdentNr2(*, path: Path) -> Optional[str]:
+    """
+    For Hendryk's archival identNrs
+    """
+    stem = (
+        path.stem
+    )  # stem as determined by path is everything before the last .suffix.
+    m = re.search(r"([\w\d +.,<>-_]+)__\d+", stem)
+    if m:
+        astr = m.group(1).strip()
+
+    print (f"XXX {astr}")
+    raise TypeError
+    return astr

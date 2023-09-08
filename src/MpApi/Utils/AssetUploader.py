@@ -11,13 +11,15 @@ Should emulate the hotfolder eventually. That is we
 
 In order to make the process transparent it is carried out in several steps
 
-AssetUploader does not work RECURSIVELY
+AssetUploader does NOT work RECURSIVELY
+
+
 """
 import copy
 from lxml import etree
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
-from MpApi.Utils.logic import extractIdentNr
+from MpApi.Utils.logic import extractIdentNr2
 from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
 from mpapi.record import Record
@@ -78,7 +80,7 @@ class AssetUploader(BaseApp):
             },
             "ref": {
                 "label": "Objekte-Link",
-                "desc": "automatisierter Vorschlag",
+                "desc": "automat. Vorschlag für Objekte-DS",
                 "col": "F",
                 "width": 9,
             },
@@ -238,6 +240,8 @@ class AssetUploader(BaseApp):
                 continue
             elif str(p).lower() in IGNORE_NAMES:
                 continue
+            elif str(p).lower() == "checksum.md5":
+                continue
             # returns None if not in list, else rno
             rno = self._path_in_list(p)
             # if rno is None _file_to_list adds a new line
@@ -353,7 +357,7 @@ class AssetUploader(BaseApp):
         self.orgUnit = self._get_orgUnit(cell="B3")  # can be None
 
         # todo: check that target_dir is filled-in
-        if conf_ws["C4"].value is None:
+        if conf_ws["B4"].value is None:
             raise ConfigError("ERROR: Need target dir in B4")
 
     def _create_new_asset(self, cells: dict) -> None:
@@ -401,7 +405,7 @@ class AssetUploader(BaseApp):
 
     def _file_to_list(self, *, path: Path, rno=None):
         """
-        If rno is None add a new file to the end of the Excel list, else update the row
+        If rno is None, add a new file to the end of the Excel list; else update the row
         specified by rno.
 
         This is for the scandir step.
@@ -409,7 +413,7 @@ class AssetUploader(BaseApp):
         if rno is None:
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
         cells = self._rno2dict(rno)
-        identNr = extractIdentNr(path=path)  # returns Python's None on failure
+        identNr = extractIdentNr2(path=path)  # returns Python's None on failure
         # only write in empty fields
         # relative path, but not if we use this recursively
         if cells["filename"].value is None:
@@ -438,17 +442,16 @@ class AssetUploader(BaseApp):
             )
 
         if cells["parts_objIds"].value is None:
-            cells["parts_objIds"].value = self.client.get_objIds2(
-                # no orgUnit. Should that remain that way?
-                identNr=cells["identNr"].value,
-                strict=False,
-            )
+            partsL = self._get_parts(identNr=cells["identNr"].value)
+            if partsL:
+                cells["parts_objIds"].value = "; ".join(parts)
+            else:
+                cells["parts_objIds"].value = "None"
             cells["parts_objIds"].alignment = Alignment(wrap_text=True)
 
         if cells["ref"].value is None:
-            # print("in ref")
             # if asset_fn exists we assume that asset has already been uploaded
-            # if no single objId has been indentified, we will not create asset
+            # if no single objId has been identified, we will not create asset
             if cells["asset_fn_exists"].value == "None":
                 # if single objId has been identified use it as ref
                 objIds = cells["objIds"].value

@@ -151,7 +151,7 @@ class RIA:
 
     def get_objIds2(
         self, *, identNr: str, strict: bool = True, orgUnit: str = None
-    ) -> str:
+    ) -> set:
         """
         A version of get_objIds that allows to search for Sonderzeichen. Not very
         fast, but since RIA cant search for Sonderzeichen there sometimes is no way
@@ -161,25 +161,28 @@ class RIA:
         Sonderzeichen. So a search for "VII a 123 >" returns the same result as
         "VII a 123"
 
-        This method basically returns the same Excel-ready string as get_objIds and uses
-        the same parameters.
+        Returns a possibly empty list with objIds.
+        
+        UPDATE
+        - Used to return semicolon separated string or "None" as a string.
+        
+        TODO: 
+        - There is a now an exact search in RIA that might make this search obsolete.
         """
+        real_parts = set() # do we need double brackets? doubtful
         for single in identNr.split(";"):
             identNr = single.strip()
             resL = self.identNr_exists2(nr=identNr, orgUnit=orgUnit, strict=strict)
             if not resL:
-                return "None"
-            real_parts = []
+                continue
             for result in resL:
                 objId = result[0]
                 identNr_part = self.rm_junk(result[1])
                 if f"{identNr} " in identNr_part:
-                    real_parts.append(f"{objId} [{identNr_part}]")
-            # if we tested some results, but didnt find any real parts
-            # we dont want to test them again
-            if not real_parts:
-                return "None"
-            return "; ".join(real_parts)
+                    real_parts.add(objId)
+        # if we tested some results, but didnt find any real parts
+        # we dont want to test them again
+        return real_parts
 
     def id_exists(self, *, mtype: str, ID: int) -> bool:
         """
@@ -250,6 +253,8 @@ class RIA:
     ) -> list[tuple[int, str]]:
         """
         Returns a list of tuples containing objIds and identNr
+
+        Who wants such a complicated return value?
         """
         if strict is True:
             op = "equalsField"
@@ -281,6 +286,30 @@ class RIA:
                 "m:dataField[@name = 'ObjObjectNumberTxt']/m:value", namespaces=NSMAP
             )
             results.append((objId, identNrL[0].text))
+        return results
+
+    def identNr_exists3(self, *, ident:str, orgUnit: Optional[str] = None) -> set[int]:
+        """
+        Another version that for a given identNr returns objIds as a set (unique) or empty set
+        if no record is found. Uses equalsExact.
+        """
+        q = Search(module="Object", limit=-1, offset=0)
+        if orgUnit is not None:
+            q.AND()
+        q.addCriterion(
+            field="ObjObjectNumberVrt",
+            operator="equalsExact",
+            value=ident,
+        )
+        if orgUnit is not None:
+            q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
+        q.addField(field="__id")
+
+        results = set()
+        m = self.mpapi.search2(query=q)
+        for itemN in m.iter(module="Object"):
+            objId = int(itemN.xpath("@id")[0])
+            results.add(objId)
         return results
 
     # a simple lookup
