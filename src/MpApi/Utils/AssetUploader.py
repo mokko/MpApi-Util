@@ -19,7 +19,7 @@ import copy
 from lxml import etree
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
-from MpApi.Utils.logic import extractIdentNr2
+from MpApi.Utils.logic import extractIdentNr
 from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
 from mpapi.record import Record
@@ -413,7 +413,7 @@ class AssetUploader(BaseApp):
         if rno is None:
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
         cells = self._rno2dict(rno)
-        identNr = extractIdentNr2(path=path)  # returns Python's None on failure
+        identNr = extractIdentNr(path=path)  # returns Python's None on failure
         # only write in empty fields
         # relative path, but not if we use this recursively
         if cells["filename"].value is None:
@@ -442,7 +442,7 @@ class AssetUploader(BaseApp):
             )
 
         if cells["parts_objIds"].value is None:
-            partsL = self._get_parts(identNr=cells["identNr"].value)
+            partsL = self._has_parts(identNr=cells["identNr"].value)
             if partsL:
                 cells["parts_objIds"].value = "; ".join(parts)
             else:

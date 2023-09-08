@@ -67,28 +67,28 @@ class BaseApp:
                     self.ws.delete_rows(c)
             c += 1
 
-#
-#
-#
+    #
+    #
+    #
 
-    def _get_objIds_for_whole_or_parts(self, *, identNr:str)-> set[int]:
+    def _get_objIds_for_whole_or_parts(self, *, identNr: str) -> set[int]:
         """
-        Receive the actual identNr. If it is (a) whole-part number, look for wholes; 
+        Receive the actual identNr. If it is (a) whole-part number, look for wholes;
         (b) if it a whole number look for parts and return the respective results as list
         of objIds.
 
         VII a 123 a-c: whole-part form
         VII a 123 whole form
-        
+
         Return the objIds as list, not a semicolon-separated string list.
         """
         if self._has_parts(identNr):
             # look for whole equivalent
             self._get_objIds_for_whole(identNr=identNr)
-        else: # look for parts
+        else:  # look for parts
             self._get_objIds_for_part(identNr=identNr)
 
-    def _get_objIds_for_part(self, *, identNr:str) -> set[int]:
+    def _get_objIds_for_part(self, *, identNr: str) -> set[int]:
         # the return value is messy here
         return self.client.get_objIds2(
             # no orgUnit. Should that remain that way?
@@ -96,7 +96,7 @@ class BaseApp:
             strict=False,
         )
 
-    def _get_objIds_for_whole(self, *, identNr:str) -> set[int]:
+    def _get_objIds_for_whole(self, *, identNr: str) -> set[int]:
         """
         Provided an identNr with parts, return objIds for the wholes.
 
@@ -104,18 +104,18 @@ class BaseApp:
         signature which makes little sense.
         """
         if not self._has_parts(identNr=identNr):
-            print ("WARNING: _get_objIds_for_whole already received a whole")
-            return {} # empty set
+            print("WARNING: _get_objIds_for_whole already received a whole")
+            return {}  # empty set
 
-        #chop_off_last_part assuming there is part information
+        # chop_off_last_part assuming there is part information
         ident_whole = " ".join(identNr.split()[:-1])
-        #print(f"WHOLE: {ident_whole}")
+        # print(f"WHOLE: {ident_whole}")
         return self.client.identNr_exists3(
             # no orgUnit. Should it remain that way?
             ident=ident_whole,
         )
 
-    def _has_parts(self, identNr:str) -> bool:
+    def _has_parts(self, identNr: str) -> bool:
         """
         Tests if identNr ends with parts; if so, return True, else False.
         """
@@ -138,11 +138,9 @@ class BaseApp:
         else:
             return True
 
-
-
-#
-#
-#
+    #
+    #
+    #
 
     def _init_excel(self, *, path: Path) -> Workbook:
         """

@@ -162,14 +162,14 @@ class RIA:
         "VII a 123"
 
         Returns a possibly empty list with objIds.
-        
+
         UPDATE
         - Used to return semicolon separated string or "None" as a string.
-        
-        TODO: 
+
+        TODO:
         - There is a now an exact search in RIA that might make this search obsolete.
         """
-        real_parts = set() # do we need double brackets? doubtful
+        real_parts = set()  # do we need double brackets? doubtful
         for single in identNr.split(";"):
             identNr = single.strip()
             resL = self.identNr_exists2(nr=identNr, orgUnit=orgUnit, strict=strict)
@@ -288,7 +288,7 @@ class RIA:
             results.append((objId, identNrL[0].text))
         return results
 
-    def identNr_exists3(self, *, ident:str, orgUnit: Optional[str] = None) -> set[int]:
+    def identNr_exists3(self, *, ident: str, orgUnit: Optional[str] = None) -> set[int]:
         """
         Another version that for a given identNr returns objIds as a set (unique) or empty set
         if no record is found. Uses equalsExact.
