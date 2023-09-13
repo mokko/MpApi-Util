@@ -518,7 +518,7 @@ class AssetUploader(BaseApp):
             try:
                 shutil.move(src, dst)
             except:
-                print(f"WARN move failed, continue ")
+                print(f"   WARN move failed, continue ")
             else:
                 print(f"   moved to target '{dst}'")
         else:
@@ -546,7 +546,7 @@ class AssetUploader(BaseApp):
             return self.templateM
 
     def _upload_file(self, cells) -> None:
-        print("enter _upload_file")
+        #print("enter _upload_file")
         if cells["attached"].value == None:
             if cells["ref"].value is not None:
                 fn = cells["filename"].value
@@ -565,7 +565,7 @@ class AssetUploader(BaseApp):
         If column standardbild = x, try to set asset as standardbild for known object;
         only succeeds if object has no Standardbild yet.
         """
-        print("enter _set_Standardbild")
+        #print("enter _set_Standardbild")
         if c["standardbild"].value is not None:
             if c["standardbild"].value.lower() == "x":
                 objId = int(c["objIds"].value)
