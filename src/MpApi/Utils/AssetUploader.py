@@ -141,10 +141,11 @@ class AssetUploader(BaseApp):
         self._check_go()  # raise on error
 
         ws2 = self.wb["Conf"]
-        u_dir = Path(ws2["B4"].value)
-        if not u_dir.exists():
-            print(f"Making new dir '{u_dir}'")
-            u_dir.mkdir()
+        if ws2["B4"].value is not None:
+            u_dir = Path(ws2["B4"].value)
+            if not u_dir.exists():
+                print(f"Making new dir '{u_dir}'")
+                u_dir.mkdir()
 
         for cells, rno in self._loop_table2(sheet=self.ws):
             # relative path; assume dir hasn't changed since scandir run
@@ -187,7 +188,7 @@ class AssetUploader(BaseApp):
         ws2["B2"] = "Objekte"  # todo alternativer Wert Restaurierung
 
         ws2["A3"] = "OrgUnit (optional)"
-        ws2["B3"] = "EMMusikethnologie"
+        ws2["B3"] = "EMArchiv"
         ws2[
             "C3"
         ] = "OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen)"
@@ -196,7 +197,8 @@ class AssetUploader(BaseApp):
         ws2["A4"] = "Zielverzeichnis"
         ws2[
             "C4"
-        ] = "Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen in Python zweifachen Backslash."
+        ] = """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
+        Backslash. Wenn Feld leer. wird Datei nicht bewegt."""
 
         ws2.column_dimensions["A"].width = 25
         ws2.column_dimensions["B"].width = 25
@@ -278,8 +280,6 @@ class AssetUploader(BaseApp):
         attach an asset file (at path) and, if successful, move the asset file to new
         location (target_path).
         """
-        if target_path is None:
-            raise SyntaxError("ERROR: target path should not be None")
 
         # if the file doesn't exist (anymore) it indicates major issues!
         if not Path(path).exists():
@@ -289,8 +289,9 @@ class AssetUploader(BaseApp):
         ret = self.client.upload_attachment(file=path, ID=mulId)
         # print(f"   success on upload? {ret}")
         if ret.status_code == 204:
-            self._move_file(src=path, dst=target_path)
-            return True
+            if target_path is not None:
+                self._move_file(src=path, dst=target_path)
+                return True
         else:
             # should this raise an error?
             print("   ATTACHING FAILED (HTTP REQUEST)!")
@@ -319,7 +320,8 @@ class AssetUploader(BaseApp):
         check_if_none = {
             "B1": "ERROR: Missing configuration value: No templateID provided!",
             "B3": "ERROR: Missing configuration value: orgUnit not filled in!",
-            "B4": "ERROR: Missing configuration value: Target directory empty!",
+            # B4 is now optional
+            # "B4": "ERROR: Missing configuration value: Target directory empty!",
         }
         ws2 = self.wb["Conf"]
         for cell in check_if_none:
@@ -356,8 +358,8 @@ class AssetUploader(BaseApp):
         self.orgUnit = self._get_orgUnit(cell="B3")  # can be None
 
         # todo: check that target_dir is filled-in
-        if conf_ws["B4"].value is None:
-            raise ConfigError("ERROR: Need target dir in B4")
+        # if conf_ws["B4"].value is None:
+        #    raise ConfigError("ERROR: Need target dir in B4")
 
     def _create_new_asset(self, cells: dict) -> None:
         # print("_create_new_asset")
@@ -475,14 +477,15 @@ class AssetUploader(BaseApp):
         if cells["targetpath"].value is None:
             # print("in targetpath")
             ws2 = self.wb["Conf"]
-            u_dir = Path(ws2["B4"].value)
-            fn = Path(cells["filename"].value)
-            t = u_dir / fn
-            while t.exists():
-                t = self._plus_one(t)
-            else:
-                cells["targetpath"].value = str(t)
-                cells["targetpath"].font = teal
+            if ws2["B4"].value is not None:
+                u_dir = Path(ws2["B4"].value)
+                fn = Path(cells["filename"].value)
+                t = u_dir / fn
+                while t.exists():
+                    t = self._plus_one(t)
+                else:
+                    cells["targetpath"].value = str(t)
+                    cells["targetpath"].font = teal
 
         print(f"   {rno}: {path.name} -> {identNr} [{cells['ref'].value}]")
         if cells["photographer"].value is None:
@@ -515,12 +518,8 @@ class AssetUploader(BaseApp):
         """
         dstp = Path(dst)
         if not dstp.exists():
-            try:
-                shutil.move(src, dst)
-            except:
-                print(f"   WARN move failed, continue ")
-            else:
-                print(f"   moved to target '{dst}'")
+            shutil.move(src, dst)  # die if problems
+            print(f"   moved to target '{dst}'")
         else:
             raise SyntaxError(f"ERROR: Target location already used! {dst}")
 
@@ -546,7 +545,7 @@ class AssetUploader(BaseApp):
             return self.templateM
 
     def _upload_file(self, cells) -> None:
-        #print("enter _upload_file")
+        # print("enter _upload_file")
         if cells["attached"].value == None:
             if cells["ref"].value is not None:
                 fn = cells["filename"].value
@@ -565,7 +564,7 @@ class AssetUploader(BaseApp):
         If column standardbild = x, try to set asset as standardbild for known object;
         only succeeds if object has no Standardbild yet.
         """
-        #print("enter _set_Standardbild")
+        # print("enter _set_Standardbild")
         if c["standardbild"].value is not None:
             if c["standardbild"].value.lower() == "x":
                 objId = int(c["objIds"].value)

@@ -151,11 +151,9 @@ class BaseApp:
         if path.exists():
             # print (f"* Loading existing excel: '{data_fn}'")
             return load_workbook(path, data_only=True)
-            # self.wb = load_workbook(path)
         else:
             # print (f"* Starting new excel: '{data_fn}'")
             return Workbook()
-            # self.wb = Workbook()
 
     def _init_log(self) -> Path:
         fn: str = Path(sys.argv[0]).stem + ".log"
