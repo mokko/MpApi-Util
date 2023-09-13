@@ -22,7 +22,6 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
     )  # stem as determined by path is everything before the last .suffix.
 
     stem2 = re.sub("_", " ", stem)
-
     m = re.search(r"([\w\d +.,<>-_]+)| -KK| -\d|__\d+", stem2)
     if m:
         # restrict to max length of elements

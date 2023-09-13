@@ -138,7 +138,6 @@ class AssetUploader(BaseApp):
         BTW: go is now called up in command line interface.
 
         """
-        # print("Enter go")
         self._check_go()  # raise on error
 
         ws2 = self.wb["Conf"]
@@ -361,9 +360,12 @@ class AssetUploader(BaseApp):
             raise ConfigError("ERROR: Need target dir in B4")
 
     def _create_new_asset(self, cells: dict) -> None:
+        # print("_create_new_asset")
         if cells["asset_fn_exists"].value == "None":
             templateM = self._prepare_template()
             fn = cells["filename"].value
+            if not Path(fn).exists():
+                raise ValueError(f"File does not exist: '{fn}'")
             # print(f"fn: {fn}")
             new_asset_id = self._make_new_asset(
                 fn=fn, moduleItemId=cells["ref"].value, templateM=templateM
@@ -492,6 +494,7 @@ class AssetUploader(BaseApp):
                 cells["photographer"].value = creator
 
     def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
+        # print("enter _make_new_asset")
         if moduleItemId is None or moduleItemId == "None":
             raise SyntaxError(f"moduleItemdId {moduleItemdId} not allowed!")
         r = Record(templateM)
@@ -499,9 +502,11 @@ class AssetUploader(BaseApp):
         r.set_filename(path=fn)
         r.set_size(path=fn)
         newAssetM = r.toModule()
+        # newAssetM.toFile(path="debug.template.xml")
         new_asset_id = self.client.create_asset_from_template(
             templateM=newAssetM,
         )
+        print("ok")
         return new_asset_id
 
     def _move_file(self, *, src: str, dst: str) -> None:
@@ -510,8 +515,12 @@ class AssetUploader(BaseApp):
         """
         dstp = Path(dst)
         if not dstp.exists():
-            shutil.move(src, dst)
-            print(f"   moved to target '{dst}'")
+            try:
+                shutil.move(src, dst)
+            except:
+                print(f"WARN move failed, continue ")
+            else:
+                print(f"   moved to target '{dst}'")
         else:
             raise SyntaxError(f"ERROR: Target location already used! {dst}")
 
@@ -537,6 +546,7 @@ class AssetUploader(BaseApp):
             return self.templateM
 
     def _upload_file(self, cells) -> None:
+        print("enter _upload_file")
         if cells["attached"].value == None:
             if cells["ref"].value is not None:
                 fn = cells["filename"].value
@@ -555,6 +565,7 @@ class AssetUploader(BaseApp):
         If column standardbild = x, try to set asset as standardbild for known object;
         only succeeds if object has no Standardbild yet.
         """
+        print("enter _set_Standardbild")
         if c["standardbild"].value is not None:
             if c["standardbild"].value.lower() == "x":
                 objId = int(c["objIds"].value)

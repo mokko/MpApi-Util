@@ -28,18 +28,15 @@
     </vocabularyReference>
     id="3107523" uuid="ee4fa81a-26a1-473b-b41c-3c8d34d2231f"
 
-    TEST was SUCCESSFUL WITH EMMusikethnologie and EMSüdseeAustralien
+    TEST was SUCCESSFUL WITH EMMusikethnologie and EMSudseeAustralien
 """
 
 from mpapi.client import MpApi
 from mpapi.module import Module
+from mpapi.constants import get_credentials
 from pathlib import Path
 
-credentials = "credentials.py"
-
-if Path(credentials).exists():
-    with open(credentials) as f:
-        exec(f.read())
+user, pw, baseURL = get_credentials()
 
 xml = """
 <application xmlns="http://www.zetcom.com/ria/ws/module">
@@ -47,7 +44,7 @@ xml = """
     <module name="Object" totalSize="1">
       <moduleItem hasAttachments="false">
         <systemField dataType="Varchar" name="__orgUnit">
-          <value>EMSudseeAustralien</value>
+          <value>EMMusikethnologie</value>
         </systemField>
       </moduleItem>
     </module>
@@ -60,6 +57,7 @@ if __name__ == "__main__":
     client = MpApi(baseURL=baseURL, user=user, pw=pw)
     m = Module(xml=xml)
     m.validate()
+    print("m validates")
     objId = client.createItem3(data=m)
 
     print(f"objId {objId}")
