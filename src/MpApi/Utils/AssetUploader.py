@@ -245,9 +245,8 @@ class AssetUploader(BaseApp):
         print("preparing file list...")
         file_list = src_dir.glob(f"**/{self.filemask}")
         # sorted lasts too long for large amounts of files
-        if len(file_list) < 5000:
-            file_list = sorted(file_list)
-        print(f"done ({len(file_list)} items)")
+        # if len(file_list) < 5000:
+        #    file_list = sorted(file_list)
         for p in file_list:  # dont try recursive!
             print(f"working on {p}")
             if p.name.startswith(".") or p.name == excel_fn or p.name == "prepare.xlsx":
@@ -267,6 +266,7 @@ class AssetUploader(BaseApp):
             c += 1
             # save every few thousand files to protect against interruption
             if c % 1000 == 0:
+                print("saving Excel...")
                 self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 

@@ -37,19 +37,10 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         if astr.startswith("I MV"):
             new = " ".join(alist[0:3])
             new = re.sub("I MV", "I/MV", new)
-        elif (
-            astr.startswith("HK Afr")
-            or astr.startswith("HK AmArch")
-            or astr.startswith("HK AmEth")
-            or astr.startswith("HK ONA")
-            or astr.startswith("HK ISL")
-            or astr.startswith("HK SOA")
-            or astr.startswith("HK SUA")
-            or astr.startswith("HK VIII")
-            or astr.startswith("Adr (EJ)")
-        ):
+        elif astr.startswith("Verz BGAEU"):
             new = " ".join(alist[0:3])
-        elif astr.startswith("EJ "):
+            new = re.sub("Verz BGAEU", "Verz. BGAEU", new)
+        elif astr.startswith("EJ ") or astr.startswith("Inv "):
             new = " ".join(alist[0:2])
 
         # print (f"{new=}")
