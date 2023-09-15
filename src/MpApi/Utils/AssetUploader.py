@@ -37,7 +37,14 @@ red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
 
-IGNORE_NAMES = ("thumbs.db", "desktop.ini", "debug.xml", "prepare.log", "prepare.ini")
+IGNORE_NAMES = (
+    "thumbs.db",
+    "desktop.ini",
+    "debug.xml",
+    "prepare.log",
+    "prepare.ini",
+    "checksum.md5",
+)
 IGNORE_SUFFIXES = (".py", ".ini", ".lnk")
 
 
@@ -159,7 +166,8 @@ class AssetUploader(BaseApp):
             self._create_new_asset(cells)
             self._upload_file(cells)
             self._set_Standardbild(cells)
-        self._save_excel(path=excel_fn)
+            # save after every file to protect against interruptions
+            self._save_excel(path=excel_fn)
 
     def init(self) -> None:
         """
@@ -199,12 +207,15 @@ class AssetUploader(BaseApp):
             "C4"
         ] = """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
         Backslash. Wenn Feld leer. wird Datei nicht bewegt."""
+        ws2["A5"] = "Filemask"
+        ws2["B5"] = "*"
+        ws2["C5"] = "Filemask für rekursive Suche, default ist *"
 
         ws2.column_dimensions["A"].width = 25
         ws2.column_dimensions["B"].width = 25
         ws2.column_dimensions["C"].width = 25
 
-        for each in "A1", "A2", "A3", "A4":
+        for each in "A1", "A2", "A3", "A4", "A5":
             ws2[each].font = Font(bold=True)
         self._save_excel(path=excel_fn)
 
@@ -227,30 +238,36 @@ class AssetUploader(BaseApp):
             src_dir = Path(".")
         else:
             src_dir = Path(Dir)
-        print(f"Scanning pwd {src_dir}")
+        print(f"Scanning {src_dir}/{self.filemask}")
 
         self._drop_rows_if_file_gone()
         c = 1
-        file_list = sorted(src_dir.rglob("*"))
+        print("preparing file list...")
+        file_list = src_dir.glob(f"**/{self.filemask}")
+        # sorted lasts too long for large amounts of files
+        if len(file_list) < 5000:
+            file_list = sorted(file_list)
+        print(f"done ({len(file_list)} items)")
         for p in file_list:  # dont try recursive!
-            if str(p).startswith(".") or p == excel_fn:
+            print(f"working on {p}")
+            if p.name.startswith(".") or p.name == excel_fn or p.name == "prepare.xlsx":
                 continue
             elif p.is_dir():
                 continue
             elif p.suffix in IGNORE_SUFFIXES:
                 continue
-            elif str(p).lower() in IGNORE_NAMES:
+            elif p.name.lower() in IGNORE_NAMES:
                 continue
-            elif str(p).lower() == "checksum.md5":
-                continue
-            # returns None if not in list, else rno
-            rno = self._path_in_list(p)
+            rno = self._path_in_list(p)  # returns None if not in list, else rno
             # if rno is None _file_to_list adds a new line
             self._file_to_list(path=p, rno=rno)
             if self.limit == c:
                 print("* Limit reached")
-                break  # breaks for loop
+                break
             c += 1
+            # save every few thousand files to protect against interruption
+            if c % 1000 == 0:
+                self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
     def standardbild(self) -> None:
@@ -354,12 +371,13 @@ class AssetUploader(BaseApp):
                 f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
             )
 
-        conf_ws = self.wb["Conf"]
+        ws2 = self.wb["Conf"]
         self.orgUnit = self._get_orgUnit(cell="B3")  # can be None
 
-        # todo: check that target_dir is filled-in
-        # if conf_ws["B4"].value is None:
-        #    raise ConfigError("ERROR: Need target dir in B4")
+        if ws2["B5"].value is None:
+            self.filemask = "*"
+        else:
+            self.filemask = ws2["B5"].value
 
     def _create_new_asset(self, cells: dict) -> None:
         # print("_create_new_asset")

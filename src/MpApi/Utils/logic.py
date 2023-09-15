@@ -22,7 +22,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
     )  # stem as determined by path is everything before the last .suffix.
 
     stem2 = re.sub("_", " ", stem)
-    m = re.search(r"([\w\d +.,<>-_]+)| -KK| -\d|__\d+", stem2)
+    m = re.search(r"([\w\d +.,<>-]+)| -KK| -\d| +\d+", stem2)
     if m:
         # restrict to max length of elements
         astr = m.group(1).strip()
@@ -33,9 +33,24 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         else:
             new = " ".join(alist[0:4])
 
+        # we're adding a magic slash
         if astr.startswith("I MV"):
             new = " ".join(alist[0:3])
             new = re.sub("I MV", "I/MV", new)
+        elif (
+            astr.startswith("HK Afr")
+            or astr.startswith("HK AmArch")
+            or astr.startswith("HK AmEth")
+            or astr.startswith("HK ONA")
+            or astr.startswith("HK ISL")
+            or astr.startswith("HK SOA")
+            or astr.startswith("HK SUA")
+            or astr.startswith("HK VIII")
+            or astr.startswith("Adr (EJ)")
+        ):
+            new = " ".join(alist[0:3])
+        elif astr.startswith("EJ "):
+            new = " ".join(alist[0:2])
 
         # print (f"{new=}")
 
