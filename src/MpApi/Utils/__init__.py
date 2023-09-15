@@ -245,7 +245,7 @@ def upload():
     parser.add_argument(
         "cmd",
         help="use one of the following commands",
-        choices=("init", "scandir", "standardbild", "up"),
+        choices=("init", "scandir", "standardbild", "up", "cont"),
     )
     parser.add_argument(
         "-l", "--limit", help="break the go after number of items", default=-1
@@ -268,6 +268,15 @@ def upload():
         u.go()
     elif args.cmd == "standardbild":
         u.standardbild()
+    elif args.cmd == "cont":
+        c = 1
+        while True:
+            limit = c * 1000
+            print(f"Setting limit to {limit}")
+            u = AssetUploader(limit=limit)
+            u.scandir()
+            u.go()
+            c += 1
     else:
         print(f"Unknown command '{args.cmd}'")
 

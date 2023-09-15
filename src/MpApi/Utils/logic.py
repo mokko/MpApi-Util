@@ -16,11 +16,10 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
     extracts IdentNr (=identifier, Signatur) from filename (as Pathlib path). Developed
     specifically for cataogue cards and not widely tested beyond.
     """
-    # stem = str(path).split(".")[0] stem is everything before first .
-    stem = (
-        path.stem
-    )  # stem as determined by path is everything before the last .suffix.
+    # stem as determined by path is everything before the last .suffix.
+    stem = path.stem
 
+    # collapse all underlines into space
     stem2 = re.sub("_", " ", stem)
     m = re.search(r"([\w\d +.,<>-]+)| -KK| -\d| +\d+", stem2)
     if m:
@@ -33,25 +32,29 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         else:
             new = " ".join(alist[0:4])
 
-        # we're adding a magic slash
+        # special cases
         if astr.startswith("I MV"):
-            new = " ".join(alist[0:3])
+            # adding a magic slash.
+            # It's magic because it's not there in the filename
+            # some have different length I/MV 0950 a
             new = re.sub("I MV", "I/MV", new)
         elif astr.startswith("Verz BGAEU"):
-            new = " ".join(alist[0:3])
+            # new = " ".join(alist[0:3])
             new = re.sub("Verz BGAEU", "Verz. BGAEU", new)
         elif astr.startswith("EJ ") or astr.startswith("Inv "):
+            # not catching __0001 correctly...
             new = " ".join(alist[0:2])
-
         # print (f"{new=}")
 
-        new2 = re.sub(r"___|-[A-Z]+", "", new).strip()
+        # remove certain trails
+        new2 = re.sub(r"   |-[A-Z]+", "", new).strip()
         # if there is a trailing + oder -, delete that
         new3 = re.sub(r"[\+-] *$| -3D|_ct", "", new2).strip()
         # print (f"{new3=}")
 
         # only allow patterns that have one space separated number
-        # number can be sole item if objId is used as identNr
-        match = re.search(r"\w \d+|d+", new3)
-        if match:
+        if re.search(r"\w \d+", new3):
             return new3
+        elif re.search(r"\d+", stem2):
+            # number can be sole item e.g. if objId is used as identNr
+            return stem2

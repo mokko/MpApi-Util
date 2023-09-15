@@ -38,12 +38,13 @@ parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
 
 IGNORE_NAMES = (
-    "thumbs.db",
+    "checksum.md5",
     "desktop.ini",
     "debug.xml",
+    "prepare.xlsx",
     "prepare.log",
     "prepare.ini",
-    "checksum.md5",
+    "thumbs.db",
 )
 IGNORE_SUFFIXES = (".py", ".ini", ".lnk")
 
@@ -190,6 +191,8 @@ class AssetUploader(BaseApp):
         #
         ws2 = self.wb.create_sheet("Conf")
         ws2["A1"] = "templateID"
+        ws2["B1"] = 6697400  # temporarily changing default
+
         ws2["C1"] = "Asset"
 
         ws2["A2"] = "verlinktes Modul"
@@ -208,7 +211,7 @@ class AssetUploader(BaseApp):
         ] = """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
         Backslash. Wenn Feld leer. wird Datei nicht bewegt."""
         ws2["A5"] = "Filemask"
-        ws2["B5"] = "*"
+        ws2["B5"] = "*.jpg"  # temporary new default
         ws2["C5"] = "Filemask für rekursive Suche, default ist *"
 
         ws2.column_dimensions["A"].width = 25
@@ -240,16 +243,24 @@ class AssetUploader(BaseApp):
             src_dir = Path(Dir)
         print(f"Scanning {src_dir}/{self.filemask}")
 
-        self._drop_rows_if_file_gone()
+        print("Update excel file list?")
+        # rm excel rows if file no longer exists on disk
+        self._drop_rows_if_file_gone(col="I")
+        self._save_excel(path=excel_fn)
+
         c = 1
         print("preparing file list...")
         file_list = src_dir.glob(f"**/{self.filemask}")
         # sorted lasts too long for large amounts of files
         # if len(file_list) < 5000:
         #    file_list = sorted(file_list)
-        for p in file_list:  # dont try recursive!
-            print(f"working on {p}")
-            if p.name.startswith(".") or p.name == excel_fn or p.name == "prepare.xlsx":
+        for p in file_list:
+            # dirty, temporary...
+            ignore_dir = "Y:\0_Neu"
+            if str(p).startswith(ignore_dir):
+                continue
+            print(p)
+            if p.name.startswith(".") or p.name == excel_fn:
                 continue
             elif p.is_dir():
                 continue
@@ -262,6 +273,7 @@ class AssetUploader(BaseApp):
             self._file_to_list(path=p, rno=rno)
             if self.limit == c:
                 print("* Limit reached")
+                self._save_excel(path=excel_fn)
                 break
             c += 1
             # save every few thousand files to protect against interruption
@@ -300,7 +312,7 @@ class AssetUploader(BaseApp):
 
         # if the file doesn't exist (anymore) it indicates major issues!
         if not Path(path).exists():
-            raise Exception("ERROR 101: Path doesn't exist. Already uploaded?")
+            raise FileNotFoundError("ERROR: Path doesn't exist. Already uploaded?")
 
         print(f"   attaching {path} {mulId}")
         ret = self.client.upload_attachment(file=path, ID=mulId)
@@ -383,9 +395,9 @@ class AssetUploader(BaseApp):
         # print("_create_new_asset")
         if cells["asset_fn_exists"].value == "None":
             templateM = self._prepare_template()
-            fn = cells["filename"].value
+            fn = cells["fullpath"].value
             if not Path(fn).exists():
-                raise ValueError(f"File does not exist: '{fn}'")
+                raise FileNotFoundError(f"File not found: '{fn}'")
             # print(f"fn: {fn}")
             new_asset_id = self._make_new_asset(
                 fn=fn, moduleItemId=cells["ref"].value, templateM=templateM
@@ -544,9 +556,11 @@ class AssetUploader(BaseApp):
     def _path_in_list(self, path) -> None:
         """Returns True if filename is already in list (column A), else None."""
         rno = 3
+        name = path.name
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
             fn = row[0].value
-            if fn == str(path):
+            # print (f"_path_in_list: {fn=}{name=}")
+            if fn == name:
                 return rno
             rno += 1
         return None
@@ -566,7 +580,7 @@ class AssetUploader(BaseApp):
         # print("enter _upload_file")
         if cells["attached"].value == None:
             if cells["ref"].value is not None:
-                fn = cells["filename"].value
+                fn = cells["fullpath"].value
                 ID = int(cells["asset_fn_exists"].value)
                 if self._attach_asset(
                     path=fn, mulId=ID, target_path=cells["targetpath"].value
