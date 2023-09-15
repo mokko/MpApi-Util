@@ -320,7 +320,7 @@ class AssetUploader(BaseApp):
         if ret.status_code == 204:
             if target_path is not None:
                 self._move_file(src=path, dst=target_path)
-                return True
+            return True
         else:
             # should this raise an error?
             print("   ATTACHING FAILED (HTTP REQUEST)!")
@@ -476,11 +476,10 @@ class AssetUploader(BaseApp):
             )
 
         if cells["parts_objIds"].value is None:
-            partsL = self._has_parts(identNr=cells["identNr"].value)
-            if partsL:
-                cells["parts_objIds"].value = "; ".join(parts)
-            else:
-                cells["parts_objIds"].value = "None"
+            # if self._has_parts(identNr=cells["identNr"].value):
+            # cells["parts_objIds"].value = "; ".join(ids)
+            # else:
+            cells["parts_objIds"].value = "None"
             cells["parts_objIds"].alignment = Alignment(wrap_text=True)
 
         if cells["ref"].value is None:

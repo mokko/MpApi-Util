@@ -21,11 +21,11 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
 
     # collapse all underlines into space
     stem2 = re.sub("_", " ", stem)
-    m = re.search(r"([\w\d +.,<>-]+)| -KK| -\d| +\d+", stem2)
+    m = re.search(r"([()\w\d +.,<>-]+)| -KK| -\d| \d+|  \d+", stem2)
     if m:
         # restrict to max length of elements
         astr = m.group(1).strip()
-        # print (f"{astr=}")
+        print(f"{astr=}")
         alist = astr.split(" ")
         if "<" in astr:
             new = " ".join(alist[0:5])
@@ -44,6 +44,9 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         elif astr.startswith("EJ ") or astr.startswith("Inv "):
             # not catching __0001 correctly...
             new = " ".join(alist[0:2])
+        elif astr.startswith("Adr (EJ)"):
+            new = " ".join(alist[0:3])
+
         # print (f"{new=}")
 
         # remove certain trails
@@ -53,7 +56,8 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         # print (f"{new3=}")
 
         # only allow patterns that have one space separated number
-        if re.search(r"\w \d+", new3):
+        if re.search(r"\w+ \d+|", new3):
+            # print(f"XXXXXXXXXXXXXXXXXXX{new}")
             return new3
         elif re.search(r"\d+", stem2):
             # number can be sole item e.g. if objId is used as identNr

@@ -98,7 +98,7 @@ class BaseApp:
 
     def _get_objIds_for_whole(self, *, identNr: str) -> set[int]:
         """
-        Provided an identNr with parts, return objIds for the wholes.
+        Provided an identNr with parts, return objIds for the whole.
 
         What happens if a whole is provided? Then it checks for a two part
         signature which makes little sense.
@@ -110,10 +110,11 @@ class BaseApp:
         # chop_off_last_part assuming there is part information
         ident_whole = " ".join(identNr.split()[:-1])
         # print(f"WHOLE: {ident_whole}")
-        return self.client.identNr_exists3(
+        objId_set = self.client.identNr_exists3(
             # no orgUnit. Should it remain that way?
             ident=ident_whole,
         )
+        return objId_set
 
     def _has_parts(self, identNr: str) -> bool:
         """
@@ -133,10 +134,10 @@ class BaseApp:
         """
         identL = identNr.split()
         # print(f"parts in IdentNr {len(identL)}")
-        if len(identL) < 4:
-            return False
-        else:
+        if len(identL) > 4:
             return True
+        else:
+            return False
 
     #
     #
