@@ -314,7 +314,7 @@ class AssetUploader(BaseApp):
         if not Path(path).exists():
             raise FileNotFoundError("ERROR: Path doesn't exist. Already uploaded?")
 
-        print(f"   attaching {path} {mulId}")
+        print(f"   attaching {path}")
         ret = self.client.upload_attachment(file=path, ID=mulId)
         # print(f"   success on upload? {ret}")
         if ret.status_code == 204:
@@ -577,18 +577,17 @@ class AssetUploader(BaseApp):
 
     def _upload_file(self, cells) -> None:
         # print("enter _upload_file")
-        if cells["attached"].value == None:
-            if cells["ref"].value is not None:
-                fn = cells["fullpath"].value
-                ID = int(cells["asset_fn_exists"].value)
-                if self._attach_asset(
-                    path=fn, mulId=ID, target_path=cells["targetpath"].value
-                ):
-                    cells["attached"].value = "x"
-                # save after every file that is uploaded
-                self._save_excel(path=excel_fn)
+        if cells["attached"].value == None and cells["ref"].value != "None":
+            fn = cells["fullpath"].value
+            ID = int(cells["asset_fn_exists"].value)
+            if self._attach_asset(
+                path=fn, mulId=ID, target_path=cells["targetpath"].value
+            ):
+                cells["attached"].value = "x"
+            # save after every file that is uploaded
+            self._save_excel(path=excel_fn)
         else:
-            print("   asset already attached")
+            print("   asset already attached or no link")
 
     def _set_Standardbild(self, c) -> None:
         """

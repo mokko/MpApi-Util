@@ -25,7 +25,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
     if m:
         # restrict to max length of elements
         astr = m.group(1).strip()
-        print(f"{astr=}")
+        # print(f"{astr=}")
         alist = astr.split(" ")
         if "<" in astr:
             new = " ".join(alist[0:5])
