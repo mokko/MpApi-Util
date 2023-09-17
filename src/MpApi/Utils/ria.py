@@ -290,7 +290,7 @@ class RIA:
 
     def identNr_exists3(self, *, ident: str, orgUnit: Optional[str] = None) -> set[int]:
         """
-        Another version that for a given identNr returns objIds as a set (unique) or empty set
+        Another version that for a given identNr returns objIds as a set or empty set
         if no record is found. Uses equalsExact.
         """
         q = Search(module="Object", limit=-1, offset=0)

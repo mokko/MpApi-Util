@@ -33,6 +33,7 @@ import shutil
 from typing import Any, Optional
 
 excel_fn = Path("upload.xlsx")
+bak_fn = Path("upload.xlsx.bak")
 red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
@@ -50,8 +51,9 @@ IGNORE_SUFFIXES = (".py", ".ini", ".lnk")
 
 
 class AssetUploader(BaseApp):
-    def __init__(self, *, limit: int = -1) -> None:
+    def __init__(self, *, limit: int = -1, offset: int = 0) -> None:
         self.limit = int(limit)  # allows to break the go loop after number of items
+        self.offset = int(offset)
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
 
@@ -130,6 +132,9 @@ class AssetUploader(BaseApp):
             },
         }
 
+    def backup_excel(self):
+        shutil.copy(excel_fn, bak_fn)
+
     def go(self) -> None:
         """
         Do the actual upload based on the preparations in the Excel file
@@ -143,7 +148,7 @@ class AssetUploader(BaseApp):
 
         Is it allowed to re-run go multiple time, e.g. to restart attachment? Yes!
 
-        BTW: go is now called up in command line interface.
+        BTW: go is now called 'up' in command line interface.
 
         """
         self._check_go()  # raise on error
@@ -155,10 +160,11 @@ class AssetUploader(BaseApp):
                 print(f"Making new dir '{u_dir}'")
                 u_dir.mkdir()
 
-        for cells, rno in self._loop_table2(sheet=self.ws):
+        # breaks at limit
+        for cells, rno in self._loop_table2(sheet=self.ws, offset=self.offset):
             # relative path; assume dir hasn't changed since scandir run
             print(f"{rno}: {cells['identNr'].value}")
-            if cells["ref"].value is None:
+            if cells["ref"].value == "None":
                 print(
                     "   object reference unknown, not creating assets nor attachments"
                 )
@@ -222,7 +228,31 @@ class AssetUploader(BaseApp):
             ws2[each].font = Font(bold=True)
         self._save_excel(path=excel_fn)
 
-    def scandir(self, *, Dir=None) -> None:
+    def initial_offset(self) -> int:
+        """
+        Returns int representing the first row in the Excel without x in field
+        "attached" (aka "Asset hochgeladen").
+        """
+        if not excel_fn.exists():
+            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
+        self.wb = self._init_excel(path=excel_fn)
+
+        # die if not writable so that user can close it before waste of time
+        self._save_excel(path=excel_fn)
+        try:
+            self.ws = self.wb["Assets"]
+        except:
+            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+
+        # we need a loop that doesn't break on limit
+        c = 3  # row counter
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            if row[10].value != "x":
+                return c
+            c += 1
+        return c
+
+    def scandir(self, *, Dir: Optional[Path] = None, offset: int = 0) -> None:
         """
         Scans local directory and enters values for each file in the Excel
 
@@ -235,17 +265,14 @@ class AssetUploader(BaseApp):
         to update the table by re-running scandir.
         """
         self._check_scandir()
-
         # looping thru files (usually pwd)
         if Dir is None:
             src_dir = Path(".")
         else:
             src_dir = Path(Dir)
         print(f"Scanning {src_dir}/{self.filemask}")
-
-        print("Update excel file list?")
         # rm excel rows if file no longer exists on disk
-        self._drop_rows_if_file_gone(col="I")
+        self._drop_rows_if_file_gone(col="I", cont=offset)
         self._save_excel(path=excel_fn)
 
         c = 1
@@ -259,7 +286,6 @@ class AssetUploader(BaseApp):
             ignore_dir = "Y:\0_Neu"
             if str(p).startswith(ignore_dir):
                 continue
-            print(p)
             if p.name.startswith(".") or p.name == excel_fn:
                 continue
             elif p.is_dir():
@@ -268,6 +294,9 @@ class AssetUploader(BaseApp):
                 continue
             elif p.name.lower() in IGNORE_NAMES:
                 continue
+            elif c < offset:
+                continue  # fast-forward during scandir
+            print(f"{p} --301--")
             rno = self._path_in_list(p)  # returns None if not in list, else rno
             # if rno is None _file_to_list adds a new line
             self._file_to_list(path=p, rno=rno)
@@ -368,7 +397,6 @@ class AssetUploader(BaseApp):
         # check if excel exists, has the expected shape and is writable
         if not excel_fn.exists():
             raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-
         self.wb = self._init_excel(path=excel_fn)
 
         # die if not writable so that user can close it before waste of time
@@ -538,7 +566,6 @@ class AssetUploader(BaseApp):
         new_asset_id = self.client.create_asset_from_template(
             templateM=newAssetM,
         )
-        print("ok")
         return new_asset_id
 
     def _move_file(self, *, src: str, dst: str) -> None:
@@ -553,7 +580,17 @@ class AssetUploader(BaseApp):
             raise SyntaxError(f"ERROR: Target location already used! {dst}")
 
     def _path_in_list(self, path) -> None:
-        """Returns True if filename is already in list (column A), else None."""
+        """
+        Returns True if filename is already in list (column A), else None.
+        Currently, we're using the filename from column A which SHOULD be unique
+        in the MuseumPlus context, but which is strange requirement in the world
+        of directories, where multiple dirs may contain files with the same name.
+
+        We could switch to full path here for the identity test, if we wanted to.
+
+        What happens if filenames are not unique? Files on disk will not be
+        uploaded listed in scandir and hence not uploaded and hence not moved.
+        """
         rno = 3
         name = path.name
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
@@ -577,7 +614,7 @@ class AssetUploader(BaseApp):
 
     def _upload_file(self, cells) -> None:
         # print("enter _upload_file")
-        if cells["attached"].value == None and cells["ref"].value != "None":
+        if cells["attached"].value == None:
             fn = cells["fullpath"].value
             ID = int(cells["asset_fn_exists"].value)
             if self._attach_asset(
@@ -587,7 +624,7 @@ class AssetUploader(BaseApp):
             # save after every file that is uploaded
             self._save_excel(path=excel_fn)
         else:
-            print("   asset already attached or no link")
+            print("   asset already attached")
 
     def _set_Standardbild(self, c) -> None:
         """

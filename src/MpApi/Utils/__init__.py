@@ -234,6 +234,7 @@ def upload():
                    # and scans current directory preparing for upload
     upload up      # initiates or continues for upload process
     upload standardbild # only set standardbild
+    upload cont    # continous upload
     """
 
     parser = argparse.ArgumentParser(
@@ -270,11 +271,16 @@ def upload():
         u.standardbild()
     elif args.cmd == "cont":
         c = 1
+        u = AssetUploader()
+        ioffset = u.initial_offset()
+        csize = 3000
         while True:
-            limit = c * 1000
-            print(f"Setting limit to {limit}")
-            u = AssetUploader(limit=limit)
-            u.scandir()
+            limit = c * csize + ioffset
+            offset = (c - 1) * csize + ioffset
+            print(f"Setting {limit=} and {offset=}")
+            u = AssetUploader(limit=limit, offset=offset)
+            u.backup_excel()
+            u.scandir(offset=offset)
             u.go()
             c += 1
     else:

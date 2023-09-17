@@ -21,12 +21,12 @@ def test_init():
     if p.exists():
         os.remove(p)
     u = AssetUploader()
-    u.init()
+    u.init()  # creates new excel which lacks config info
 
 
-# creates new excel which lacks config info
 def tast_scandir():
     u = AssetUploader()
+    # requires an initilized Excel file
     u.scandir(Dir="adir")
 
 
@@ -71,3 +71,6 @@ def test_get_parts():
         # if identNr == "V A 106 a"
         #    assert ident_whole == "V A 106"
         # print (f"{identNr}: {cases[identNr]}")
+
+
+# def test_initial_offset():

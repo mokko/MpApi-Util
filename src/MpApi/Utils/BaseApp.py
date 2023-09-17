@@ -49,7 +49,7 @@ class BaseApp:
         else:
             return RiaUtil(baseURL=self.baseURL, user=self.user, pw=self.pw)
 
-    def _drop_rows_if_file_gone(self, *, col: str = "A") -> None:
+    def _drop_rows_if_file_gone(self, *, col: str = "A", cont: bool = False) -> None:
         """
         Loop thru Excel sheet "Assets" and check if the files still exist. We use
         relative filename for that, so update has to be executed in right dir.
@@ -58,6 +58,10 @@ class BaseApp:
 
         This is for the scandir step.
         """
+        if cont:
+            print("   continous mode, skipping the update of the excel list")
+            return
+        print("Update excel file list?")
         c = 3
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
             filename = self.ws[f"{col}{c}"].value
@@ -66,6 +70,7 @@ class BaseApp:
                     print(f"Deleting Excel row {c} file gone '{filename}'")
                     self.ws.delete_rows(c)
             c += 1
+        print("   done")
 
     #
     #
@@ -185,7 +190,7 @@ class BaseApp:
                 break
             c += 1
 
-    def _loop_table2(self, *, sheet: worksheet) -> Iterator:
+    def _loop_table2(self, *, sheet: worksheet, offset: int = 3) -> Iterator:
         """
         Loop thru the data part of the Excel table. For convenience, return cells in dict by column
         names. For this to work, we require a description of the table in the following form:
@@ -202,8 +207,8 @@ class BaseApp:
         for c,rno in _loop_table2():
             print (f"row number {rno} {c['filename']}")
         """
-        rno = 3  # row number; used to report a different number
-        for row in sheet.iter_rows(min_row=3):  # start at 3rd row
+        rno = offset  # row number; used to report a different number
+        for row in sheet.iter_rows(min_row=offset):  # start at 3rd row
             cells = self._rno2dict(rno)
             yield cells, rno
             if self.limit == rno:
