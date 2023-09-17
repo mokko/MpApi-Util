@@ -31,6 +31,7 @@ import pyexiv2
 import re
 import shutil
 from typing import Any, Optional
+from tqdm import tqdm
 
 excel_fn = Path("upload.xlsx")
 bak_fn = Path("upload.xlsx.bak")
@@ -233,6 +234,7 @@ class AssetUploader(BaseApp):
         Returns int representing the first row in the Excel without x in field
         "attached" (aka "Asset hochgeladen").
         """
+        print("determining initial offset")
         if not excel_fn.exists():
             raise ConfigError(f"ERROR: {excel_fn} NOT found!")
         self.wb = self._init_excel(path=excel_fn)
@@ -275,40 +277,44 @@ class AssetUploader(BaseApp):
         self._drop_rows_if_file_gone(col="I", cont=offset)
         self._save_excel(path=excel_fn)
 
-        c = 1
+        c = 0
         print("preparing file list...")
         file_list = src_dir.glob(f"**/{self.filemask}")
         # sorted lasts too long for large amounts of files
         # if len(file_list) < 5000:
         #    file_list = sorted(file_list)
-        for p in file_list:
-            # dirty, temporary...
-            ignore_dir = "Y:\0_Neu"
-            if str(p).startswith(ignore_dir):
-                continue
-            if p.name.startswith(".") or p.name == excel_fn:
-                continue
-            elif p.is_dir():
-                continue
-            elif p.suffix in IGNORE_SUFFIXES:
-                continue
-            elif p.name.lower() in IGNORE_NAMES:
-                continue
-            elif c < offset:
-                continue  # fast-forward during scandir
-            print(f"{p} --301--")
-            rno = self._path_in_list(p)  # returns None if not in list, else rno
-            # if rno is None _file_to_list adds a new line
-            self._file_to_list(path=p, rno=rno)
-            if self.limit == c:
-                print("* Limit reached")
-                self._save_excel(path=excel_fn)
-                break
-            c += 1
-            # save every few thousand files to protect against interruption
-            if c % 1000 == 0:
-                print("saving Excel...")
-                self._save_excel(path=excel_fn)
+        if offset > 0:
+            print(f"Fast-forwarding {offset} files")
+        with tqdm(total=offset) as pbar:
+            for p in file_list:
+                c += 1
+                # dirty, temporary...
+                ignore_dir = "Y:\0_Neu"
+                if str(p).startswith(ignore_dir):
+                    continue
+                if p.name.startswith(".") or p.name == excel_fn:
+                    continue
+                elif p.is_dir():
+                    continue
+                elif p.suffix in IGNORE_SUFFIXES:
+                    continue
+                elif p.name.lower() in IGNORE_NAMES:
+                    continue
+                elif c < offset:
+                    pbar.update()
+                    continue  # fast-forward during scandir
+                print(f"{p} --305--")
+                rno = self._path_in_list(p)  # returns None if not in list, else rno
+                # if rno is None _file_to_list adds a new line
+                self._file_to_list(path=p, rno=rno)
+                if self.limit == c:
+                    print("* Limit reached")
+                    self._save_excel(path=excel_fn)
+                    break
+                # save every few thousand files to protect against interruption
+                if c % 1000 == 0:
+                    print("saving Excel...")
+                    self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
     def standardbild(self) -> None:
@@ -483,15 +489,12 @@ class AssetUploader(BaseApp):
         if cells["identNr"].value is None:
             cells["identNr"].value = identNr
         if cells["fullpath"].value is None:
-            # .resolve() problems on UNC
-            cells["fullpath"].value = str(path.absolute())
+            fullpath = path.absolute()  # .resolve() problems on UNC
+            cells["fullpath"].value = str(fullpath)
         # print (f"***{path}")
         if cells["asset_fn_exists"].value is None:
-            idL = self.client.fn_to_mulId(fn=str(path), orgUnit=self.orgUnit)
-            if len(idL) == 0:
-                cells["asset_fn_exists"].value = "None"
-            else:
-                cells["asset_fn_exists"].value = "; ".join(idL)
+            # if cache the known paths drastically reduces http requests
+            cells["asset_fn_exists"].value = self._get_mulId(fullpath=fullpath)
 
         # identNr_cell might be None, then we cant look up any objIds
         if cells["identNr"].value is None:
@@ -552,6 +555,24 @@ class AssetUploader(BaseApp):
                 cells["photographer"].value = "None"
             else:
                 cells["photographer"].value = creator
+
+    def _get_mulId(self, *, fullpath: Path) -> int:
+        """
+        A in-memory-cache that maps fullpath to mulIds to reduce
+        necessary https requests. Expects a fullpath, returns mulId.
+
+        cache = {
+            fullpath: mulId
+        }
+        """
+        if fullpath not in self.mulId_cache:
+            print("   getting mulId from RIA")
+            idL = self.client.fn_to_mulId(fn=str(fullpath.name), orgUnit=self.orgUnit)
+            if len(idL) == 0:
+                self.mulId_cache[fullpath] = "None"
+            else:
+                self.mulId_cache[fullpath] = "; ".join(idL)
+        return self.mulId_cache[fullpath]
 
     def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
         # print("enter _make_new_asset")

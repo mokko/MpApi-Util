@@ -59,7 +59,7 @@ class BaseApp:
         This is for the scandir step.
         """
         if cont:
-            print("   continous mode, skipping the update of the excel list")
+            print("   continous mode, not looking for changes on disk")
             return
         print("Update excel file list?")
         c = 3
