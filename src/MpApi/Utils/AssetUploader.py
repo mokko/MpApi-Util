@@ -57,6 +57,7 @@ class AssetUploader(BaseApp):
         self.offset = int(offset)
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
+        self.mulId_cache = {}  # used during scandir
 
         self.table_desc = {
             "filename": {
@@ -234,7 +235,7 @@ class AssetUploader(BaseApp):
         Returns int representing the first row in the Excel without x in field
         "attached" (aka "Asset hochgeladen").
         """
-        print("determining initial offset")
+        print("Determining initial offset ...")
         if not excel_fn.exists():
             raise ConfigError(f"ERROR: {excel_fn} NOT found!")
         self.wb = self._init_excel(path=excel_fn)
@@ -278,13 +279,13 @@ class AssetUploader(BaseApp):
         self._save_excel(path=excel_fn)
 
         c = 0
-        print("preparing file list...")
+        print("Preparing file list...")
         file_list = src_dir.glob(f"**/{self.filemask}")
         # sorted lasts too long for large amounts of files
         # if len(file_list) < 5000:
         #    file_list = sorted(file_list)
         if offset > 0:
-            print(f"Fast-forwarding {offset} files")
+            print(f"Fast-forwarding {offset} files ...")
         with tqdm(total=offset) as pbar:
             for p in file_list:
                 c += 1
