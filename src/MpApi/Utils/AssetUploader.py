@@ -57,7 +57,6 @@ class AssetUploader(BaseApp):
         self.offset = int(offset)
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
-        self.mulId_cache = {}  # used during scandir
 
         self.table_desc = {
             "filename": {
@@ -559,21 +558,14 @@ class AssetUploader(BaseApp):
 
     def _get_mulId(self, *, fullpath: Path) -> int:
         """
-        A in-memory-cache that maps fullpath to mulIds to reduce
-        necessary https requests. Expects a fullpath, returns mulId.
-
-        cache = {
-            fullpath: mulId
-        }
+        Expects a fullpath, returns mulId.
         """
-        if fullpath not in self.mulId_cache:
-            print("   getting mulId from RIA")
-            idL = self.client.fn_to_mulId(fn=str(fullpath.name), orgUnit=self.orgUnit)
-            if len(idL) == 0:
-                self.mulId_cache[fullpath] = "None"
-            else:
-                self.mulId_cache[fullpath] = "; ".join(idL)
-        return self.mulId_cache[fullpath]
+        idL = self.client.fn_to_mulId(fn=str(fullpath.name), orgUnit=self.orgUnit)
+        if len(idL) == 0:
+            mulId = "None"
+        else:
+            mulId = "; ".join(idL)
+        return mulId
 
     def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
         # print("enter _make_new_asset")
