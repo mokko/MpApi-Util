@@ -61,6 +61,7 @@ class BaseApp:
         if cont:
             print("   continous mode, not looking for changes on disk")
             return
+
         print("Update excel file list?")
         c = 3
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row

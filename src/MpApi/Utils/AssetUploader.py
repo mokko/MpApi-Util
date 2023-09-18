@@ -169,13 +169,14 @@ class AssetUploader(BaseApp):
                 print(
                     "   object reference unknown, not creating assets nor attachments"
                 )
-                continue
-            #  print(f"   object reference known, continue {cells['ref'].value}")
-            self._create_new_asset(cells)
-            self._upload_file(cells)
-            self._set_Standardbild(cells)
-            # save after every file to protect against interruptions
-            self._save_excel(path=excel_fn)
+                continue  # SEEMS NOT TO WORK, so we try with else!
+            else:
+                #  print(f"   object reference known, continue {cells['ref'].value}")
+                self._create_new_asset(cells)
+                self._upload_file(cells)
+                self._set_Standardbild(cells)
+                # save after every file to protect against interruptions
+                self._save_excel(path=excel_fn)
 
     def init(self) -> None:
         """
@@ -433,8 +434,8 @@ class AssetUploader(BaseApp):
             if not Path(fn).exists():
                 raise FileNotFoundError(f"File not found: '{fn}'")
             # print(f"fn: {fn}")
-            new_asset_id = self._make_new_asset(
-                fn=fn, moduleItemId=cells["ref"].value, templateM=templateM
+            new_asset_id = self._create_from_template(
+                fn=fn, objId=cells["ref"].value, templateM=templateM
             )
             cells["asset_fn_exists"].value = new_asset_id
             cells["asset_fn_exists"].font = teal
@@ -495,6 +496,12 @@ class AssetUploader(BaseApp):
         if cells["asset_fn_exists"].value is None:
             # if cache the known paths drastically reduces http requests
             cells["asset_fn_exists"].value = self._get_mulId(fullpath=fullpath)
+            if cells["asset_fn_exists"].value != "None":
+                cells["attached"].value = "x"
+                cells["attached"].font = red
+                # red signifies that asset has already been uploaded, but it has not been
+                # tested if asset is linked to any or correct object.
+                # We need the x here to fast-forward during continous mode
 
         # identNr_cell might be None, then we cant look up any objIds
         if cells["identNr"].value is None:
@@ -519,10 +526,11 @@ class AssetUploader(BaseApp):
             if cells["asset_fn_exists"].value == "None":
                 # if single objId has been identified use it as ref
                 objIds = cells["objIds"].value
+                # if single part objId has been identified use it as ref
                 if objIds != "None" and ";" not in str(objIds):
                     cells["ref"].value = int(objIds)
                     cells["ref"].font = teal
-                # if single part objId has been identified use it as ref
+                # taking ref from part
                 elif cells["parts_objIds"].value != "None" and ";" not in str(
                     cells["parts_objIds"].value
                 ):
@@ -530,9 +538,9 @@ class AssetUploader(BaseApp):
                         cells["parts_objIds"].value.split(" ")[0].strip()
                     )
                     cells["ref"].font = red
-            else:
-                cells["ref"].value = "None"
-                cells["ref"].font = red
+                else:  # right indent?
+                    cells["ref"].value = "None"
+                    cells["ref"].font = red  # seems not to work!
 
         if cells["targetpath"].value is None:
             # print("in targetpath")
@@ -567,12 +575,24 @@ class AssetUploader(BaseApp):
             mulId = "; ".join(idL)
         return mulId
 
-    def _make_new_asset(self, *, fn: str, moduleItemId: int, templateM: Module) -> int:
-        # print("enter _make_new_asset")
-        if moduleItemId is None or moduleItemId == "None":
-            raise SyntaxError(f"moduleItemdId {moduleItemdId} not allowed!")
+    def _create_from_template(self, *, fn: str, objId: int, templateM: Module) -> int:
+        """
+        Creates a new asset record in RIA by copying the template. Also fill in
+        - object reference
+        - filename
+        - size
+
+        CHANGES
+        - Used to die if assetID was not defined; now just returns
+        - Used to be called _make_new_asset
+        """
+        # print("enter _create_from_template")
+        if objId is None or objId == "None":
+            # Do we want to log this error/warning in Excel?
+            print(f"moduleItemdId '{objId}' not allowed! Not creating new asset.")
+            return
         r = Record(templateM)
-        r.add_reference(targetModule="Object", moduleItemId=moduleItemId)
+        r.add_reference(targetModule="Object", moduleItemId=objId)
         r.set_filename(path=fn)
         r.set_size(path=fn)
         newAssetM = r.toModule()
