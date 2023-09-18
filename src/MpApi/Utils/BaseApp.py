@@ -263,7 +263,10 @@ class BaseApp:
         """Made this only to have same print msgs all the time"""
 
         # print(f"*** saving {path}")
-        self.wb.save(filename=path)
+        try:
+            self.wb.save(filename=path)
+        except KeyboardInterrupt:
+            print("Catching keyboard interrupt during Excel operation; try again...")
 
     def _get_orgUnit(self, *, cell: str) -> Optional[str]:
         """

@@ -24,7 +24,7 @@ from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
 from mpapi.record import Record
 
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook # load_workbook 
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
 import pyexiv2
@@ -134,7 +134,10 @@ class AssetUploader(BaseApp):
         }
 
     def backup_excel(self):
-        shutil.copy(excel_fn, bak_fn)
+        try:
+            shutil.copy(excel_fn, bak_fn)
+        except KeyboardInterrupt:
+            print("Catching keyboard interrupt during Excel operation; try again...")
 
     def go(self) -> None:
         """
@@ -304,7 +307,7 @@ class AssetUploader(BaseApp):
                 elif c < offset:
                     pbar.update()
                     continue  # fast-forward during scandir
-                print(f"{p} --305--")
+                print(f"{p} scandir")
                 rno = self._path_in_list(p)  # returns None if not in list, else rno
                 # if rno is None _file_to_list adds a new line
                 self._file_to_list(path=p, rno=rno)
@@ -454,7 +457,7 @@ class AssetUploader(BaseApp):
         # known extensions that dont work with exif
         exclude_exts = (".jpg", ".exr", ".obj", ".pdf", ".xml", ".zip")
         if path.suffix.lower() in exclude_exts:
-            print(f"\tExif: ignoring suffix {path}")
+            print(f"\tExif: ignoring suffix")
             return
 
         try:
@@ -497,6 +500,7 @@ class AssetUploader(BaseApp):
             # if cache the known paths drastically reduces http requests
             cells["asset_fn_exists"].value = self._get_mulId(fullpath=fullpath)
             if cells["asset_fn_exists"].value != "None":
+                print("\tasset already exists in RIA")
                 cells["attached"].value = "x"
                 cells["attached"].font = red
                 # red signifies that asset has already been uploaded, but it has not been
@@ -555,7 +559,7 @@ class AssetUploader(BaseApp):
                     cells["targetpath"].value = str(t)
                     cells["targetpath"].font = teal
 
-        print(f"   {rno}: {path.name} -> {identNr} [{cells['ref'].value}]")
+        print(f"   {rno}: {identNr} [{cells['ref'].value}]")
         if cells["photographer"].value is None:
             # print("in photographer")
             creator = self._exiv_creator(path=path)
