@@ -38,6 +38,10 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
             # It's magic because it's not there in the filename
             # some have different length I/MV 0950 a
             new = re.sub("I MV", "I/MV", new)
+            m = re.search(r"(I/MV \d+) (\d)", new)
+            # add spitze klammern
+            if m:
+                new = f"{m.group(1)} <{m.group(2)}>"
         elif astr.startswith("Verz BGAEU"):
             # new = " ".join(alist[0:3])
             new = re.sub("Verz BGAEU", "Verz. BGAEU", new)

@@ -19,6 +19,7 @@ cases = {
     "VII a 123 c-KK.tif": "VII a 123 c",
     "VII c 86 a -A x.tif": "VII c 86 a",
     "VII c 86 a <1>-A x.tif": "VII c 86 a <1>",
+    "I_MV_0404_3__0051.jpg": "I/MV 0404 <3>",
 }
 
 

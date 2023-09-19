@@ -24,7 +24,7 @@ from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
 from mpapi.record import Record
 
-from openpyxl import Workbook # load_workbook 
+from openpyxl import Workbook  # load_workbook
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
 import pyexiv2
@@ -57,6 +57,7 @@ class AssetUploader(BaseApp):
         self.offset = int(offset)
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
+        self.objIds_cache = {}
 
         self.table_desc = {
             "filename": {
@@ -513,9 +514,8 @@ class AssetUploader(BaseApp):
             return None
 
         if cells["objIds"].value == None:
-            cells["objIds"].value = self.client.get_objIds(
-                identNr=cells["identNr"].value, strict=True, orgUnit=self.orgUnit
-            )
+            # new cache
+            cells["objIds"].value = self._get_objIds(identNr=cells["identNr"].value)
 
         if cells["parts_objIds"].value is None:
             # if self._has_parts(identNr=cells["identNr"].value):
@@ -605,6 +605,17 @@ class AssetUploader(BaseApp):
             templateM=newAssetM,
         )
         return new_asset_id
+
+    def _get_objIds(self, *, identNr: str):
+        if identNr in self.objIds_cache:
+            return self.objIds_cache[identNr]
+        else:
+            print("\tgetting new objId from RIA")
+            objIds = self.client.get_objIds(
+                identNr=identNr, strict=True, orgUnit=self.orgUnit
+            )
+            self.objIds_cache[identNr] = objIds
+            return objIds
 
     def _move_file(self, *, src: str, dst: str) -> None:
         """
