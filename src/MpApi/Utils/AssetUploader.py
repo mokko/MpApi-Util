@@ -46,6 +46,7 @@ IGNORE_NAMES = (
     "prepare.xlsx",
     "prepare.log",
     "prepare.ini",
+    excel_fn,
     "thumbs.db",
 )
 IGNORE_SUFFIXES = (".py", ".ini", ".lnk")
@@ -168,7 +169,7 @@ class AssetUploader(BaseApp):
         # breaks at limit
         for cells, rno in self._loop_table2(sheet=self.ws, offset=self.offset):
             # relative path; assume dir hasn't changed since scandir run
-            print(f"{rno}: {cells['identNr'].value}")
+            print(f"{rno}: {cells['identNr'].value} up")
             if cells["ref"].value == "None":
                 print(
                     "   object reference unknown, not creating assets nor attachments"
@@ -239,7 +240,6 @@ class AssetUploader(BaseApp):
         Returns int representing the first row in the Excel without x in field
         "attached" (aka "Asset hochgeladen").
         """
-        print("Determining initial offset ...")
         if not excel_fn.exists():
             raise ConfigError(f"ERROR: {excel_fn} NOT found!")
         self.wb = self._init_excel(path=excel_fn)
@@ -282,44 +282,58 @@ class AssetUploader(BaseApp):
         self._drop_rows_if_file_gone(col="I", cont=offset)
         self._save_excel(path=excel_fn)
 
-        c = 0
+        # fast-forward cache: reach all the files that have already been attached
+        # according to Excel
+        attached_cache = self._attached_cache()
+
+        c = 0  # counting files here, no offset for headlines
         print("Preparing file list...")
         file_list = src_dir.glob(f"**/{self.filemask}")
-        # sorted lasts too long for large amounts of files
-        # if len(file_list) < 5000:
-        #    file_list = sorted(file_list)
-        if offset > 0:
-            print(f"Fast-forwarding {offset} files ...")
-        with tqdm(total=offset) as pbar:
+        file_list2 = list()
+
+        with tqdm(total=len(file_list2) + len(attached_cache)) as pbar:
             for p in file_list:
                 c += 1
+                p_abs = str(p.absolute())
                 # dirty, temporary...
                 ignore_dir = "Y:\0_Neu"
-                if str(p).startswith(ignore_dir):
+                if p_abs.startswith(ignore_dir):
                     continue
-                if p.name.startswith(".") or p.name == excel_fn:
+                if p.name.startswith(".") or p.name.lower in IGNORE_NAMES:
+                    # print("   exluding reason 1")
                     continue
                 elif p.is_dir():
+                    # print("   exluding reason 2: dir")
                     continue
-                elif p.suffix in IGNORE_SUFFIXES:
-                    continue
-                elif p.name.lower() in IGNORE_NAMES:
-                    continue
-                elif c < offset:
+                elif p_abs in attached_cache:
                     pbar.update()
-                    continue  # fast-forward during scandir
-                print(f"{p} scandir")
-                rno = self._path_in_list(p)  # returns None if not in list, else rno
-                # if rno is None _file_to_list adds a new line
-                self._file_to_list(path=p, rno=rno)
+                    # print(f"   already in RIA {p_abs}")
+                    continue
+                # no longer needed since we're using filemask
+                # elif p.suffix in IGNORE_SUFFIXES:
+                #    continue
+                pbar.update()
+                file_list2.append(p)
                 if self.limit == c:
                     print("* Limit reached")
-                    self._save_excel(path=excel_fn)
                     break
-                # save every few thousand files to protect against interruption
-                if c % 1000 == 0:
-                    print("saving Excel...")
-                    self._save_excel(path=excel_fn)
+
+        print(f"Sorting file list... {len(file_list2)}")
+        file_list2 = sorted(file_list2)
+
+        print("Scanning file list...")
+        n = 0  # still counting files
+        for p in file_list2:
+            n = +1
+            print(f"{p} scandir")
+            rno = self._path_in_list(p)
+            # rno is the row number in Assets sheet
+            # rno is None if file not in list
+            self._file_to_list(path=p, rno=rno)
+            # save every few thousand files to protect against interruption
+            if n % 1000 == 0:
+                print("saving Excel...")
+                self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
     def standardbild(self) -> None:
@@ -365,6 +379,18 @@ class AssetUploader(BaseApp):
             # should this raise an error?
             print("   ATTACHING FAILED (HTTP REQUEST)!")
             return False
+
+    def _attached_cache(self) -> set:
+        c = 3  # line counter;
+        cache = set()
+        for row in self.ws.iter_rows(min_row=c):  # start at 3rd row
+            fullpath = row[8].value
+            attached = row[10].value
+            if attached == "x":
+                cache.add(fullpath)
+                # print(f"{fullpath} in attached cache")
+        print(f"Skipping files already uploaded ({len(cache)} files)")
+        return cache
 
     def _check_go(self) -> None:
         """
@@ -436,6 +462,9 @@ class AssetUploader(BaseApp):
             templateM = self._prepare_template()
             fn = cells["fullpath"].value
             if not Path(fn).exists():
+                # fn had been found during a scandir process
+                # if it is not found anymore at this time the file system has changed in
+                # an important way which warrants an error and the user's attention.
                 raise FileNotFoundError(f"File not found: '{fn}'")
             # print(f"fn: {fn}")
             new_asset_id = self._create_from_template(
@@ -501,7 +530,7 @@ class AssetUploader(BaseApp):
             # if cache the known paths drastically reduces http requests
             cells["asset_fn_exists"].value = self._get_mulId(fullpath=fullpath)
             if cells["asset_fn_exists"].value != "None":
-                print("\tasset already exists in RIA")
+                print("\tasset exists in RIA already")
                 cells["attached"].value = "x"
                 cells["attached"].font = red
                 # red signifies that asset has already been uploaded, but it has not been
@@ -610,11 +639,11 @@ class AssetUploader(BaseApp):
         if identNr in self.objIds_cache:
             return self.objIds_cache[identNr]
         else:
-            print("\tgetting new objId from RIA")
             objIds = self.client.get_objIds(
                 identNr=identNr, strict=True, orgUnit=self.orgUnit
             )
             self.objIds_cache[identNr] = objIds
+            print(f"\tgetting new objId from RIA {identNr} -> {objIds}")
             return objIds
 
     def _move_file(self, *, src: str, dst: str) -> None:

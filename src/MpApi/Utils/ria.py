@@ -143,7 +143,7 @@ class RIA:
         orgUnit (optional): If a valid orgUnit is provided, only results from that
         orgUnit are returned.
         """
-        ident = identNr.strip()
+        ident = identNr.strip()  # really do this?
         objIdL = self.identNr_exists(nr=ident, orgUnit=orgUnit, strict=strict)
         if not objIdL:
             return "None"
@@ -183,6 +183,34 @@ class RIA:
         # if we tested some results, but didnt find any real parts
         # we dont want to test them again
         return real_parts
+
+    def get_objIds_strict(
+        self, *, identNr: str, orgUnit: str = None, mtype: str = "Object"
+    ) -> Optional[list]:
+        """
+        Another version of the get_objIds that uses Zetcom's new exact search
+        which respects Sonderzeichen.
+        TODO
+        """
+        q = Search(module=mtype, limit=-1, offset=0)
+        if orgUnit is not None:
+            q.AND()
+        q.addCriterion(
+            field="ObjObjectNumberVrt",
+            operator="equalsExact",
+            value=nr,
+        )
+        if orgUnit is not None:
+            q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
+        q.addField(field="ObjObjectNumberTxt")
+        q.addField(field="ObjObjectNumberVrt")  # dont know what's the difference
+        q.validate(mode="search")  # raises if not valid
+        m = self.mpapi.search2(query=q)
+        if not m:
+            return None
+        else:
+            IDs = m.xpath("@id")
+            return IDs  # allow for multiple
 
     def id_exists(self, *, mtype: str, ID: int) -> bool:
         """
