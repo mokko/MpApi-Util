@@ -30,6 +30,7 @@ from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.styles import Alignment, Font
 import re
 import sys
+from tqdm import tqdm
 from typing import Iterator, Optional, Union
 
 # from typing import Any
@@ -62,15 +63,17 @@ class BaseApp:
             print("   continous mode, not looking for changes on disk")
             return
 
-        print("Update excel file list?")
+        print("Checking for file changes")
         c = 3
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            filename = self.ws[f"{col}{c}"].value
-            if filename is not None:
-                if not Path(filename).exists():
-                    print(f"Deleting Excel row {c} file gone '{filename}'")
-                    self.ws.delete_rows(c)
-            c += 1
+        with tqdm(total=self.ws.max_row - c) as pbar:
+            for row in self.ws.iter_rows(min_row=c):  # start at 3rd row
+                filename = self.ws[f"{col}{c}"].value
+                pbar.update()
+                if filename is not None:
+                    if not Path(filename).exists():
+                        print(f"Deleting Excel row {c} file gone '{filename}'")
+                        self.ws.delete_rows(c)
+                c += 1
         print("   done")
 
     #

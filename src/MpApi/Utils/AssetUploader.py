@@ -278,20 +278,21 @@ class AssetUploader(BaseApp):
         else:
             src_dir = Path(Dir)
         print(f"Scanning {src_dir}/{self.filemask}")
-        # rm excel rows if file no longer exists on disk
-        self._drop_rows_if_file_gone(col="I", cont=offset)
-        self._save_excel(path=excel_fn)
-
         # fast-forward cache: reach all the files that have already been attached
         # according to Excel
         attached_cache = self._attached_cache()
+
+        # rm excel rows if file no longer exists on disk
+        self._drop_rows_if_file_gone(col="I", cont=len(attached_cache))
+        self._save_excel(path=excel_fn)
 
         c = 0  # counting files here, no offset for headlines
         print("Preparing file list...")
         file_list = src_dir.glob(f"**/{self.filemask}")
         file_list2 = list()
-
-        with tqdm(total=len(file_list2) + len(attached_cache)) as pbar:
+        chunk_size = self.limit - len(attached_cache)
+        print(f"   chunk size: {chunk_size}")
+        with tqdm(total=chunk_size + len(attached_cache)) as pbar:
             for p in file_list:
                 c += 1
                 p_abs = str(p.absolute())
@@ -325,7 +326,7 @@ class AssetUploader(BaseApp):
         n = 0  # still counting files
         for p in file_list2:
             n = +1
-            print(f"{p} scandir")
+            print(f"scandir:{p}")
             rno = self._path_in_list(p)
             # rno is the row number in Assets sheet
             # rno is None if file not in list
@@ -530,7 +531,7 @@ class AssetUploader(BaseApp):
             # if cache the known paths drastically reduces http requests
             cells["asset_fn_exists"].value = self._get_mulId(fullpath=fullpath)
             if cells["asset_fn_exists"].value != "None":
-                print("\tasset exists in RIA already")
+                print("   asset exists in RIA already")
                 cells["attached"].value = "x"
                 cells["attached"].font = red
                 # red signifies that asset has already been uploaded, but it has not been

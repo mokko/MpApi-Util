@@ -273,11 +273,11 @@ def upload():
         c = 1
         u = AssetUploader()
         ioffset = u.initial_offset()
-        csize = 100
+        csize = 2000
         while True:
             limit = c * csize + ioffset
             offset = (c - 1) * csize + ioffset
-            print(f"Setting {limit=} and {offset=}")
+            print(f"Setting {offset=} and {limit=} ")
             u = AssetUploader(limit=limit, offset=offset)
             u.backup_excel()
             u.scandir(offset=offset)
