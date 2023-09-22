@@ -20,6 +20,7 @@ dependencies = [
 	"openpyxl",
 	"pyexiv2",
     "requests >=2.6",
+	"tqdm",
 	"typing_extensions",
 ]
 [project.optional-dependencies]

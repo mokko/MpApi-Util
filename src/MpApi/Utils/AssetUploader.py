@@ -278,12 +278,13 @@ class AssetUploader(BaseApp):
         else:
             src_dir = Path(Dir)
         print(f"Scanning {src_dir}/{self.filemask}")
-        # fast-forward cache: reach all the files that have already been attached
-        # according to Excel
+        # fast-forward cache: jump over all the files that have
+        # already been attached according to Excel
         attached_cache = self._attached_cache()
 
         # rm excel rows if file no longer exists on disk
-        self._drop_rows_if_file_gone(col="I", cont=len(attached_cache))
+        # self._drop_rows_if_file_gone(col="I", cont=len(attached_cache))
+        print("   In case of substantial file changes, create new Excel sheet")
         self._save_excel(path=excel_fn)
 
         c = 0  # counting files here, no offset for headlines
