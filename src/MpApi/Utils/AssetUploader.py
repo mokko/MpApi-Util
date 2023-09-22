@@ -515,16 +515,7 @@ class AssetUploader(BaseApp):
             fullpath = path.absolute()  # .resolve() problems on UNC
             cells["fullpath"].value = str(fullpath)
         # print (f"***{path}")
-        if cells["asset_fn_exists"].value is None:
-            # if cache the known paths drastically reduces http requests
-            cells["asset_fn_exists"].value = self._get_mulId(fullpath=fullpath)
-            if cells["asset_fn_exists"].value != "None":
-                print("   asset exists in RIA already")
-                cells["attached"].value = "x"
-                cells["attached"].font = red
-                # red signifies that asset has already been uploaded, but it has not been
-                # tested if asset is linked to any or correct object.
-                # We need the x here to fast-forward during continous mode
+        self._write_asset_fn(cell)
 
         # identNr_cell might be None, then we cant look up any objIds
         if cells["identNr"].value is None:
@@ -532,60 +523,14 @@ class AssetUploader(BaseApp):
             return None
 
         if cells["objIds"].value == None:
-            # new cache
             cells["objIds"].value = self._get_objIds(identNr=cells["identNr"].value)
 
-        if cells["parts_objIds"].value is None:
-            # if self._has_parts(identNr=cells["identNr"].value):
-            # cells["parts_objIds"].value = "; ".join(ids)
-            # else:
-            cells["parts_objIds"].value = "None"
-            cells["parts_objIds"].alignment = Alignment(wrap_text=True)
-
-        if cells["ref"].value is None:
-            # if asset_fn exists we assume that asset has already been uploaded
-            # if no single objId has been identified, we will not create asset
-            if cells["asset_fn_exists"].value == "None":
-                # if single objId has been identified use it as ref
-                objIds = cells["objIds"].value
-                # if single part objId has been identified use it as ref
-                if objIds != "None" and ";" not in str(objIds):
-                    cells["ref"].value = int(objIds)
-                    cells["ref"].font = teal
-                # taking ref from part
-                elif cells["parts_objIds"].value != "None" and ";" not in str(
-                    cells["parts_objIds"].value
-                ):
-                    cells["ref"].value = (
-                        cells["parts_objIds"].value.split(" ")[0].strip()
-                    )
-                    cells["ref"].font = red
-                else:  # right indent?
-                    cells["ref"].value = "None"
-                    cells["ref"].font = red  # seems not to work!
-
-        if cells["targetpath"].value is None:
-            # print("in targetpath")
-            ws2 = self.wb["Conf"]
-            if ws2["B4"].value is not None:
-                u_dir = Path(ws2["B4"].value)
-                fn = Path(cells["filename"].value)
-                t = u_dir / fn
-                while t.exists():
-                    t = self._plus_one(t)
-                else:
-                    cells["targetpath"].value = str(t)
-                    cells["targetpath"].font = teal
-
+        self._write_parts(cell)
+        self._write_ref(cell)
+        self_write_targetpath(cell)
         print(f"   {rno}: {identNr} [{cells['ref'].value}]")
-        if cells["photographer"].value is None:
-            # print("in photographer")
-            creator = self._exiv_creator(path=path)
-            if creator is None:
-                cells["photographer"].value = "None"
-            else:
-                cells["photographer"].value = creator
-        self._photo(cells)
+        self._write_photographer(cell)
+        self._write_photoID(cells)
 
     def _init_wbws(self):
         if not excel_fn.exists():
@@ -682,19 +627,6 @@ class AssetUploader(BaseApp):
             rno += 1
         return None
 
-    def _photo(self, cells):
-        cname = cells["photographer"].value
-        if cells["creatorID"].value is None and cname != "None":
-            print(f"Looking up creatorID '{cname}'?")
-            idL = self.client.get_photographerID(name=cname)
-            # can be None, not "None". Since i may want to run 'upload foto' again after i have
-            # added photographer to RIA's person module.
-            if idL is None:
-                print(f"   creatorID not found")
-            else:
-                cells["creatorID"].value = "; ".join(idL)
-                # print(cells["creatorID"].value)
-
     def _prepare_template(self) -> Module:
         try:
             return self.templateM
@@ -734,3 +666,82 @@ class AssetUploader(BaseApp):
                 c["standardbild"].value = "erledigt"
                 self._save_excel(path=excel_fn)
                 print("\tstandardbild set")
+
+    def _write_asset_fn(self, cell):
+        if cells["asset_fn_exists"].value is None:
+            # if cache the known paths drastically reduces http requests
+            cells["asset_fn_exists"].value = self._get_mulId(fullpath=fullpath)
+            if cells["asset_fn_exists"].value != "None":
+                print("   asset exists in RIA already")
+                cells["attached"].value = "x"
+                cells["attached"].font = red
+                # red signifies that asset has already been uploaded, but it has not been
+                # tested if asset is linked to any or correct object.
+                # We need the x here to fast-forward during continous mode
+
+    def _write_parts(self, cell):
+        if cells["parts_objIds"].value is None:
+            # if self._has_parts(identNr=cells["identNr"].value):
+            # cells["parts_objIds"].value = "; ".join(ids)
+            # else:
+            cells["parts_objIds"].value = "None"
+            cells["parts_objIds"].alignment = Alignment(wrap_text=True)
+
+    def _write_photoID(self, cells):
+        cname = cells["photographer"].value
+        if cells["creatorID"].value is None and cname != "None":
+            print(f"Looking up creatorID '{cname}'?")
+            idL = self.client.get_photographerID(name=cname)
+            # can be None, not "None". Since i may want to run 'upload foto' again after i have
+            # added photographer to RIA's person module.
+            if idL is None:
+                print(f"   creatorID not found")
+            else:
+                cells["creatorID"].value = "; ".join(idL)
+                # print(cells["creatorID"].value)
+
+    def _write_photographer(self, cell):
+        if cells["photographer"].value is None:
+            # print("in photographer")
+            creator = self._exiv_creator(path=path)
+            if creator is None:
+                cells["photographer"].value = "None"
+            else:
+                cells["photographer"].value = creator
+
+    def _write_ref(self, cell):
+        if cells["ref"].value is None:
+            # if asset_fn exists we assume that asset has already been uploaded
+            # if no single objId has been identified, we will not create asset
+            if cells["asset_fn_exists"].value == "None":
+                # if single objId has been identified use it as ref
+                objIds = cells["objIds"].value
+                # if single part objId has been identified use it as ref
+                if objIds != "None" and ";" not in str(objIds):
+                    cells["ref"].value = int(objIds)
+                    cells["ref"].font = teal
+                # taking ref from part
+                elif cells["parts_objIds"].value != "None" and ";" not in str(
+                    cells["parts_objIds"].value
+                ):
+                    cells["ref"].value = (
+                        cells["parts_objIds"].value.split(" ")[0].strip()
+                    )
+                    cells["ref"].font = red
+                else:  # right indent?
+                    cells["ref"].value = "None"
+                    cells["ref"].font = red  # seems not to work!
+
+    def _write_targetpath(self):
+        if cells["targetpath"].value is None:
+            # print("in targetpath")
+            ws2 = self.wb["Conf"]
+            if ws2["B4"].value is not None:
+                u_dir = Path(ws2["B4"].value)
+                fn = Path(cells["filename"].value)
+                t = u_dir / fn
+                while t.exists():
+                    t = self._plus_one(t)
+                else:
+                    cells["targetpath"].value = str(t)
+                    cells["targetpath"].font = teal
