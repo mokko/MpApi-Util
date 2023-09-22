@@ -15,3 +15,9 @@ def test_identNr_exists3():
     for ident in cases:
         result = c.identNr_exists3(ident=ident)
         assert result == cases[ident]
+
+
+def test_get_photographerID():
+    idL = c.get_photographerID(name="Claudia Obrocki")
+    # print(f"{idL}")
+    assert idL == ["3597"]

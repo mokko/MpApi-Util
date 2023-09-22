@@ -109,28 +109,34 @@ class AssetUploader(BaseApp):
                 "col": "H",
                 "width": 20,
             },
+            "creatorID": {
+                "label": "Urheber*inID",
+                "desc": "aus RIA",
+                "col": "I",
+                "width": 20,
+            },
             "fullpath": {
                 "label": "absoluter Pfad",
                 "desc": "aus Verzeichnis",
-                "col": "I",
+                "col": "J",
                 "width": 90,
             },
             "targetpath": {
                 "label": "nach Bewegen der Datei",
                 "desc": "wenn Upload erfolgreich",
-                "col": "J",
+                "col": "K",
                 "width": 30,
             },
             "attached": {
                 "label": "Asset hochgeladen?",
                 "desc": "wenn Upload erfolgreich",
-                "col": "K",
+                "col": "L",
                 "width": 15,
             },
             "standardbild": {
                 "label": "Standardbild",
                 "desc": "Standardbild setzen, wenn noch keines existiert",
-                "col": "L",
+                "col": "M",
                 "width": 5,
             },
         }
@@ -140,6 +146,17 @@ class AssetUploader(BaseApp):
             shutil.copy(excel_fn, bak_fn)
         except KeyboardInterrupt:
             print("Catching keyboard interrupt during Excel operation; try again...")
+
+    def photo(self):
+        """
+        Loop thru the excel entries and lookup ids for fotographers/creators if no ID
+        filled in yet.
+        """
+        self._init_wbws()
+        self._save_excel(path=excel_fn)
+        for cells, rno in self._loop_table2(sheet=self.ws):
+            self._photo(cells)
+        self._save_excel(path=excel_fn)
 
     def go(self) -> None:
         """
@@ -240,16 +257,7 @@ class AssetUploader(BaseApp):
         Returns int representing the first row in the Excel without x in field
         "attached" (aka "Asset hochgeladen").
         """
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-        self.wb = self._init_excel(path=excel_fn)
-
-        # die if not writable so that user can close it before waste of time
-        self._save_excel(path=excel_fn)
-        try:
-            self.ws = self.wb["Assets"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+        self._init_wbws()
 
         # we need a loop that doesn't break on limit
         c = 3  # row counter
@@ -327,7 +335,7 @@ class AssetUploader(BaseApp):
         n = 0  # still counting files
         for p in file_list2:
             n = +1
-            print(f"scandir:{p}")
+            print(f"scandir: {p}")
             rno = self._path_in_list(p)
             # rno is the row number in Assets sheet
             # rno is None if file not in list
@@ -386,8 +394,8 @@ class AssetUploader(BaseApp):
         c = 3  # line counter;
         cache = set()
         for row in self.ws.iter_rows(min_row=c):  # start at 3rd row
-            fullpath = row[8].value
-            attached = row[10].value
+            fullpath = row[9].value
+            attached = row[11].value
             if attached == "x":
                 cache.add(fullpath)
                 # print(f"{fullpath} in attached cache")
@@ -400,19 +408,7 @@ class AssetUploader(BaseApp):
 
         Saves workbook to self.wb
         """
-        # check if excel exists, has the expected shape and is writable
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-
-        self.wb = self._init_excel(path=excel_fn)
-
-        # die if not writable so that user can close it before waste of time
-        self._save_excel(path=excel_fn)
-
-        try:
-            self.ws = self.wb["Assets"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+        self._init_wbws()
 
         check_if_none = {
             "B1": "ERROR: Missing configuration value: No templateID provided!",
@@ -434,16 +430,7 @@ class AssetUploader(BaseApp):
         A couple of checks for scandir. Saves worksheet to self.wb.
         """
         # check if excel exists, has the expected shape and is writable
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-        self.wb = self._init_excel(path=excel_fn)
-
-        # die if not writable so that user can close it before waste of time
-        self._save_excel(path=excel_fn)
-        try:
-            self.ws = self.wb["Assets"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+        self._init_wbws()
 
         if self.ws.max_row < 2:
             raise ConfigError(
@@ -496,13 +483,13 @@ class AssetUploader(BaseApp):
             with pyexiv2.Image(str(path)) as img:
                 img_data = img.read_iptc()
         except:
-            print("   Exif:Couldn't open for exif")
+            print("\tExif:Couldn't open for exif")
             return
 
         try:
             img_data["Iptc.Application2.Byline"]
         except:
-            print("   Exif:Didn't find photographer info")
+            print("\tExif:Didn't find photographer info")
             return
         else:
             return "; ".join(img_data["Iptc.Application2.Byline"])
@@ -598,6 +585,20 @@ class AssetUploader(BaseApp):
                 cells["photographer"].value = "None"
             else:
                 cells["photographer"].value = creator
+        self._photo(cells)
+
+    def _init_wbws(self):
+        if not excel_fn.exists():
+            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
+        self.wb = self._init_excel(path=excel_fn)
+
+        # die if not writable so that user can close it before waste of time
+        self._save_excel(path=excel_fn)
+
+        try:
+            self.ws = self.wb["Assets"]
+        except:
+            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
 
     def _get_mulId(self, *, fullpath: Path) -> int:
         """
@@ -645,7 +646,7 @@ class AssetUploader(BaseApp):
                 identNr=identNr, strict=True, orgUnit=self.orgUnit
             )
             self.objIds_cache[identNr] = objIds
-            print(f"\tgetting new objId from RIA {identNr} -> {objIds}")
+            print("   new objId from RIA")
             return objIds
 
     def _move_file(self, *, src: str, dst: str) -> None:
@@ -680,6 +681,19 @@ class AssetUploader(BaseApp):
                 return rno
             rno += 1
         return None
+
+    def _photo(self, cells):
+        cname = cells["photographer"].value
+        if cells["creatorID"].value is None and cname != "None":
+            print(f"Looking up creatorID '{cname}'?")
+            idL = self.client.get_photographerID(name=cname)
+            # can be None, not "None". Since i may want to run 'upload foto' again after i have
+            # added photographer to RIA's person module.
+            if idL is None:
+                print(f"   creatorID not found")
+            else:
+                cells["creatorID"].value = "; ".join(idL)
+                # print(cells["creatorID"].value)
 
     def _prepare_template(self) -> Module:
         try:

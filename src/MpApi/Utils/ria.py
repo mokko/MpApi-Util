@@ -52,6 +52,7 @@ class RIA:
     def __init__(self, *, baseURL: str, user: str, pw: str):
         self.mpapi = MpApi(baseURL=baseURL, user=user, pw=pw)
         self.fac = IdentNrFactory()
+        self.photographer_cache = {}
 
     def create_asset_from_template(self, *, templateM) -> int:
         """method not really necessary"""
@@ -211,6 +212,27 @@ class RIA:
         else:
             IDs = m.xpath("@id")
             return IDs  # allow for multiple
+
+    def get_photographerID(self, *, name) -> Optional[list]:
+        if name in self.photographer_cache:
+            # print (f"   photographer cache {self.photographer_cache[name]}")
+            return self.photographer_cache[name]
+        else:
+            IDs = self._get_photographerID(name=name)
+            self.photographer_cache[name] = IDs
+            # print (f"   new photographer {IDs}")
+            return IDs
+
+    def _get_photographerID(self, *, name) -> Optional[list]:
+        q = Search(module="Person")
+        q.addCriterion(operator="equalsField", field="PerNennformTxt", value=name)
+        q.addField(field="__id")
+        m = self.mpapi.search2(query=q)
+
+        if not m:
+            # print("No result")
+            return None
+        return m.get_ids(mtype="Person")
 
     def id_exists(self, *, mtype: str, ID: int) -> bool:
         """

@@ -50,7 +50,10 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
             new = " ".join(alist[0:2])
         elif astr.startswith("Adr (EJ)"):
             new = " ".join(alist[0:3])
-
+        elif astr.startswith("VIII "):
+            new = " ".join(alist[0:3])
+        elif astr.startswith("I C "):
+            new = astr.split(" mit ")[0]
         # print (f"{new=}")
 
         # remove certain trails
@@ -61,7 +64,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
 
         # only allow patterns that have one space separated number
         if re.search(r"\w+ \d+|", new3):
-            # print(f"XXXXXXXXXXXXXXXXXXX{new}")
+            # print(f"XXXXXXXXXXXXXXXXXXX{new3}")
             return new3
         elif re.search(r"\d+", stem2):
             # number can be sole item e.g. if objId is used as identNr

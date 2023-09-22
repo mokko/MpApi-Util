@@ -232,6 +232,7 @@ def upload():
     CLI USAGE:
     upload init    # writes empty excel file at conf.xlsx; existing files not overwritten
                    # and scans current directory preparing for upload
+    upload photo    # lookup photographerIDs
     upload up      # initiates or continues for upload process
     upload standardbild # only set standardbild
     upload cont    # continous upload
@@ -246,7 +247,7 @@ def upload():
     parser.add_argument(
         "cmd",
         help="use one of the following commands",
-        choices=("init", "scandir", "standardbild", "up", "cont"),
+        choices=("photo", "init", "scandir", "standardbild", "up", "cont"),
     )
     parser.add_argument(
         "-l", "--limit", help="break the go after number of items", default=-1
@@ -261,15 +262,7 @@ def upload():
         sys.exit(0)
 
     u = AssetUploader(limit=args.limit)
-    if args.cmd == "init":
-        u.init()
-    elif args.cmd == "scandir":
-        u.scandir()
-    elif args.cmd == "up":
-        u.go()
-    elif args.cmd == "standardbild":
-        u.standardbild()
-    elif args.cmd == "cont":
+    if args.cmd == "cont":
         c = 1
         u = AssetUploader()
         ioffset = u.initial_offset()
@@ -283,6 +276,16 @@ def upload():
             u.scandir(offset=offset)
             u.go()
             c += 1
+    elif args.cmd == "photo":
+        u.photo()
+    elif args.cmd == "init":
+        u.init()
+    elif args.cmd == "scandir":
+        u.scandir()
+    elif args.cmd == "standardbild":
+        u.standardbild()
+    elif args.cmd == "up":
+        u.go()
     else:
         print(f"Unknown command '{args.cmd}'")
 

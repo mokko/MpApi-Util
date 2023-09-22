@@ -20,6 +20,9 @@ cases = {
     "VII c 86 a -A x.tif": "VII c 86 a",
     "VII c 86 a <1>-A x.tif": "VII c 86 a <1>",
     "I_MV_0404_3__0051.jpg": "I/MV 0404 <3>",
+    "P 11766.tif": "P 11766",
+    "VIII C 20274 (P 10054).tif": "VIII C 20274",
+    "I C 8266 mit I C 8265, I C 8300.tif": "I C 8266",
 }
 
 
