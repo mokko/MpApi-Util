@@ -16,10 +16,11 @@ keywords = ["museum", "museumPlus", "api client"]
 dependencies = [
 	#"dateutil", 
 	"flit",
-	"lxml >=4.8.0", #pathlike objects
+	"lxml >=4.8.0", 
 	"openpyxl",
 	"pyexiv2",
     "requests >=2.6",
+	"tqdm",
 	"typing_extensions",
 ]
 [project.optional-dependencies]
