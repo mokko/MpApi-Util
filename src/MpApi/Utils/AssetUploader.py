@@ -54,9 +54,9 @@ IGNORE_SUFFIXES = (".py", ".ini", ".lnk", ".tmp")
 
 
 class AssetUploader(BaseApp):
-    def __init__(self, *, limit: int = -1, offset: int = 0) -> None:
+    def __init__(self, *, limit: int = -1, offset: int = 3) -> None:
         self.limit = int(limit)  # allows to break the go loop after number of items
-        self.offset = int(offset)
+        self.offset = int(offset)  # set to 3 by default to start at 3 row
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         self.objIds_cache = {}
@@ -111,7 +111,7 @@ class AssetUploader(BaseApp):
                 "width": 20,
             },
             "creatorID": {
-                "label": "Urheber*inID",
+                "label": "ID Urheber*in",
                 "desc": "aus RIA",
                 "col": "I",
                 "width": 20,
@@ -290,7 +290,6 @@ class AssetUploader(BaseApp):
         # fast-forward cache: jump over all the files that have
         # already been attached according to Excel
         attached_cache = self._attached_cache()
-
         # rm excel rows if file no longer exists on disk
         # self._drop_rows_if_file_gone(col="I", cont=len(attached_cache))
         print("   in case of substantial file changes, create new Excel sheet")
@@ -392,14 +391,18 @@ class AssetUploader(BaseApp):
             return False
 
     def _attached_cache(self) -> set:
-        c = 3  # line counter;
+        rno = 3  # row counter;
         cache = set()
-        for row in self.ws.iter_rows(min_row=c):  # start at 3rd row
-            fullpath = row[9].value
-            attached = row[11].value
+        # loop without limit
+        for row in self.ws.iter_rows(min_row=rno):  # start at 3rd row
+            cells = self._rno2dict(rno)
+            fullpath = cells["fullpath"].value
+            attached = cells["attached"].value
+            # print(f"{rno} {cells}")
             if attached == "x":
                 cache.add(fullpath)
-                # print(f"{fullpath} in attached cache")
+                # print(f"attached cache: {fullpath} {attached}")
+            rno += 1
         print(f"Skipping files already uploaded ({len(cache)} files)")
         return cache
 
@@ -446,7 +449,42 @@ class AssetUploader(BaseApp):
         else:
             self.filemask = ws2["B5"].value
 
+    def _create_from_template(
+        self, *, fn: str, objId: int, templateM: Module, creatorID: Optional[int] = None
+    ) -> int:
+        """
+        Creates a new asset record in RIA by copying the template. Also fill in
+        - object reference
+        - filename
+        - size
+
+        CHANGES
+        - Used to die if assetID was not defined; now just returns
+        - Used to be called _make_new_asset
+        """
+        # print("enter _create_from_template")
+        if objId is None or objId == "None":
+            # Do we want to log this error/warning in Excel?
+            print(f"moduleItemdId '{objId}' not allowed! Not creating new asset.")
+            return
+        r = Record(templateM)
+        r.add_reference(targetModule="Object", moduleItemId=objId)
+        r.set_filename(path=fn)
+        r.set_size(path=fn)
+        if creatorID is not None:
+            r.set_creator(ID=creatorID)
+        newAssetM = r.toModule()
+        newAssetM.toFile(path="debug.template.xml")
+        new_asset_id = self.client.create_asset_from_template(
+            templateM=newAssetM,
+        )
+        return new_asset_id
+
     def _create_new_asset(self, cells: dict) -> None:
+        """
+        Copies a template specified in the configuration.
+        Gets called during upload (go) phase.
+        """
         # print("_create_new_asset")
         if cells["asset_fn_exists"].value == "None":
             templateM = self._prepare_template()
@@ -457,8 +495,12 @@ class AssetUploader(BaseApp):
                 # an important way which warrants an error and the user's attention.
                 raise FileNotFoundError(f"File not found: '{fn}'")
             # print(f"fn: {fn}")
+            creatorID = cells["creatorID"].value
             new_asset_id = self._create_from_template(
-                fn=fn, objId=cells["ref"].value, templateM=templateM
+                fn=fn,
+                objId=cells["ref"].value,
+                templateM=templateM,
+                creatorID=creatorID,
             )
             cells["asset_fn_exists"].value = new_asset_id
             cells["asset_fn_exists"].font = teal
@@ -557,33 +599,6 @@ class AssetUploader(BaseApp):
             mulId = "; ".join(idL)
         return mulId
 
-    def _create_from_template(self, *, fn: str, objId: int, templateM: Module) -> int:
-        """
-        Creates a new asset record in RIA by copying the template. Also fill in
-        - object reference
-        - filename
-        - size
-
-        CHANGES
-        - Used to die if assetID was not defined; now just returns
-        - Used to be called _make_new_asset
-        """
-        # print("enter _create_from_template")
-        if objId is None or objId == "None":
-            # Do we want to log this error/warning in Excel?
-            print(f"moduleItemdId '{objId}' not allowed! Not creating new asset.")
-            return
-        r = Record(templateM)
-        r.add_reference(targetModule="Object", moduleItemId=objId)
-        r.set_filename(path=fn)
-        r.set_size(path=fn)
-        newAssetM = r.toModule()
-        # newAssetM.toFile(path="debug.template.xml")
-        new_asset_id = self.client.create_asset_from_template(
-            templateM=newAssetM,
-        )
-        return new_asset_id
-
     def _get_objIds(self, *, identNr: str):
         if identNr in self.objIds_cache:
             return self.objIds_cache[identNr]
@@ -636,6 +651,8 @@ class AssetUploader(BaseApp):
             templateID = int(ws2["B1"].value)
             print(f"Using asset {templateID} as template")
             self.templateM = self.client.get_template(ID=templateID, mtype="Multimedia")
+            if not self.templateM:
+                raise ValueError("Template not available!")
             # template.toFile(path=f".template{templateID}.orig.xml")
             return self.templateM
 
