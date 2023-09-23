@@ -46,10 +46,11 @@ IGNORE_NAMES = (
     "prepare.xlsx",
     "prepare.log",
     "prepare.ini",
-    excel_fn,
+    str(excel_fn),
+    str(bak_fn),
     "thumbs.db",
 )
-IGNORE_SUFFIXES = (".py", ".ini", ".lnk")
+IGNORE_SUFFIXES = (".py", ".ini", ".lnk", ".tmp")
 
 
 class AssetUploader(BaseApp):
@@ -292,7 +293,7 @@ class AssetUploader(BaseApp):
 
         # rm excel rows if file no longer exists on disk
         # self._drop_rows_if_file_gone(col="I", cont=len(attached_cache))
-        print("   In case of substantial file changes, create new Excel sheet")
+        print("   in case of substantial file changes, create new Excel sheet")
         self._save_excel(path=excel_fn)
 
         c = 0  # counting files here, no offset for headlines
@@ -309,7 +310,7 @@ class AssetUploader(BaseApp):
                 ignore_dir = "Y:\0_Neu"
                 if p_abs.startswith(ignore_dir):
                     continue
-                if p.name.startswith(".") or p.name.lower in IGNORE_NAMES:
+                if p.name.startswith(".") or p.name.lower() in IGNORE_NAMES:
                     # print("   exluding reason 1")
                     continue
                 elif p.is_dir():
@@ -319,9 +320,9 @@ class AssetUploader(BaseApp):
                     pbar.update()
                     # print(f"   already in RIA {p_abs}")
                     continue
-                # no longer needed since we're using filemask
-                # elif p.suffix in IGNORE_SUFFIXES:
-                #    continue
+                # we dont need to ignore suffixes if we look for *.jpg etc.
+                elif self.filemask == "*" and p.suffix in IGNORE_SUFFIXES:
+                    continue
                 pbar.update()
                 file_list2.append(p)
                 if self.limit == c:
@@ -505,6 +506,7 @@ class AssetUploader(BaseApp):
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
         cells = self._rno2dict(rno)
         identNr = extractIdentNr(path=path)  # returns Python's None on failure
+        fullpath = path.absolute()  # .resolve() problems on UNC
         # only write in empty fields
         # relative path, but not if we use this recursively
         if cells["filename"].value is None:
@@ -512,10 +514,9 @@ class AssetUploader(BaseApp):
         if cells["identNr"].value is None:
             cells["identNr"].value = identNr
         if cells["fullpath"].value is None:
-            fullpath = path.absolute()  # .resolve() problems on UNC
             cells["fullpath"].value = str(fullpath)
         # print (f"***{path}")
-        self._write_asset_fn(cell)
+        self._write_asset_fn(cells, fullpath)
 
         # identNr_cell might be None, then we cant look up any objIds
         if cells["identNr"].value is None:
@@ -525,11 +526,11 @@ class AssetUploader(BaseApp):
         if cells["objIds"].value == None:
             cells["objIds"].value = self._get_objIds(identNr=cells["identNr"].value)
 
-        self._write_parts(cell)
-        self._write_ref(cell)
-        self_write_targetpath(cell)
+        self._write_parts(cells)
+        self._write_ref(cells)
+        self._write_targetpath(cells)
         print(f"   {rno}: {identNr} [{cells['ref'].value}]")
-        self._write_photographer(cell)
+        self._write_photographer(cells, path)
         self._write_photoID(cells)
 
     def _init_wbws(self):
@@ -667,7 +668,7 @@ class AssetUploader(BaseApp):
                 self._save_excel(path=excel_fn)
                 print("\tstandardbild set")
 
-    def _write_asset_fn(self, cell):
+    def _write_asset_fn(self, cells, fullpath):
         if cells["asset_fn_exists"].value is None:
             # if cache the known paths drastically reduces http requests
             cells["asset_fn_exists"].value = self._get_mulId(fullpath=fullpath)
@@ -679,7 +680,7 @@ class AssetUploader(BaseApp):
                 # tested if asset is linked to any or correct object.
                 # We need the x here to fast-forward during continous mode
 
-    def _write_parts(self, cell):
+    def _write_parts(self, cells):
         if cells["parts_objIds"].value is None:
             # if self._has_parts(identNr=cells["identNr"].value):
             # cells["parts_objIds"].value = "; ".join(ids)
@@ -690,17 +691,17 @@ class AssetUploader(BaseApp):
     def _write_photoID(self, cells):
         cname = cells["photographer"].value
         if cells["creatorID"].value is None and cname != "None":
-            print(f"Looking up creatorID '{cname}'?")
+            print(f"\tLooking up creatorID '{cname}'?")
             idL = self.client.get_photographerID(name=cname)
             # can be None, not "None". Since i may want to run 'upload foto' again after i have
             # added photographer to RIA's person module.
             if idL is None:
-                print(f"   creatorID not found")
+                print(f"\tcreatorID not found")
             else:
                 cells["creatorID"].value = "; ".join(idL)
                 # print(cells["creatorID"].value)
 
-    def _write_photographer(self, cell):
+    def _write_photographer(self, cells, path):
         if cells["photographer"].value is None:
             # print("in photographer")
             creator = self._exiv_creator(path=path)
@@ -709,7 +710,7 @@ class AssetUploader(BaseApp):
             else:
                 cells["photographer"].value = creator
 
-    def _write_ref(self, cell):
+    def _write_ref(self, cells):
         if cells["ref"].value is None:
             # if asset_fn exists we assume that asset has already been uploaded
             # if no single objId has been identified, we will not create asset
@@ -732,7 +733,7 @@ class AssetUploader(BaseApp):
                     cells["ref"].value = "None"
                     cells["ref"].font = red  # seems not to work!
 
-    def _write_targetpath(self):
+    def _write_targetpath(self, cells):
         if cells["targetpath"].value is None:
             # print("in targetpath")
             ws2 = self.wb["Conf"]
