@@ -20,7 +20,7 @@ from datetime import datetime
 from lxml import etree
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
-from MpApi.Utils.logic import extractIdentNr, is_suspicious
+from MpApi.Utils.logic import extractIdentNr, has_parts, is_suspicious, whole_for_parts
 from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
 from mpapi.record import Record
@@ -744,15 +744,19 @@ class AssetUploader(BaseApp):
 
     def _write_parts(self, cells):
         if cells["parts_objIds"].value is None:
-            if self._has_parts(identNr=cells["identNr"].value):
-                cells["parts_objIds"].value = "; ".join(ids)
-            else:
-                cells["parts_objIds"].value = "None"
-                cells["parts_objIds"].alignment = Alignment(wrap_text=True)
+            identNr = cells["identNr"].value
+            whole_ident = whole_for_parts(identNr)
+            IDs = self.clientidentNr_exists(
+                nr=whole_ident, orgUnit=self.orgUnit, strict=False
+            )
+            cells["parts_objIds"].value = "; ".join(IDs)
+            # cells["parts_objIds"].alignment = Alignment(wrap_text=True)
+        else:
+            cells["parts_objIds"].value = "None"
 
     def _write_whole(self, cells):
         if cells["whole_objIds"].value is None:
-            if self._has_parts(identNr=cells["identNr"].value):
+            if has_parts(identNr=cells["identNr"].value):
                 cells["whole_objIds"].value = "has parts"
             else:
                 cells["whole_objIds"].value = "has no parts"

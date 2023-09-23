@@ -125,29 +125,6 @@ class BaseApp:
         )
         return objId_set
 
-    def _has_parts(self, identNr: str) -> bool:
-        """
-        Tests if identNr ends with parts; if so, return True, else False.
-        """
-        """
-        Test if identNr includes no part information. Currently, this test is rather 
-        simplistic. It will have to develop it. We might add a check if last item has
-        letters [a-z+]
-        
-        whole: VII c 123
-        whole+parts: VII c 123 a 
-        whole+parts: VII c 123 a,b 
-        whole+parts: VII c 123 a-b 
-
-        Can we rely on the fact that identNr have only 3 parts? No, probably not.
-        """
-        identL = identNr.split()
-        # print(f"parts in IdentNr {len(identL)}")
-        if len(identL) > 4:
-            return True
-        else:
-            return False
-
     #
     #
     #

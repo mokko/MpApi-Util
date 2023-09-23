@@ -76,6 +76,43 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
             return stem2
 
 
+def has_parts(identNr: str) -> bool:
+    """
+    For a given identNr determine if it describes a part of not.
+
+    Examples for parts:
+    VII a 123 a
+    VII a 123 a,b
+    VII a 123 a-c
+    IV 124 a <1>
+    IV 124 a,b
+    """
+    parts = identNr.split(" ")
+    if "<" in parts[-1] and ">" in parts[-1]:
+        parts.pop()
+    if re.search("[a-z]+|[a-z]+-[a-z]+|[a-z],[a-z]", parts[-1]):
+        return True
+    return False
+
+
+def whole_for_parts(identNr: str) -> str:
+    """
+    For a given identNr return the whole. If it is a whole already, return as is.
+    """
+    if has_parts(identNr):
+        parts = identNr.split(" ")
+        disamb = ""
+        if "<" in parts[-1] and ">" in parts[-1]:
+            disamb = parts.pop()
+        parts.pop()  # rm parts info
+        whole_ident = " ".join(parts)
+        if disamb != "":
+            whole_ident += " " + disamb
+        return whole_ident
+    else:
+        return identNr
+
+
 def is_suspicious(identNr: str) -> bool:
     """
     Returns True of identNr looks suspicious, False if it looks good.
