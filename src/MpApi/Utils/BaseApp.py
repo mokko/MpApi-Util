@@ -265,7 +265,7 @@ class BaseApp:
     def _save_excel(self, path: Path) -> None:
         """Made this only to have same print msgs all the time"""
 
-        # print(f"*** saving {path}")
+        print(f"*** saving Excel {path}")
         try:
             self.wb.save(filename=path)
         except KeyboardInterrupt:

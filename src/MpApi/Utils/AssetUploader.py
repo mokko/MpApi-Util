@@ -16,10 +16,11 @@ AssetUploader does NOT work RECURSIVELY
 
 """
 import copy
+from datetime import datetime
 from lxml import etree
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
-from MpApi.Utils.logic import extractIdentNr
+from MpApi.Utils.logic import extractIdentNr, is_suspicious
 from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
 from mpapi.record import Record
@@ -92,52 +93,58 @@ class AssetUploader(BaseApp):
                 "col": "E",
                 "width": 20,
             },
+            "whole_objIds": {
+                "label": "Ganzes objId",
+                "desc": "für diese IdentNr",
+                "col": "F",
+                "width": 20,
+            },
             "ref": {
                 "label": "Objekte-Link",
                 "desc": "automat. Vorschlag für Objekte-DS",
-                "col": "F",
+                "col": "G",
                 "width": 9,
             },
             "notes": {
                 "label": "Bemerkung",
                 "desc": "für Notizen",
-                "col": "G",
+                "col": "H",
                 "width": 20,
             },
             "photographer": {
                 "label": "Fotograf*in",
                 "desc": "aus Datei",
-                "col": "H",
+                "col": "I",
                 "width": 20,
             },
             "creatorID": {
                 "label": "ID Urheber*in",
                 "desc": "aus RIA",
-                "col": "I",
+                "col": "J",
                 "width": 20,
             },
             "fullpath": {
                 "label": "absoluter Pfad",
                 "desc": "aus Verzeichnis",
-                "col": "J",
+                "col": "K",
                 "width": 90,
             },
             "targetpath": {
                 "label": "nach Bewegen der Datei",
                 "desc": "wenn Upload erfolgreich",
-                "col": "K",
+                "col": "L",
                 "width": 30,
             },
             "attached": {
                 "label": "Asset hochgeladen?",
                 "desc": "wenn Upload erfolgreich",
-                "col": "L",
+                "col": "M",
                 "width": 15,
             },
             "standardbild": {
                 "label": "Standardbild",
                 "desc": "Standardbild setzen, wenn noch keines existiert",
-                "col": "M",
+                "col": "N",
                 "width": 5,
             },
         }
@@ -147,17 +154,6 @@ class AssetUploader(BaseApp):
             shutil.copy(excel_fn, bak_fn)
         except KeyboardInterrupt:
             print("Catching keyboard interrupt during Excel operation; try again...")
-
-    def photo(self):
-        """
-        Loop thru the excel entries and lookup ids for fotographers/creators if no ID
-        filled in yet.
-        """
-        self._init_wbws()
-        self._save_excel(path=excel_fn)
-        for cells, rno in self._loop_table2(sheet=self.ws):
-            self._photo(cells)
-        self._save_excel(path=excel_fn)
 
     def go(self) -> None:
         """
@@ -222,7 +218,7 @@ class AssetUploader(BaseApp):
         #
         ws2 = self.wb.create_sheet("Conf")
         ws2["A1"] = "templateID"
-        ws2["B1"] = 6697400  # temporarily changing default
+        ws2["B1"] = ""  # Hendryk's default 6697400
 
         ws2["C1"] = "Asset"
 
@@ -230,11 +226,14 @@ class AssetUploader(BaseApp):
         ws2["B2"] = "Objekte"  # todo alternativer Wert Restaurierung
 
         ws2["A3"] = "OrgUnit (optional)"
-        ws2["B3"] = "EMArchiv"
+        ws2["B3"] = ""
         ws2[
             "C3"
-        ] = "OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen)"
-        ws2["C3"].alignment = Alignment(wrap_text=True)
+        ] = """OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen). 
+        Die Suche der existierenden Assets wird auf den angegebenen Bereich eingeschränkt. 
+        Wenn kein Bereich angegenen, wird die Suche auch nicht eingeschränkt. Gültige 
+        orgUnits sind z.B. EMArchiv, EMMusikethnologie"""
+        # ws2["C3"].alignment = Alignment(wrap_text=True)
 
         ws2["A4"] = "Zielverzeichnis"
         ws2[
@@ -249,7 +248,10 @@ class AssetUploader(BaseApp):
         ws2.column_dimensions["B"].width = 25
         ws2.column_dimensions["C"].width = 25
 
-        for each in "A1", "A2", "A3", "A4", "A5":
+        ws2["A6"] = "Erstellungsdatum"
+        ws2["B6"] = datetime.today().strftime("%Y-%m-%d")
+
+        for each in "A1", "A2", "A3", "A4", "A5", "A6":
             ws2[each].font = Font(bold=True)
         self._save_excel(path=excel_fn)
 
@@ -267,6 +269,16 @@ class AssetUploader(BaseApp):
                 return c
             c += 1
         return c
+
+    def photo(self):
+        """
+        Loop thru the excel entries and lookup ids for fotographers/creators if no ID
+        filled in yet.
+        """
+        self._init_wbws()
+        for cells, rno in self._loop_table2(sheet=self.ws):
+            self._photo(cells)
+        self._save_excel(path=excel_fn)
 
     def scandir(self, *, Dir: Optional[Path] = None, offset: int = 0) -> None:
         """
@@ -309,7 +321,11 @@ class AssetUploader(BaseApp):
                 ignore_dir = "Y:\0_Neu"
                 if p_abs.startswith(ignore_dir):
                     continue
-                if p.name.startswith(".") or p.name.lower() in IGNORE_NAMES:
+                if (
+                    p.name.startswith(".")
+                    or p.name.startswith("debug")
+                    or p.name.lower() in IGNORE_NAMES
+                ):
                     # print("   exluding reason 1")
                     continue
                 elif p.is_dir():
@@ -363,6 +379,21 @@ class AssetUploader(BaseApp):
                 )
                 continue
             self._set_Standardbild(c)
+        self._save_excel(path=excel_fn)
+
+    def wipe(self) -> None:
+        """
+        Loop thru excel and delete all data rows. This re-creates the state of
+        'upload init'. Can be useful for running another scandir.
+
+        Beware of --limit.
+        """
+        self._init_wbws()
+        rno = 3
+        while rno < self.ws.max_row:
+            # print(f"wiping row {rno}")
+            self.ws.delete_rows(rno)
+            # rno += 1
         self._save_excel(path=excel_fn)
 
     #
@@ -472,6 +503,7 @@ class AssetUploader(BaseApp):
         r.set_filename(path=fn)
         r.set_size(path=fn)
         if creatorID is not None:
+            print(f"   creatorID {creatorID} _create_from_template")
             r.set_creator(ID=creatorID)
         newAssetM = r.toModule()
         newAssetM.toFile(path="debug.template.xml")
@@ -496,6 +528,7 @@ class AssetUploader(BaseApp):
                 raise FileNotFoundError(f"File not found: '{fn}'")
             # print(f"fn: {fn}")
             creatorID = cells["creatorID"].value
+            # print(f"   template with creatorID {creatorID}")
             new_asset_id = self._create_from_template(
                 fn=fn,
                 objId=cells["ref"].value,
@@ -537,6 +570,15 @@ class AssetUploader(BaseApp):
         else:
             return "; ".join(img_data["Iptc.Application2.Byline"])
 
+    def _write_identNr(self, cells: dict, path: Path) -> None:
+        identNr = extractIdentNr(path=path)  # returns Python's None on failure
+        # print(f"***{identNr=}")
+        if cells["identNr"].value is None:
+            cells["identNr"].value = identNr
+
+        if is_suspicious(identNr=identNr):
+            cells["identNr"].font = teal
+
     def _file_to_list(self, *, path: Path, rno=None):
         """
         If rno is None, add a new file to the end of the Excel list; else update the row
@@ -547,31 +589,34 @@ class AssetUploader(BaseApp):
         if rno is None:
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
         cells = self._rno2dict(rno)
-        identNr = extractIdentNr(path=path)  # returns Python's None on failure
         fullpath = path.absolute()  # .resolve() problems on UNC
         # only write in empty fields
         # relative path, but not if we use this recursively
         if cells["filename"].value is None:
             cells["filename"].value = path.name
-        if cells["identNr"].value is None:
-            cells["identNr"].value = identNr
+
+        self._write_identNr(cells, path)
+
         if cells["fullpath"].value is None:
             cells["fullpath"].value = str(fullpath)
         # print (f"***{path}")
         self._write_asset_fn(cells, fullpath)
 
         # identNr_cell might be None, then we cant look up any objIds
-        if cells["identNr"].value is None:
-            print(f"WARNING: identNr cell is empty! {path.name}")
-            return None
+        identNr = cells["identNr"].value
+        if identNr is None:
+            print(f"WARNING: identNr cell is empty!!!\n {path.name}")
+            return
 
         if cells["objIds"].value == None:
-            cells["objIds"].value = self._get_objIds(identNr=cells["identNr"].value)
+            cells["objIds"].value = self._get_objIds(identNr=identNr)
 
         self._write_parts(cells)
+        self._write_whole(cells)
         self._write_ref(cells)
         self._write_targetpath(cells)
-        print(f"   {rno}: {identNr} [{cells['ref'].value}]")
+        ref = cells["ref"].value
+        print(f"   {rno}: {identNr} [{ref}]")
         self._write_photographer(cells, path)
         self._write_photoID(cells)
 
@@ -607,7 +652,7 @@ class AssetUploader(BaseApp):
                 identNr=identNr, strict=True, orgUnit=self.orgUnit
             )
             self.objIds_cache[identNr] = objIds
-            print("   new objId from RIA")
+            print(f"   new objId from RIA [{objIds}]")
             return objIds
 
     def _move_file(self, *, src: str, dst: str) -> None:
@@ -649,7 +694,7 @@ class AssetUploader(BaseApp):
         except:
             ws2 = self.wb["Conf"]
             templateID = int(ws2["B1"].value)
-            print(f"Using asset {templateID} as template")
+            print(f"   template from asset {templateID}")
             self.templateM = self.client.get_template(ID=templateID, mtype="Multimedia")
             if not self.templateM:
                 raise ValueError("Template not available!")
@@ -699,16 +744,23 @@ class AssetUploader(BaseApp):
 
     def _write_parts(self, cells):
         if cells["parts_objIds"].value is None:
-            # if self._has_parts(identNr=cells["identNr"].value):
-            # cells["parts_objIds"].value = "; ".join(ids)
-            # else:
-            cells["parts_objIds"].value = "None"
-            cells["parts_objIds"].alignment = Alignment(wrap_text=True)
+            if self._has_parts(identNr=cells["identNr"].value):
+                cells["parts_objIds"].value = "; ".join(ids)
+            else:
+                cells["parts_objIds"].value = "None"
+                cells["parts_objIds"].alignment = Alignment(wrap_text=True)
+
+    def _write_whole(self, cells):
+        if cells["whole_objIds"].value is None:
+            if self._has_parts(identNr=cells["identNr"].value):
+                cells["whole_objIds"].value = "has parts"
+            else:
+                cells["whole_objIds"].value = "has no parts"
 
     def _write_photoID(self, cells):
         cname = cells["photographer"].value
         if cells["creatorID"].value is None and cname != "None":
-            print(f"\tLooking up creatorID '{cname}'?")
+            print(f"\tlooking up creatorID '{cname}'")
             idL = self.client.get_photographerID(name=cname)
             # can be None, not "None". Since i may want to run 'upload foto' again after i have
             # added photographer to RIA's person module.

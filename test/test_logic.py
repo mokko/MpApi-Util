@@ -1,4 +1,4 @@
-from MpApi.Utils.logic import extractIdentNr
+from MpApi.Utils.logic import extractIdentNr, is_suspicious
 from pathlib import Path
 
 cases = {
@@ -23,6 +23,9 @@ cases = {
     "P 11766.tif": "P 11766",
     "VIII C 20274 (P 10054).tif": "VIII C 20274",
     "I C 8266 mit I C 8265, I C 8300.tif": "I C 8266",
+    "VI 35989 -KK RS.jpg": "VI 35989",
+    "VI 35989 -KK.jpg": "VI 35989",
+    "I C 972 a-h -KK -B.jpg": "I C 972 a-h",
 }
 
 
@@ -32,3 +35,23 @@ def test_extractIdent():
         identNr = extractIdentNr(path=case)
         print(f"{case} -> {identNr}")
         assert cases[str(case)] == identNr
+
+
+def test_is_suspicious():
+    cases = {
+        "Oboe oNr": True,
+        "Schalenhalslaute oNr": True,
+        "III C 22851 (HK": True,
+        "VII a 123 a-c <1>": False,
+        "VII a 123 a-c": False,
+        "VII a 123": False,
+        "III C 22851   glg": True,
+        "III C 22851  glg": True,
+        1: True,
+        " ": True,
+        "III Nls(Sanduhrtrommel 2)": True,
+        "III Nls)Sanduhrtrommel 2": True,
+    }
+
+    for identNr in cases:
+        assert cases[identNr] == is_suspicious(identNr=identNr)

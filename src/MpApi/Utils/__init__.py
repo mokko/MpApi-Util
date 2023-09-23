@@ -230,12 +230,13 @@ def sren():
 def upload():
     """
     CLI USAGE:
+    upload cont    # continous upload
     upload init    # writes empty excel file at conf.xlsx; existing files not overwritten
                    # and scans current directory preparing for upload
-    upload photo    # lookup photographerIDs
-    upload up      # initiates or continues for upload process
+    upload photo   # lookup photographerIDs
     upload standardbild # only set standardbild
-    upload cont    # continous upload
+    upload up      # initiates or continues for upload process
+    upload wipe    # wipe all data rows in Excel so that init state is re-created
     """
 
     parser = argparse.ArgumentParser(
@@ -247,7 +248,7 @@ def upload():
     parser.add_argument(
         "cmd",
         help="use one of the following commands",
-        choices=("photo", "init", "scandir", "standardbild", "up", "cont"),
+        choices=("cont", "init", "photo", "scandir", "standardbild", "up", "wipe"),
     )
     parser.add_argument(
         "-l", "--limit", help="break the go after number of items", default=-1
@@ -286,6 +287,8 @@ def upload():
         u.standardbild()
     elif args.cmd == "up":
         u.go()
+    elif args.cmd == "wipe":
+        u.wipe()
     else:
         print(f"Unknown command '{args.cmd}'")
 

@@ -19,13 +19,17 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
     # stem as determined by path is everything before the last .suffix.
     stem = path.stem
 
-    # collapse all underlines into space
+    # step 1: collapse all underlines into space
     stem2 = re.sub("_", " ", stem)
-    m = re.search(r"([()\w\d +.,<>-]+)| -KK| -\d| \d+|  \d+", stem2)
+    # step 2: all allowed chars
+    m = re.search(r"([()\w\d +.,<>-]+)", stem2)
     if m:
-        # restrict to max length of elements
         astr = m.group(1).strip()
+        # step 3: cut the tail
+        astr = re.sub(r" -KK[ \w]*| -\w+", "", astr)
         # print(f"{astr=}")
+
+        # restrict to max length of elements
         alist = astr.split(" ")
         if "<" in astr:
             new = " ".join(alist[0:5])
@@ -44,6 +48,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
                 new = f"{m.group(1)} <{m.group(2)}>"
         elif astr.startswith("Verz BGAEU"):
             # new = " ".join(alist[0:3])
+            # add a magic dot
             new = re.sub("Verz BGAEU", "Verz. BGAEU", new)
         elif astr.startswith("EJ ") or astr.startswith("Inv "):
             # not catching __0001 correctly...
@@ -69,3 +74,52 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         elif re.search(r"\d+", stem2):
             # number can be sole item e.g. if objId is used as identNr
             return stem2
+
+
+def is_suspicious(identNr: str) -> bool:
+    """
+    Returns True of identNr looks suspicious, False if it looks good.
+    """
+    # print(f"***{identNr}")
+    if identNr is None:
+        return True
+
+    if not isinstance(identNr, str):
+        return True
+
+    if identNr.isspace():
+        return True
+
+    partsL = identNr.split(" ")
+    if len(partsL) < 0 or len(partsL) > 5:
+        # print(f"'{identNr}' Too few or too many parts")
+        return True
+
+    # return any(re.match("\d+",part) for part in partsL)
+    any_number = False
+    for part in partsL:
+        if re.match(r"\d+", part):
+            any_number = True
+    if not any_number:
+        # print(f"'{identNr}' not any number")
+        return True
+
+    # 2+ consecutive spaces
+    if re.search(r"\s{2,}", identNr):
+        # print(f"'{identNr}' 2+ white space")
+        return True
+
+    # unbalanced brackets
+    brackets = [("(", ")"), ("<", ">"), ("[", "]")]
+    for btype in brackets:
+        if identNr.count(btype[0]) != identNr.count(btype[1]):
+            # print(f"'{identNr}' unbalanced backets")
+            return True
+
+    if re.search(r"\w+\(|\)\w+", identNr):
+        # print(f"'{identNr}' brackets without space")
+        return True
+
+    # if you get here identNr is NOT suspicious
+    # print(f"'{identNr}' not suspicious")
+    return False

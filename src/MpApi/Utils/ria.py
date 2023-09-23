@@ -144,8 +144,8 @@ class RIA:
         orgUnit (optional): If a valid orgUnit is provided, only results from that
         orgUnit are returned.
         """
-        ident = identNr.strip()  # really do this?
-        objIdL = self.identNr_exists(nr=ident, orgUnit=orgUnit, strict=strict)
+        # ident = identNr.strip()  # really do this?
+        objIdL = self.identNr_exists(nr=identNr, orgUnit=orgUnit, strict=strict)
         if not objIdL:
             return "None"
         return self.rm_junk("; ".join(str(objId) for objId in objIdL))
