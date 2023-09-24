@@ -237,9 +237,8 @@ class RIA:
 
     def get_objIds_strict(self, *, identNr: str, orgUnit: str = None) -> dict:
         """
-        Another version of the get_objIds that uses Zetcom's new exact search
-        which respects Sonderzeichen. We returns a dictionary which may be
-        empty if no results.
+        Another version of the get_objIds that uses Zetcom's new exact search which
+        respects Sonderzeichen. We return a dictionary which may be empty if no results.
 
         A single record can have multiple identNrs, but we report __only__ the one
         that we queried.

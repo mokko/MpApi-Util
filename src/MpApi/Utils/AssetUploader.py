@@ -83,7 +83,7 @@ class AssetUploader(BaseApp):
             },
             "objIds": {
                 "label": "objId(s) aus RIA",
-                "desc": "für diese IdentNr",
+                "desc": "exact match für diese IdentNr",
                 "col": "D",
                 "width": 15,
             },
@@ -251,7 +251,10 @@ class AssetUploader(BaseApp):
         ws2["A6"] = "Erstellungsdatum"
         ws2["B6"] = datetime.today().strftime("%Y-%m-%d")
 
-        for each in "A1", "A2", "A3", "A4", "A5", "A6":
+        ws2["A7"] = "Ignore suspicious?"
+        ws2["B7"] = "True"
+
+        for each in "A1", "A2", "A3", "A4", "A5", "A6", "A7":
             ws2[each].font = Font(bold=True)
         self._save_excel(path=excel_fn)
 
@@ -394,6 +397,7 @@ class AssetUploader(BaseApp):
             # print(f"wiping row {rno}")
             self.ws.delete_rows(rno)
             # rno += 1
+        self.ws.delete_rows(rno)
         self._save_excel(path=excel_fn)
 
     #
@@ -479,6 +483,11 @@ class AssetUploader(BaseApp):
             self.filemask = "*"
         else:
             self.filemask = ws2["B5"].value
+
+        if ws2["B7"].value.lower() == "true":
+            self.ignore_suspicious = True
+        else:
+            self.ignore_suspicious = False
 
     def _create_from_template(
         self, *, fn: str, objId: int, templateM: Module, creatorID: Optional[int] = None
@@ -569,15 +578,6 @@ class AssetUploader(BaseApp):
             return
         else:
             return "; ".join(img_data["Iptc.Application2.Byline"])
-
-    def _write_identNr(self, cells: dict, path: Path) -> None:
-        identNr = extractIdentNr(path=path)  # returns Python's None on failure
-        # print(f"***{identNr=}")
-        if cells["identNr"].value is None:
-            cells["identNr"].value = identNr
-
-        if is_suspicious(identNr=identNr):
-            cells["identNr"].font = teal
 
     def _file_to_list(self, *, path: Path, rno=None):
         """
@@ -752,23 +752,37 @@ class AssetUploader(BaseApp):
                 # tested if asset is linked to any or correct object.
                 # We need the x here to fast-forward during continous mode
 
+    def _write_identNr(self, cells: dict, path: Path) -> None:
+        if cells["identNr"].value is None:
+            identNr = extractIdentNr(path=path)  # returns Python's None on failure
+            if self.ignore_suspicious and is_suspicious(identNr=identNr):
+                return
+            # currently only accepting identNrs that dont look suspicious
+            # print(f"***{identNr=}")
+            cells["identNr"].value = identNr
+
+            if is_suspicious(identNr=identNr):
+                cells["identNr"].font = red
+
     def _write_parts(self, cells):
         if cells["parts_objIds"].value is None:
-            identNr = cells["identNr"].value
-            whole_ident = whole_for_parts(identNr)
-            IDs = self.client.identNr_exists(
-                nr=whole_ident, orgUnit=self.orgUnit, strict=False
+            print("\t_write_parts")
+            IDs = self.client.get_objIds2(
+                # no orgUnit. Should that remain that way?
+                identNr=cells["identNr"].value,
+                strict=False,
             )
-            cells["parts_objIds"].value = "None"  # deactivated
-            # cells["parts_objIds"].value = "; ".join(IDs)
-            # cells["parts_objIds"].alignment = Alignment(wrap_text=True)
-        else:
-            cells["parts_objIds"].value = "None"
+            if IDs:
+                IDs = [str(e) for e in IDs]
+                cells["parts_objIds"].value = "; ".join(IDs)
+            else:
+                cells["parts_objIds"].value = "None"
 
     def _write_whole(self, cells):
         if cells["whole_objIds"].value is None:
             identNr = cells["identNr"].value
             ident_whole = whole_for_parts(identNr)
+            # print(f"\t_write_whole {ident_whole}")
             if identNr != ident_whole:
                 cells["whole_objIds"].value = f"{ident_whole}: " + self._get_objIds(
                     identNr=ident_whole
@@ -777,6 +791,7 @@ class AssetUploader(BaseApp):
                 cells["whole_objIds"].value = "None"
 
     def _write_photoID(self, cells):
+        # print("\t_write_photoID")
         cname = cells["photographer"].value
         if cells["creatorID"].value is None and cname != "None":
             print(f"\tlooking up creatorID '{cname}'")
@@ -802,21 +817,30 @@ class AssetUploader(BaseApp):
         if cells["ref"].value is None:
             # if asset_fn exists we assume that asset has already been uploaded
             # if no single objId has been identified, we will not create asset
+            whole_objIds = cells["whole_objIds"].value
             if cells["asset_fn_exists"].value == "None":
                 # if single objId has been identified use it as ref
                 objIds = cells["objIds"].value
                 # if single part objId has been identified use it as ref
                 if objIds != "None" and ";" not in str(objIds):
+                    print("   taking ref from objIds...")
                     cells["ref"].value = int(objIds)
                     cells["ref"].font = teal
                 # taking ref from part
                 elif cells["parts_objIds"].value != "None" and ";" not in str(
                     cells["parts_objIds"].value
                 ):
+                    print("   taking ref from parts...")
                     cells["ref"].value = (
                         cells["parts_objIds"].value.split(" ")[0].strip()
                     )
                     cells["ref"].font = red
+                elif not "None" in whole_objIds:  # this only works for single entries
+                    ident_whole, objId = whole_objIds.split(": ")
+                    objId = int(objId)
+                    print("   taking ref from whole...")
+                    # assuming ref is empty at this point...
+                    cells["ref"].value = objId
                 else:  # right indent?
                     cells["ref"].value = "None"
                     cells["ref"].font = red  # seems not to work!
