@@ -44,7 +44,7 @@ class NoContentError(Exception):
 
 class BaseApp:
     def _init_client(self) -> RIA:
-        # avoid reinitializing although not sure that makes a significant difference
+        # avoid reinitializing although not sure that makes a difference
         if hasattr(self, "client"):
             return self.client
         else:
@@ -57,7 +57,7 @@ class BaseApp:
         If the file no longer exists on disk (e.g. because it has been renamed),
         we delete it from the excel sheet by deleting the row.
 
-        This is for the scandir step.
+        This is for the scandir step. NOT USED AT THE MOMENT.
         """
         if cont:
             print("   continous mode, not looking for changes on disk")
@@ -75,10 +75,6 @@ class BaseApp:
                         self.ws.delete_rows(c)
                 c += 1
         print("   done")
-
-    #
-    #
-    #
 
     def _get_objIds_for_whole_or_parts(self, *, identNr: str) -> set[int]:
         """
@@ -124,10 +120,6 @@ class BaseApp:
             ident=ident_whole,
         )
         return objId_set
-
-    #
-    #
-    #
 
     def _init_excel(self, *, path: Path) -> Workbook:
         """

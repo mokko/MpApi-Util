@@ -645,6 +645,16 @@ class AssetUploader(BaseApp):
         return mulId
 
     def _get_objIds(self, *, identNr: str):
+        """
+        For a given identNr:str return the objId or objIds. If multiple objIds match,
+        they are returned as a string that is joined by "; ". If there is no match,
+        the returned string is "None".
+
+        The string is cached, so if you query the same identNr again the same run
+        of the script, it doesn't need another TCP request.
+
+        This is an obsolete version.
+        """
         if identNr in self.objIds_cache:
             return self.objIds_cache[identNr]
         else:
@@ -652,7 +662,7 @@ class AssetUploader(BaseApp):
                 identNr=identNr, strict=True, orgUnit=self.orgUnit
             )
             self.objIds_cache[identNr] = objIds
-            print(f"   new objId from RIA [{objIds}]")
+            # print(f"   new objId from RIA [{objIds}]")
             return objIds
 
     def _move_file(self, *, src: str, dst: str) -> None:
@@ -746,20 +756,25 @@ class AssetUploader(BaseApp):
         if cells["parts_objIds"].value is None:
             identNr = cells["identNr"].value
             whole_ident = whole_for_parts(identNr)
-            IDs = self.clientidentNr_exists(
+            IDs = self.client.identNr_exists(
                 nr=whole_ident, orgUnit=self.orgUnit, strict=False
             )
-            cells["parts_objIds"].value = "; ".join(IDs)
+            cells["parts_objIds"].value = "None"  # deactivated
+            # cells["parts_objIds"].value = "; ".join(IDs)
             # cells["parts_objIds"].alignment = Alignment(wrap_text=True)
         else:
             cells["parts_objIds"].value = "None"
 
     def _write_whole(self, cells):
         if cells["whole_objIds"].value is None:
-            if has_parts(identNr=cells["identNr"].value):
-                cells["whole_objIds"].value = "has parts"
+            identNr = cells["identNr"].value
+            ident_whole = whole_for_parts(identNr)
+            if identNr != ident_whole:
+                cells["whole_objIds"].value = f"{ident_whole}: " + self._get_objIds(
+                    identNr=ident_whole
+                )
             else:
-                cells["whole_objIds"].value = "has no parts"
+                cells["whole_objIds"].value = "None"
 
     def _write_photoID(self, cells):
         cname = cells["photographer"].value

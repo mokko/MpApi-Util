@@ -185,21 +185,29 @@ class RIA:
         # we dont want to test them again
         return real_parts
 
-    def get_objIds_strict(
-        self, *, identNr: str, orgUnit: str = None, mtype: str = "Object"
-    ) -> Optional[list]:
+    def get_objIds_startswith(self, *, identNr: str, orgUnit: str = None):
         """
-        Another version of the get_objIds that uses Zetcom's new exact search
-        which respects Sonderzeichen.
-        TODO
+        A lax search that finds all records that have an identNr which begins
+        with a given identNr.
+
+        Returns a dictionary which may be empty.
+            dict = {
+                objId_int: "IdentNr",
+                objId_int: "IdentNr",
+            }
+
+        We're using ObjObjectNumberVrt for the identNr returned in the hash
+        assuming that there will be only one there.
+
+        WIP: not successfully tested
         """
-        q = Search(module=mtype, limit=-1, offset=0)
+        q = Search(module="Object", limit=-1, offset=0)
         if orgUnit is not None:
             q.AND()
         q.addCriterion(
             field="ObjObjectNumberVrt",
-            operator="equalsExact",
-            value=nr,
+            operator="startsWithField",
+            value=identNr,
         )
         if orgUnit is not None:
             q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
@@ -207,11 +215,77 @@ class RIA:
         q.addField(field="ObjObjectNumberVrt")  # dont know what's the difference
         q.validate(mode="search")  # raises if not valid
         m = self.mpapi.search2(query=q)
-        if not m:
-            return None
-        else:
-            IDs = m.xpath("@id")
-            return IDs  # allow for multiple
+        objIds = {}
+        objIdL = m.get_ids(mtype="Object")
+        for objId in objIdL:
+            objId = int(objId)
+            objNumberL = m.xpath(
+                f"""/m:application/m:modules/m:module[
+                    @name = 'Object'
+                ]/m:moduleItem[
+                    @id = '{objId}']/m:virtualField[
+                        @name = 'ObjObjectNumberVrt'
+                    ]/m:value"""
+            )
+            if len(objNumberL) > 1:
+                raise ValueError("1+ identNrs per record.")
+                # If we find cases with multiple objNumbers per record we will need to
+                # save lists as values...
+            if objNumberL:  # if any results
+                objIds[objId] = objNumberL[0].text
+        return objIds
+
+    def get_objIds_strict(self, *, identNr: str, orgUnit: str = None) -> dict:
+        """
+        Another version of the get_objIds that uses Zetcom's new exact search
+        which respects Sonderzeichen. We returns a dictionary which may be
+        empty if no results.
+
+        A single record can have multiple identNrs, but we report __only__ the one
+        that we queried.
+
+        An identNr should be unique, but there may be cases where multiple records
+        have the same identNr.
+            dict = {
+                objId_int: "IdentNr1", # ObjObjectNumberVrt
+                objId_int: "IdentNr2",
+            }
+
+        Now we need a version of dict.values that lists all distinct identNr
+        """
+        q = Search(module="Object", limit=-1, offset=0)
+        if orgUnit is not None:
+            q.AND()
+        q.addCriterion(
+            field="ObjObjectNumberVrt",
+            operator="equalsExact",
+            value=identNr,
+        )
+        if orgUnit is not None:
+            q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
+        q.addField(field="ObjObjectNumberTxt")
+        q.addField(field="ObjObjectNumberVrt")  # dont know what's the difference
+        q.validate(mode="search")  # raises if not valid
+        m = self.mpapi.search2(query=q)
+        objIds = {}
+        objIdL = m.get_ids(mtype="Object")
+        for objId in objIdL:
+            objId = int(objId)
+            objNumberL = m.xpath(
+                f"""/m:application/m:modules/m:module[
+                    @name = 'Object'
+                ]/m:moduleItem[
+                    @id = '{objId}']/m:virtualField[
+                        @name = 'ObjObjectNumberVrt'
+                    ]/m:value"""
+            )
+            if len(objNumberL) > 1:
+                raise ValueError("1+ identNrs per record.")
+                # If we find cases with multiple objNumbers per record we will need to
+                # save lists as values...
+            if objNumberL:  # if any results
+                objIds[objId] = objNumberL[0].text
+        return objIds
 
     def get_photographerID(self, *, name) -> Optional[list]:
         if name in self.photographer_cache:
