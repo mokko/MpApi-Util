@@ -34,8 +34,10 @@ import shutil
 from typing import Any, Optional
 from tqdm import tqdm
 
-excel_fn = Path("upload.xlsx")
-bak_fn = Path("upload.xlsx.bak")
+excel_fn = Path(
+    "upload14.xlsx"
+)  # adding number of fields to prevent accidental overwriting of old versions
+bak_fn = Path("upload14.xlsx.bak")
 red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
@@ -47,6 +49,8 @@ IGNORE_NAMES = (
     "prepare.xlsx",
     "prepare.log",
     "prepare.ini",
+    "upload.xlsx",
+    "upload.xlsx.bak",
     str(excel_fn),
     str(bak_fn),
     "thumbs.db",
@@ -192,7 +196,7 @@ class AssetUploader(BaseApp):
             else:
                 #  print(f"   object reference known, continue {cells['ref'].value}")
                 self._create_new_asset(cells)
-                self._upload_file(cells)
+                self._upload_file(cells)  # dont also save inside _upload_file
                 self._set_Standardbild(cells)
                 # save after every file to protect against interruptions
                 self._save_excel(path=excel_fn)
@@ -321,7 +325,7 @@ class AssetUploader(BaseApp):
                 c += 1
                 p_abs = str(p.absolute())
                 # dirty, temporary...
-                ignore_dir = "Y:\0_Neu"
+                ignore_dir = "W:\0_Neu"
                 if p_abs.startswith(ignore_dir):
                     continue
                 if (
@@ -351,16 +355,15 @@ class AssetUploader(BaseApp):
         file_list2 = sorted(file_list2)
 
         print("Scanning file list...")
-        n = 0  # still counting files
         for p in file_list2:
-            n = +1
             print(f"scandir: {p}")
             rno = self._path_in_list(p)
             # rno is the row number in Assets sheet
             # rno is None if file not in list
             self._file_to_list(path=p, rno=rno)
             # save every few thousand files to protect against interruption
-            if n % 1000 == 0:
+
+            if rno is not None and rno % 1000 == 0:
                 print("saving Excel...")
                 self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
@@ -393,11 +396,10 @@ class AssetUploader(BaseApp):
         """
         self._init_wbws()
         rno = 3
-        while rno < self.ws.max_row:
+        while rno <= self.ws.max_row:
             # print(f"wiping row {rno}")
             self.ws.delete_rows(rno)
             # rno += 1
-        self.ws.delete_rows(rno)
         self._save_excel(path=excel_fn)
 
     #
@@ -721,7 +723,7 @@ class AssetUploader(BaseApp):
             ):
                 cells["attached"].value = "x"
             # save after every file that is uploaded
-            self._save_excel(path=excel_fn)
+            # self._save_excel(path=excel_fn)
         else:
             print("   asset already attached")
 
@@ -766,7 +768,9 @@ class AssetUploader(BaseApp):
 
     def _write_parts(self, cells):
         if cells["parts_objIds"].value is None:
-            print("\t_write_parts")
+            # print("\t_write_parts")
+            # we want to use the new get_objIds_beginswith which returns a dict,
+            # but it doesn't work yet
             IDs = self.client.get_objIds2(
                 # no orgUnit. Should that remain that way?
                 identNr=cells["identNr"].value,
