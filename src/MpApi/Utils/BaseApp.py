@@ -245,7 +245,7 @@ class BaseApp:
         Stores the value specified in the paramter cell in self.orgUnit.
         cell is a string like B2.
 
-        Some empty values (isspace) are turned into None
+        Some empty values are turned into None
         """
         conf_ws = self.wb["Conf"]
         orgUnit = conf_ws[cell].value  # can be None

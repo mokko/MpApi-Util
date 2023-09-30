@@ -70,85 +70,85 @@ class AssetUploader(BaseApp):
             "filename": {
                 "label": "Asset Dateiname",
                 "desc": "aus Verzeichnis",
-                "col": "A",
+                "col": "A",  # 0
                 "width": 20,
             },
             "identNr": {
                 "label": "IdentNr",
                 "desc": "aus Dateinamen",
-                "col": "B",
+                "col": "B",  # 1
                 "width": 15,
             },
             "asset_fn_exists": {
                 "label": "Assets mit diesem Dateinamen",
                 "desc": "mulId(s) aus RIA",
-                "col": "C",
+                "col": "C",  # 2
                 "width": 15,
             },
             "objIds": {
                 "label": "objId(s) aus RIA",
                 "desc": "exact match für diese IdentNr",
-                "col": "D",
+                "col": "D",  # 3
                 "width": 15,
             },
             "parts_objIds": {
                 "label": "Teile objId",
                 "desc": "für diese IdentNr",
-                "col": "E",
+                "col": "E",  # 4
                 "width": 20,
             },
             "whole_objIds": {
                 "label": "Ganzes objId",
                 "desc": "für diese IdentNr",
-                "col": "F",
+                "col": "F",  # 5
                 "width": 20,
             },
             "ref": {
                 "label": "Objekte-Link",
                 "desc": "automat. Vorschlag für Objekte-DS",
-                "col": "G",
+                "col": "G",  # 6
                 "width": 9,
             },
             "notes": {
                 "label": "Bemerkung",
                 "desc": "für Notizen",
-                "col": "H",
+                "col": "H",  # 7
                 "width": 20,
             },
             "photographer": {
                 "label": "Fotograf*in",
                 "desc": "aus Datei",
-                "col": "I",
+                "col": "I",  # 8
                 "width": 20,
             },
             "creatorID": {
                 "label": "ID Urheber*in",
                 "desc": "aus RIA",
-                "col": "J",
+                "col": "J",  # 9
                 "width": 20,
             },
             "fullpath": {
                 "label": "absoluter Pfad",
                 "desc": "aus Verzeichnis",
-                "col": "K",
+                "col": "K",  # 10
                 "width": 90,
             },
             "targetpath": {
                 "label": "nach Bewegen der Datei",
                 "desc": "wenn Upload erfolgreich",
-                "col": "L",
+                "col": "L",  # 11
                 "width": 30,
             },
             "attached": {
                 "label": "Asset hochgeladen?",
                 "desc": "wenn Upload erfolgreich",
-                "col": "M",
+                "col": "M",  # 12
                 "width": 15,
             },
             "standardbild": {
                 "label": "Standardbild",
                 "desc": "Standardbild setzen, wenn noch keines existiert",
-                "col": "N",
+                "col": "N",  # 13
                 "width": 5,
             },
         }
@@ -184,7 +184,7 @@ class AssetUploader(BaseApp):
                 print(f"Making new dir '{u_dir}'")
                 u_dir.mkdir()
 
-        # breaks at limit
+        # breaks at limit, but doesn't save on its own
         for cells, rno in self._loop_table2(sheet=self.ws, offset=self.offset):
             # relative path; assume dir hasn't changed since scandir run
             print(f"{rno}: {cells['identNr'].value} up")
@@ -196,10 +196,12 @@ class AssetUploader(BaseApp):
             else:
                 #  print(f"   object reference known, continue {cells['ref'].value}")
                 self._create_new_asset(cells)
-                self._upload_file(cells)  # dont also save inside _upload_file
+                self._upload_file(
+                    cells
+                )  # save in upload instead -> i.e. only when actually uploading
                 self._set_Standardbild(cells)
-                # save after every file to protect against interruptions
-                self._save_excel(path=excel_fn)
+                # dont save if here, save after loop instead
+        self._save_excel(path=excel_fn)
 
     def init(self) -> None:
         """
@@ -222,7 +224,8 @@ class AssetUploader(BaseApp):
         #
         ws2 = self.wb.create_sheet("Conf")
         ws2["A1"] = "templateID"
-        ws2["B1"] = ""  # Hendryk's default 6697400
+        ws2["B1"] = ""
+        ws["C1"] = """Hendryks default jpg 6697400"""
 
         ws2["C1"] = "Asset"
 
@@ -264,7 +267,7 @@ class AssetUploader(BaseApp):
 
     def initial_offset(self) -> int:
         """
-        Returns int representing the first row in the Excel without x in field
+        Returns number of rows with x in int representing the first row in the Excel without x in field
         "attached" (aka "Asset hochgeladen").
         """
         self._init_wbws()
@@ -272,9 +275,8 @@ class AssetUploader(BaseApp):
         # we need a loop that doesn't break on limit
         c = 3  # row counter
         for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            if row[10].value != "x":
-                return c
-            c += 1
+            if row[12].value == "x":
+                c += 1
         return c
 
     def photo(self):
@@ -318,7 +320,7 @@ class AssetUploader(BaseApp):
         print("Preparing file list...")
         file_list = src_dir.glob(f"**/{self.filemask}")
         file_list2 = list()
-        chunk_size = self.limit - len(attached_cache)
+        chunk_size = self.limit - offset
         print(f"   chunk size: {chunk_size}")
         with tqdm(total=chunk_size + len(attached_cache)) as pbar:
             for p in file_list:
@@ -723,7 +725,7 @@ class AssetUploader(BaseApp):
             ):
                 cells["attached"].value = "x"
             # save after every file that is uploaded
-            # self._save_excel(path=excel_fn)
+            self._save_excel(path=excel_fn)
         else:
             print("   asset already attached")
 
