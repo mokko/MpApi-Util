@@ -316,7 +316,7 @@ class AssetUploader(BaseApp):
         print("   in case of substantial file changes, create new Excel sheet")
         self._save_excel(path=excel_fn)
 
-        c = 0  # counting files here, no offset for headlines
+        c = 1  # counting files here, no offset for headlines
         print("Preparing file list...")
         file_list = src_dir.glob(f"**/{self.filemask}")
         file_list2 = list()
@@ -324,7 +324,6 @@ class AssetUploader(BaseApp):
         print(f"   chunk size: {chunk_size}")
         with tqdm(total=chunk_size + len(attached_cache)) as pbar:
             for p in file_list:
-                c += 1
                 p_abs = str(p.absolute())
                 # dirty, temporary...
                 ignore_dir = "W:\0_Neu"
@@ -340,18 +339,18 @@ class AssetUploader(BaseApp):
                 elif p.is_dir():
                     # print("   exluding reason 2: dir")
                     continue
-                elif p_abs in attached_cache:
-                    pbar.update()
-                    # print(f"   already in RIA {p_abs}")
-                    continue
                 # we dont need to ignore suffixes if we look for *.jpg etc.
                 elif self.filemask == "*" and p.suffix in IGNORE_SUFFIXES:
                     continue
+                    c += 1  # attached files we want to count
+                    # print(f"   already in RIA {p_abs}")
                 pbar.update()
-                file_list2.append(p)
+                if p_abs not in attached_cache:
+                    file_list2.append(p)
                 if self.limit == c:
                     print("* Limit reached")
                     break
+                c += 1
 
         print(f"Sorting file list... {len(file_list2)}")
         file_list2 = sorted(file_list2)
@@ -362,11 +361,11 @@ class AssetUploader(BaseApp):
             rno = self._path_in_list(p)
             # rno is the row number in Assets sheet
             # rno is None if file not in list
-            self._file_to_list(path=p, rno=rno)
-            # save every few thousand files to protect against interruption
+            rno = self._file_to_list(path=p, rno=rno)
 
+            # save every thousand files to protect against interruption
             if rno is not None and rno % 1000 == 0:
-                print("saving Excel...")
+                # print("saving Excel...")
                 self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
@@ -565,7 +564,7 @@ class AssetUploader(BaseApp):
         # known extensions that dont work with exif
         exclude_exts = (".jpg", ".exr", ".obj", ".pdf", ".xml", ".zip")
         if path.suffix.lower() in exclude_exts:
-            print(f"\tExif: ignoring suffix")
+            print(f"\tExif: ignoring suffix {path.suffix}")
             return
 
         try:
@@ -623,6 +622,7 @@ class AssetUploader(BaseApp):
         print(f"   {rno}: {identNr} [{ref}]")
         self._write_photographer(cells, path)
         self._write_photoID(cells)
+        return rno
 
     def _init_wbws(self):
         if not excel_fn.exists():
@@ -811,7 +811,9 @@ class AssetUploader(BaseApp):
                 # print(cells["creatorID"].value)
 
     def _write_photographer(self, cells, path):
-        if cells["photographer"].value is None:
+        # if file already attached, we dont need to look for photographer again
+        # assuming attached is either None or x, but not "" or anything
+        if cells["photographer"].value is None and cells["attached"].value is None:
             # print("in photographer")
             creator = self._exiv_creator(path=path)
             if creator is None:
