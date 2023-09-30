@@ -197,19 +197,12 @@ class AssetUploader(BaseApp):
                 #  print(f"   object reference known, continue {cells['ref'].value}")
                 try:
                     self._create_new_asset(cells)
+                    self._upload_file(cells)
+                    self._set_Standardbild(cells)
                 except KeyboardInterrupt:
                     print(
                         "Catching keyboard interrupt during RIA operation; try again..."
                     )
-                try:
-                    self._upload_file(
-                        cells
-                    )  # save in upload instead -> i.e. only when actually uploading
-                except KeyboardInterrupt:
-                    print(
-                        "Catching keyboard interrupt during RIA operation; try again..."
-                    )
-                self._set_Standardbild(cells)
                 # dont save if here, save after loop instead
         self._save_excel(path=excel_fn)
 
