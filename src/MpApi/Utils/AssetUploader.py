@@ -361,7 +361,7 @@ class AssetUploader(BaseApp):
         print("Scanning file list...")
         for p in file_list2:
             print(f"scandir: {p}")
-            rno = self._path_in_list(p)
+            rno = self._path_in_list(p.name, 0)
             # rno is the row number in Assets sheet
             # rno is None if file not in list
             rno = self._file_to_list(path=p, rno=rno)
@@ -682,28 +682,6 @@ class AssetUploader(BaseApp):
             print(f"   moved to target '{dst}'")
         else:
             raise SyntaxError(f"ERROR: Target location already used! {dst}")
-
-    def _path_in_list(self, path) -> None:
-        """
-        Returns True if filename is already in list (column A), else None.
-        Currently, we're using the filename from column A which SHOULD be unique
-        in the MuseumPlus context, but which is strange requirement in the world
-        of directories, where multiple dirs may contain files with the same name.
-
-        We could switch to full path here for the identity test, if we wanted to.
-
-        What happens if filenames are not unique? Files on disk will not be
-        uploaded listed in scandir and hence not uploaded and hence not moved.
-        """
-        rno = 3
-        name = path.name
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            fn = row[0].value
-            # print (f"_path_in_list: {fn=}{name=}")
-            if fn == name:
-                return rno
-            rno += 1
-        return None
 
     def _prepare_template(self) -> Module:
         try:

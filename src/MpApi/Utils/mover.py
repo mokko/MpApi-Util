@@ -15,6 +15,7 @@ from openpyxl.styles import Alignment, Font
 from pathlib import Path
 import re
 import shutil
+from tqdm import tqdm
 
 excel_fn = Path("mover.xlsx")  # do we want a central Excel?
 red = Font(color="FF0000")
@@ -206,32 +207,40 @@ class Mover(BaseApp):
         self._check_scandir()
         print(f"   filemask: {self.filemask}")
         if self.ws.max_row > 2:
-            raise ConfigError(f"ERROR: Mover's scandir can't re-run scandir!")
+            print("   restarting scandir")
+            # raise ConfigError(f"ERROR: Mover's scandir can't re-run scandir!")
 
         c = 3
-        for p in Path().glob(self.filemask):
-            # print(f"S{p}")
-            p_abs = str(p.absolute())
-            if p.name.startswith(".") or p.name.startswith("~") or p == excel_fn:
-                continue
-            elif p.suffix in (".lnk"):
-                continue
-            elif p.is_dir():
-                continue
-            elif p.name.lower() == "thumbs.db" or p.name.lower() == "desktop.ini":
-                continue
-            if self.exclude_dirs is not None:
-                for each in self.exclude_dirs:
-                    if p_abs.startswith(each):
-                        continue
-            self._scan_per_file(path=p, count=c)
-            if c % 1000 == 0:  # save every so often
-                self._save_excel(path=excel_fn)
-            if self.limit == c:
-                print("* Limit reached")
-                break
-            c += 1
-        self._save_excel(path=excel_fn)
+        with tqdm(total=self.ws.max_row - 2) as pbar:
+            for p in Path().glob(self.filemask):
+                # print(f"S{p}")
+                p_abs = p.absolute()
+                p_abs_str = str(p_abs)
+                if p.name.startswith(".") or p.name.startswith("~") or p == excel_fn:
+                    continue
+                elif p.suffix in (".lnk"):
+                    continue
+                elif p.is_dir():
+                    continue
+                elif p.name.lower() == "thumbs.db" or p.name.lower() == "desktop.ini":
+                    continue
+                if self.exclude_dirs is not None:
+                    for each in self.exclude_dirs:
+                        if p_abs_str.startswith(each):
+                            continue
+                if self._path_in_list(p_abs, 7):
+                    # print(f"ff {p_abs.name}")
+                    pbar.update()
+                else:
+                    # print("new path")
+                    self._scan_per_file(path=p, count=c)
+                    if c % 1000 == 0:  # save every so often
+                        self._save_excel(path=excel_fn)
+                if self.limit == c:
+                    print("* Limit reached")
+                    break
+                c += 1
+            self._save_excel(path=excel_fn)
 
     def wipe(self):
         self._check_move()

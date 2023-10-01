@@ -189,6 +189,30 @@ class BaseApp:
                 break
             rno += 1
 
+    def _path_in_list(self, path: Path, cno: int) -> Optional[int]:
+        """
+        Returns row number as int if filename is already in list, else None.
+
+        We were using the first column, no column no (cno).
+
+        Currently, we're using the filename from column A which SHOULD be unique
+        in the MuseumPlus context, but which is strange requirement in the world
+        of directories, where multiple dirs may contain files with the same name.
+
+        We could switch to full path here for the identity test, if we wanted to.
+
+        What happens if filenames are not unique? Files on disk will not be
+        uploaded listed in scandir and hence not uploaded and hence not moved.
+        """
+        rno = 3
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            fn = row[cno].value
+            # print (f"_path_in_list: {fn=}{name=}")
+            if fn == str(path):
+                return rno
+            rno += 1
+        return None
+
     def _plus_one(self, p: Path) -> Path:
         """
         Receive a path and add or increase the number at the end to make filename unique

@@ -5,7 +5,7 @@ count the *.jpg files in this directory recursively
 from pathlib import Path
 from tqdm import tqdm
 
-filemask = "**/*.tif"
+filemask = "**/*.jpg"
 print(f"Looking for {filemask}")
 src_dir = Path()
 c = 1
