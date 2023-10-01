@@ -287,6 +287,9 @@ class RIA:
         return objIds
 
     def get_photographerID(self, *, name) -> Optional[list]:
+        if name is None:
+            print("WARNING: Photographer name is None!")
+            return
         if name in self.photographer_cache:
             # print (f"   photographer cache {self.photographer_cache[name]}")
             return self.photographer_cache[name]

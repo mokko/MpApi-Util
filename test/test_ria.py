@@ -22,6 +22,12 @@ def test_get_photographerID():
     assert idL == ["3597"]
 
 
+def test_get_photographerID_None():
+    idL = c.get_photographerID(name=None)
+    # print(f"{idL}")
+    assert idL == None
+
+
 def test_get_objIds_startswith():
     """
     New version that returns a dictionary.
