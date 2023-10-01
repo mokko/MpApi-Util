@@ -195,6 +195,8 @@ class Mover(BaseApp):
             elif p.name.lower() == "thumbs.db" or p.name.lower() == "desktop.ini":
                 continue
             self._scan_per_file(path=p, count=c)
+            if c % 1000 == 0:  # save every so often
+                self._save_excel(path=excel_fn)
             if self.limit == c:
                 print("* Limit reached")
                 break
