@@ -802,7 +802,7 @@ class AssetUploader(BaseApp):
     def _write_photoID(self, cells):
         # print("\t_write_photoID")
         cname = cells["photographer"].value
-        if cells["creatorID"].value is None and cname != "None":
+        if cells["creatorID"].value is None and cname != "None" and cname is not None:
             print(f"\tlooking up creatorID '{cname}'")
             idL = self.client.get_photographerID(name=cname)
             # can be None, not "None". Since i may want to run 'upload foto' again after i have

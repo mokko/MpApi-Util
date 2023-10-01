@@ -7,6 +7,7 @@ mover move     do the actual moving of the files
 
 """
 
+from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.Ria import RIA
 from openpyxl import Workbook, load_workbook
@@ -23,8 +24,8 @@ teal = Font(color="008080")
 class Mover(BaseApp):
     def __init__(self, *, limit):
         self.limit = int(limit)  # allows to break the go loop after number of items
-        creds = self._read_credentials()
-        self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
+        user, pw, baseURL = get_credentials()
+        self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         self.wb = self._init_excel(path=excel_fn)
 
         self.table_desc = {
@@ -101,12 +102,19 @@ class Mover(BaseApp):
         #
         ws2 = self.wb.create_sheet("Conf")
         ws2["A1"] = "target dir"
+
         ws2["A2"] = "orgUnit"
+        ws2["C2"] = "z.B. EMArchiv, EMMusikethnologie, EMSudundSudostasien"
+
+        ws2["A3"] = "Filemask"
+        ws2["B3"] = "**/*.jpg"
+        ws2[
+            "C3"
+        ] = """vollständige Python filemask; rekursives Scannen kann dadurch ab- und angestellt werden."""
 
         ws2.column_dimensions["A"].width = 25
 
-        for each in "A1", "A2":  # "A3", "A4"
-            # pass
+        for each in "A1", "A2", "A3":
             ws2[each].font = Font(bold=True)
         self._save_excel(path=excel_fn)
 
@@ -171,11 +179,13 @@ class Mover(BaseApp):
         """
         # check if excel exists, has the expected shape and is writable
         self._check_scandir()
+        print(f"   filemask: {self.filemask}")
         if self.ws.max_row > 2:
             raise ConfigError(f"ERROR: Mover's scandir can't re-run scandir!")
 
         c = 3
-        for p in Path().rglob("*"):
+        for p in Path().glob(self.filemask):
+            # print(f"S{p}")
             if p.name.startswith(".") or p.name.startswith("~") or p == excel_fn:
                 continue
             elif p.suffix in (".lnk"):
@@ -222,7 +232,7 @@ class Mover(BaseApp):
             raise ConfigError(
                 f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
             )
-        self.orgUnit = self._set_orgUnit("B2")
+        self.orgUnit = self._get_orgUnit(cell="B2")
 
         conf_ws = self.wb["Conf"]
         if conf_ws["B1"] is None:
@@ -230,11 +240,51 @@ class Mover(BaseApp):
 
         self.target_dir = Path(conf_ws["B1"].value)
 
+        if conf_ws["B3"] is None:
+            self.filemask = "**/*"
+        else:
+            self.filemask = conf_ws["B3"].value
+
     def _scan_per_file(self, *, path: Path, count: int) -> None:
         """
         Writes to self.ws
         """
+        c = self._rno2dict(count)
+        # only write in empty fields
+        if c["filename"].value is None:
+            c["filename"].value = path.name
+        if c["relpath"].value is None:
+            c["relpath"].value = str(path)
+        if c["fullpath"].value is None:
+            c["fullpath"].value = str(path.absolute())
+        self._write_fn_exists(c, path)
+        self._write_fn_exists_orgUnit(c, path)
+        self._write_move(c)
+        self._write_targetpath(c)
 
+        print(f"{count}: {path.name} [{c['move'].value}] {path.parent}")
+
+        # if (count/200).is_integer():
+        #    self._save_excel(path=excel_fn)
+
+    def _write_fn_exists(self, c, path):
+        if c["fn_exists"].value is None:
+            idL = self.client.fn_to_mulId(fn=path.name, orgUnit=None)
+            if len(idL) == 0:
+                c["fn_exists"].value = "None"
+            else:
+                c["fn_exists"].value = "; ".join(idL)
+
+    def _write_fn_exists_orgUnit(self, c, path):
+        if self.orgUnit is not None:
+            if c["fn_exists_orgUnit"].value is None:
+                idL = self.client.fn_to_mulId(fn=path.name, orgUnit=self.orgUnit)
+                if len(idL) == 0:
+                    c["fn_exists_orgUnit"].value = "None"
+                else:
+                    c["fn_exists_orgUnit"].value = "; ".join(idL)
+
+    def _write_move(self, c):
         def is_number(x):
             if x is None:
                 return False
@@ -250,23 +300,6 @@ class Mover(BaseApp):
             if ";" in x:
                 return True
 
-        c = self._rno2dict(count)
-        # only write in empty fields
-        if c["filename"].value is None:
-            c["filename"].value = path.name
-        if c["fn_exists"].value is None:
-            idL = self.client.fn_to_mulId(fn=path.name, orgUnit=None)
-            if len(idL) == 0:
-                c["fn_exists"].value = "None"
-            else:
-                c["fn_exists"].value = "; ".join(idL)
-        if self.orgUnit is not None:
-            if c["fn_exists_orgUnit"].value is None:
-                idL = self.client.fn_to_mulId(fn=path.name, orgUnit=self.orgUnit)
-                if len(idL) == 0:
-                    c["fn_exists_orgUnit"].value = "None"
-                else:
-                    c["fn_exists_orgUnit"].value = "; ".join(idL)
         if c["move"].value is None:
             if is_number(c["fn_exists"].value) or is_number(
                 c["fn_exists_orgUnit"].value
@@ -278,10 +311,8 @@ class Mover(BaseApp):
                 c["move"].value = "x"
             else:
                 c["move"].value = None
-        if c["relpath"].value is None:
-            c["relpath"].value = str(path)
-        if c["fullpath"].value is None:
-            c["fullpath"].value = str(path.absolute())
+
+    def _write_targetpath(self, c):
         if c["move"].value == "x":
             fro = Path(c["relpath"].value)
             to = self.target_dir / fro
@@ -289,7 +320,3 @@ class Mover(BaseApp):
                 to = self._plus_one(to)
             c["targetpath"].value = str(to)
             c["targetpath"].font = teal
-        print(f"{count}: {path.name} [{c['move'].value}] {path.parent}")
-
-        # if (count/200).is_integer():
-        #    self._save_excel(path=excel_fn)
