@@ -68,7 +68,7 @@ def move():
     parser.add_argument(
         "first",
         help="command, either init, scandir or move",
-        choices=["init", "move", "rescan", "scandir"],
+        choices=["init", "move", "rescan", "scandir", "wipe"],
     )
     parser.add_argument("-l", "--limit", help="stop after number of files", default=-1)
     parser.add_argument(
@@ -88,6 +88,8 @@ def move():
         m.rescan()
     elif args.first == "scandir":
         m.scandir()
+    elif args.first == "wipe":
+        m.wipe()
     else:
         print(f"Unknown command '{args.cmd}'")
 
