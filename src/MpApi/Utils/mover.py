@@ -149,10 +149,10 @@ class Mover(BaseApp):
 
     def move(self):
         self._check_move()
-        mrow = self.ws.max_row
         for c, rno in self._loop_table2(sheet=self.ws):
             if c["move"].value == "x" and c["moved"].value is None:
                 if c["targetpath"].value is None:
+                    self._save_excel(path=excel_fn)
                     raise SyntaxError(
                         "ERROR: Move says move, but targetpath has no info!"
                     )
@@ -160,7 +160,7 @@ class Mover(BaseApp):
                 to = Path(c["targetpath"].value)
                 if not to.parent.exists():
                     to.parent.mkdir(parents=True)
-                print(f"{rno}/{mrow}: {fro}")
+                print(f"{rno}/{self.ws.max_row}: {fro}")
                 # print(f"   {to}")
                 if fro.exists():
                     # don't overwrite existing files
@@ -177,8 +177,7 @@ class Mover(BaseApp):
                         c["moved"].value = "x"
                 else:
                     print(f"   doesn't exist anymore")
-            if rno % 1000 == 0:
-                # save every so often
+            if rno % 1000 == 0:  # save every so often
                 self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
