@@ -152,31 +152,32 @@ class Mover(BaseApp):
         mrow = self.ws.max_row
         for c, rno in self._loop_table2(sheet=self.ws):
             if c["move"].value == "x":
-                if c["targetpath"].value is None:
-                    raise SyntaxError(
-                        "ERROR: Move says move, but targetpath has no info!"
-                    )
-                fro = Path(c["relpath"].value)
-                to = Path(c["targetpath"].value)
-                if not to.parent.exists():
-                    to.parent.mkdir(parents=True)
-                print(f"{rno}/{mrow}: {fro}")
-                # print(f"   {to}")
-                if fro.exists():
-                    # don't overwrite existing files
-                    # since files with same name can exist in muliple folders
-                    # it's quite possible that files with same name exist multiple times
-                    if to.exists():
-                        # should not happen, as conflicts should be resolved earlier
-                        self.ws[f"I{rno}"].font = red
-                        self._save_excel(path=excel_fn)
-                        raise Exception(f"file exists already: '{to}'")
+                if c["moved"].value is None:
+                    if c["targetpath"].value is None:
+                        raise SyntaxError(
+                            "ERROR: Move says move, but targetpath has no info!"
+                        )
+                    fro = Path(c["relpath"].value)
+                    to = Path(c["targetpath"].value)
+                    if not to.parent.exists():
+                        to.parent.mkdir(parents=True)
+                    print(f"{rno}/{mrow}: {fro}")
+                    # print(f"   {to}")
+                    if fro.exists():
+                        # don't overwrite existing files
+                        # since files with same name can exist in muliple folders
+                        # it's quite possible that files with same name exist multiple times
+                        if to.exists():
+                            # should not happen, as conflicts should be resolved earlier
+                            self.ws[f"I{rno}"].font = red
+                            self._save_excel(path=excel_fn)
+                            raise Exception(f"file exists already: '{to}'")
+                        else:
+                            shutil.move(fro, to)
+                            self.ws[f"I{rno}"].font = teal
+                            self.ws[f"F{rno}"].value = "x"
                     else:
-                        shutil.move(fro, to)
-                        self.ws[f"I{rno}"].font = teal
-                        self.ws[f"F{rno}"].value = "x"
-                else:
-                    print(f"   doesn't exist (anymore)")
+                        print(f"   doesn't exist (anymore)")
                 if rno % 1000 == 0:
                     # save every so often
                     self._save_excel(path=excel_fn)
