@@ -399,12 +399,7 @@ class AssetUploader(BaseApp):
         Beware of --limit.
         """
         self._init_wbws()
-        rno = 3
-        while rno <= self.ws.max_row:
-            # print(f"wiping row {rno}")
-            self.ws.delete_rows(rno)
-            # rno += 1
-        self._save_excel(path=excel_fn)
+        self._wipe()
 
     #
     # private

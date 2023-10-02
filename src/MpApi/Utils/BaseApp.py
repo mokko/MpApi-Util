@@ -283,6 +283,14 @@ class BaseApp:
         if identNr is None or any("-", ";") in str(identNr):
             return True
 
+    def _wipe(self) -> None:
+        rno = 3
+        while rno <= self.ws.max_row:
+            # print(f"wiping row {rno}")
+            self.ws.delete_rows(rno)
+            # rno += 1
+        self._save_excel(path=excel_fn)
+
     def _write_table_description(self, *, description: dict, sheet: worksheet):
         """
         Take the table description and write it to the top of the specified worksheet.

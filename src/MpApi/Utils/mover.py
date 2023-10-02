@@ -61,6 +61,12 @@ class Mover(BaseApp):
                 "col": "E",
                 "width": 12,
             },
+            "moved": {
+                "label": "Bewegt",
+                "desc": "",
+                "col": "F",
+                "width": 8,
+            },
             "relpath": {
                 "label": "relativer Pfad",
                 "desc": "aus Verzeichnis",
@@ -168,6 +174,7 @@ class Mover(BaseApp):
                     else:
                         shutil.move(fro, to)
                         self.ws[f"I{rno}"].font = teal
+                        self.ws[f"F{rno}"].value = "x"
                 else:
                     print(f"   doesn't exist (anymore)")
                 if rno % 1000 == 0:
@@ -244,12 +251,7 @@ class Mover(BaseApp):
 
     def wipe(self):
         self._check_move()
-        rno = 3
-        while rno <= self.ws.max_row:
-            # print(f"wiping row {rno}")
-            self.ws.delete_rows(rno)
-            # rno += 1
-        self._save_excel(path=excel_fn)
+        self._wipe()
 
     #
     # private
