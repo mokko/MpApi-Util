@@ -52,14 +52,14 @@ class RIA:
     def __init__(self, *, baseURL: str, user: str, pw: str):
         self.mpapi = MpApi(baseURL=baseURL, user=user, pw=pw)
         self.fac = IdentNrFactory()
-        self.photographer_cache = {}
+        self.photographer_cache: dict[str, list | None] = {}
 
     def create_asset_from_template(self, *, templateM) -> int:
         """method not really necessary"""
         mulId = self.mpapi.createItem3(data=templateM)
         return mulId
 
-    def create_from_template(self, *, template: Module, identNr: str = None) -> int:
+    def create_from_template(self, *, template: Module, identNr: str) -> int:
         """
         Given a template record (a module Object),
         - copy that
@@ -67,11 +67,11 @@ class RIA:
 
         Returns objId of created record; raises on some errors.
         """
-        if identNr.isspace():
-            raise TypeError("Ident cant only consist of space: {identNr}")
-
         if identNr is None:
             raise TypeError("Ident can't be None")
+
+        if identNr.isspace():
+            raise TypeError("Ident cant only consist of space: {identNr}")
 
         if len(template) != 1:
             raise ValueError(
@@ -151,7 +151,7 @@ class RIA:
         return self.rm_junk("; ".join(str(objId) for objId in objIdL))
 
     def get_objIds2(
-        self, *, identNr: str, strict: bool = True, orgUnit: str = None
+        self, *, identNr: str, strict: bool = True, orgUnit: str | None = None
     ) -> set:
         """
         A version of get_objIds that allows to search for Sonderzeichen. Not very
@@ -185,7 +185,7 @@ class RIA:
         # we dont want to test them again
         return real_parts
 
-    def get_objIds_startswith(self, *, identNr: str, orgUnit: str = None):
+    def get_objIds_startswith(self, *, identNr: str, orgUnit: str | None = None):
         """
         A lax search that finds all records that have an identNr which begins
         with a given identNr.
@@ -235,7 +235,7 @@ class RIA:
                 objIds[objId] = objNumberL[0].text
         return objIds
 
-    def get_objIds_strict(self, *, identNr: str, orgUnit: str = None) -> dict:
+    def get_objIds_strict(self, *, identNr: str, orgUnit: str | None = None) -> dict:
         """
         Another version of the get_objIds that uses Zetcom's new exact search which
         respects Sonderzeichen. We return a dictionary which may be empty if no results.
@@ -289,7 +289,7 @@ class RIA:
     def get_photographerID(self, *, name) -> Optional[list]:
         if name is None:
             print("   WARNING: Photographer name is None!")
-            return
+            return None
         if name in self.photographer_cache:
             # print (f"   photographer cache {self.photographer_cache[name]}")
             return self.photographer_cache[name]
@@ -375,7 +375,7 @@ class RIA:
         return [int(x) for x in objIdL]
 
     def identNr_exists2(
-        self, *, nr: str, orgUnit: Optional[str] = None, strict: bool = True
+        self, *, nr: str, orgUnit: str | None = None, strict: bool = True
     ) -> list[tuple[int, str]]:
         """
         Returns a list of tuples containing objIds and identNr
@@ -625,7 +625,7 @@ class RIA:
             print("Updating record in RIA...")
             #  since we're uploading the whole document, RIA logs changes to multiple
             #  fields. This is not good, but it works.
-            client.mpapi.updateItem2(mtype="Object", ID=objId, data=m)
+            self.mpapi.updateItem2(mtype="Object", ID=objId, data=m)
         else:
             print("Thumbnail already set!?")
             print(
