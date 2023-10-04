@@ -189,7 +189,7 @@ class BaseApp:
                 break
             rno += 1
 
-    def _path_in_list(self, path: Path, cno: int) -> Optional[int]:
+    def _path_in_list(self, path: Path | str, cno: int) -> Optional[int]:
         """
         Returns row number as int if filename is already in list, else None.
 

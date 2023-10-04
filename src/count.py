@@ -28,7 +28,7 @@ args = parser.parse_args()
 print(f"Looking for {args.filemask}")
 src_dir = Path()
 c = 1  # count
-total_size = 0  # KB
+total_size: float = 0  # KB
 with tqdm(desc="files") as pbar:
     for f in src_dir.glob(args.filemask):
         pbar.update()

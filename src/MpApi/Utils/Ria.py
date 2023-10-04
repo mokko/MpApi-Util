@@ -128,7 +128,7 @@ class RIA:
         return objId
 
     def get_objIds(
-        self, *, identNr: str, strict: bool = True, orgUnit: str = None
+        self, *, identNr: str, strict: bool = True, orgUnit: str | None = None
     ) -> str:
         """
         For an individual identNr (provided as str), lookup matching ids in RIA and
@@ -466,7 +466,7 @@ class RIA:
             positiveIDs.add(itemN.get("id"))
         return positiveIDs
 
-    def get_template(self, *, mtype, ID):
+    def get_template(self, *, mtype: str, ID: int) -> Module:
         """
         Returns a Module object in upload form.
         """

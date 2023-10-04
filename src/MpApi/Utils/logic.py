@@ -95,25 +95,7 @@ def has_parts(identNr: str) -> bool:
     return False
 
 
-def whole_for_parts(identNr: str) -> str:
-    """
-    For a given identNr return the whole. If it is a whole already, return as is.
-    """
-    if has_parts(identNr):
-        parts = identNr.split(" ")
-        disamb = ""
-        if "<" in parts[-1] and ">" in parts[-1]:
-            disamb = parts.pop()
-        parts.pop()  # rm parts info
-        whole_ident = " ".join(parts)
-        if disamb != "":
-            whole_ident += " " + disamb
-        return whole_ident
-    else:
-        return identNr
-
-
-def is_suspicious(identNr: str) -> bool:
+def is_suspicious(identNr: str | None) -> bool:
     """
     Returns True of identNr looks suspicious, False if it looks good.
     """
@@ -160,3 +142,21 @@ def is_suspicious(identNr: str) -> bool:
     # if you get here identNr is NOT suspicious
     # print(f"'{identNr}' not suspicious")
     return False
+
+
+def whole_for_parts(identNr: str) -> str:
+    """
+    For a given identNr return the whole. If it is a whole already, return as is.
+    """
+    if has_parts(identNr):
+        parts = identNr.split(" ")
+        disamb = ""
+        if "<" in parts[-1] and ">" in parts[-1]:
+            disamb = parts.pop()
+        parts.pop()  # rm parts info
+        whole_ident = " ".join(parts)
+        if disamb != "":
+            whole_ident += " " + disamb
+        return whole_ident
+    else:
+        return identNr

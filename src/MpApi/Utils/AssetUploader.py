@@ -65,7 +65,7 @@ class AssetUploader(BaseApp):
         self.offset = int(offset)  # set to 3 by default to start at 3 row
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
-        self.objIds_cache = {}
+        self.objIds_cache: dict[str, str] = {}
 
         self.table_desc = {
             "filename": {
@@ -265,10 +265,10 @@ class AssetUploader(BaseApp):
         ws2["A7"] = "Ignore suspicious?"
         ws2["B7"] = "True"
 
-        for cell in sheet.iter_rows(min_col=1, max_col=1):
+        for cell in ws2.iter_rows(min_col=1, max_col=1):
             cell.font = Font(bold=True)
 
-        for cell in sheet.iter_rows(min_col=3, max_col=3):
+        for cell in ws2.iter_rows(min_col=3, max_col=3):
             cell.font = blue
 
         self._save_excel(path=excel_fn)
@@ -486,7 +486,7 @@ class AssetUploader(BaseApp):
         self.orgUnit = self._get_orgUnit(cell="B3")  # can be None
 
         if ws2["B5"].value is None:
-            self.filemask = "*"
+            self.filemask: str = "*"
         else:
             self.filemask = ws2["B5"].value
 
@@ -497,7 +497,7 @@ class AssetUploader(BaseApp):
 
     def _create_from_template(
         self, *, fn: str, objId: int, templateM: Module, creatorID: Optional[int] = None
-    ) -> int:
+    ) -> Optional[int]:
         """
         Creates a new asset record in RIA by copying the template. Also fill in
         - object reference
@@ -512,7 +512,7 @@ class AssetUploader(BaseApp):
         if objId is None or objId == "None":
             # Do we want to log this error/warning in Excel?
             print(f"moduleItemdId '{objId}' not allowed! Not creating new asset.")
-            return
+            return None
         r = Record(templateM)
         r.add_reference(targetModule="Object", moduleItemId=objId)
         r.set_filename(path=fn)
@@ -568,20 +568,20 @@ class AssetUploader(BaseApp):
         exclude_exts = (".jpg", ".exr", ".obj", ".pdf", ".xml", ".zip")
         if path.suffix.lower() in exclude_exts:
             print(f"\tExif: ignoring suffix {path.suffix}")
-            return
+            return None
 
         try:
             with pyexiv2.Image(str(path)) as img:
                 img_data = img.read_iptc()
         except:
             print("\tExif:Couldn't open for exif")
-            return
+            return None
 
         try:
             img_data["Iptc.Application2.Byline"]
         except:
             print("\tExif:Didn't find photographer info")
-            return
+            return None
         else:
             return "; ".join(img_data["Iptc.Application2.Byline"])
 
@@ -640,9 +640,9 @@ class AssetUploader(BaseApp):
         except:
             raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
 
-    def _get_mulId(self, *, fullpath: Path) -> int:
+    def _get_mulId(self, *, fullpath: Path) -> int | str:
         """
-        Expects a fullpath, returns mulId.
+        Expects a fullpath, returns mulId. Currently as str, should return int, I guess.
         """
         idL = self.client.fn_to_mulId(fn=str(fullpath.name), orgUnit=self.orgUnit)
         if len(idL) == 0:
@@ -690,7 +690,9 @@ class AssetUploader(BaseApp):
             ws2 = self.wb["Conf"]
             templateID = int(ws2["B1"].value)
             print(f"   template from asset {templateID}")
-            self.templateM = self.client.get_template(ID=templateID, mtype="Multimedia")
+            self.templateM: Module = self.client.get_template(
+                ID=templateID, mtype="Multimedia"
+            )
             if not self.templateM:
                 raise ValueError("Template not available!")
             # template.toFile(path=f".template{templateID}.orig.xml")
