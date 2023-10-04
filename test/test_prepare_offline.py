@@ -1,6 +1,7 @@
 # from mpapi.search import Search
 # from mpapi.module import Module
-from MpApi.Utils.Ria import RiaUtil
+from mpapi.constants import get_credentials
+from MpApi.Utils.Ria import RIA
 from MpApi.Utils.prepareUpload import PrepareUpload
 from MpApi.Utils.BaseApp import ConfigError
 
@@ -11,14 +12,12 @@ import pytest
 
 # NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
 
-credentials = Path(__file__).parents[1] / "sdata/credentials.py"
-with open(credentials) as f:
-    exec(f.read())
+user, pw, baseURL = get_credentials()
 
 
 def test_constructor_ria():
-    c = RiaUtil(baseURL=baseURL, user=user, pw=pw)
-    assert isinstance(c, RiaUtil)
+    c = RIA(baseURL=baseURL, user=user, pw=pw)
+    assert isinstance(c, RIA)
 
 
 def test_prepare_fail():
