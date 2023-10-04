@@ -1,6 +1,6 @@
 """Higer-level tools for MpApi, the unofficial MuseumPlus Client"""
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 import argparse
 
 from mpapi.client import MpApi

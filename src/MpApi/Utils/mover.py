@@ -7,6 +7,7 @@ mover move      do the actual moving of the files
 
 """
 
+from datetime import datetime
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.Ria import RIA
@@ -135,15 +136,18 @@ class Mover(BaseApp):
             "C3"
         ] = """vollständige Python filemask; rekursives Scannen kann dadurch ab- und angestellt werden."""
 
-        ws2["A3"] = "Exclude Dirs"
-        ws2["B3"] = "Andere Dokumente"
+        ws2["A4"] = "Exclude Dirs"
+        ws2["B4"] = "Andere Dokumente"
         ws2[
-            "C3"
+            "C4"
         ] = """Mehrere Verzeichnisse durch ; trennen. Angegebene Verzeichnisse werden ignoriert."""
+
+        ws2["A5"] = "Erstellungsdatum"
+        ws2["B5"] = datetime.today().strftime("%Y-%m-%d")
 
         ws2.column_dimensions["A"].width = 25
 
-        for each in "A1", "A2", "A3":
+        for each in "A1", "A2", "A3", "A4":
             ws2[each].font = Font(bold=True)
         self._save_excel(path=excel_fn)
 
@@ -158,8 +162,6 @@ class Mover(BaseApp):
                     )
                 fro = Path(c["relpath"].value)
                 to = Path(c["targetpath"].value)
-                if not to.parent.exists():
-                    to.parent.mkdir(parents=True)
                 print(f"{rno}/{self.ws.max_row}: {fro}")
                 # print(f"   {to}")
                 if fro.exists():
@@ -172,6 +174,8 @@ class Mover(BaseApp):
                         self._save_excel(path=excel_fn)
                         raise Exception(f"file exists already: '{to}'")
                     else:
+                        if not to.parent.exists():
+                            to.parent.mkdir(parents=True)
                         shutil.move(fro, to)
                         self.ws[f"I{rno}"].font = teal
                         c["moved"].value = "x"
@@ -189,7 +193,6 @@ class Mover(BaseApp):
         self._check_scandir()
         print("Dropping files from Excel that don't exist anymore")
         self._drop_rows_if_file_gone(col="H")
-        # raise Exception ("rescan not implementd yet")
         # currently we're deleting files that have been moved from Excel
         # and we re-parse the rest of the Excel entries
         # but we dont do a completely new scandir

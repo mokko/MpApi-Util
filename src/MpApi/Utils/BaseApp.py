@@ -285,10 +285,12 @@ class BaseApp:
 
     def _wipe(self) -> None:
         rno = 3
-        while rno <= self.ws.max_row:
-            # print(f"wiping row {rno}")
-            self.ws.delete_rows(rno)
-            # rno += 1
+        with tqdm(total=self.ws.max_row - 2) as pbar:
+            while rno <= self.ws.max_row:
+                # print(f"wiping row {rno}")
+                pbar.update()
+                self.ws.delete_rows(rno)
+                # rno += 1
         self._save_excel(path=excel_fn)
 
     def _write_table_description(self, *, description: dict, sheet: worksheet):

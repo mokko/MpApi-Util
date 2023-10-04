@@ -41,6 +41,7 @@ bak_fn = Path("upload14.xlsx.bak")
 red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
+blue = Font(color="0000FF")
 
 IGNORE_NAMES = (
     "checksum.md5",
@@ -242,7 +243,7 @@ class AssetUploader(BaseApp):
         ] = """OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen). 
         Die Suche der existierenden Assets wird auf den angegebenen Bereich eingeschränkt. 
         Wenn kein Bereich angegenen, wird die Suche auch nicht eingeschränkt. Gültige 
-        orgUnits sind z.B. EMArchiv, EMMusikethnologie"""
+        orgUnits sind z.B. EMArchiv, EMMusikethnologie, EMMedienarchiv, EMPhonogrammArchiv"""
         # ws2["C3"].alignment = Alignment(wrap_text=True)
 
         ws2["A4"] = "Zielverzeichnis"
@@ -264,8 +265,12 @@ class AssetUploader(BaseApp):
         ws2["A7"] = "Ignore suspicious?"
         ws2["B7"] = "True"
 
-        for each in "A1", "A2", "A3", "A4", "A5", "A6", "A7":
-            ws2[each].font = Font(bold=True)
+        for cell in sheet.iter_rows(min_col=1, max_col=1):
+            cell.font = Font(bold=True)
+
+        for cell in sheet.iter_rows(min_col=3, max_col=3):
+            cell.font = blue
+
         self._save_excel(path=excel_fn)
 
     def initial_offset(self) -> int:
