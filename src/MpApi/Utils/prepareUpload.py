@@ -104,7 +104,7 @@ class PrepareUpload(BaseApp):
         print(f"Logged in as '{user}'")
         self.limit = int(limit)
         if self.limit:
-            print (f"Using limit {self.limit}")
+            print(f"Using limit {self.limit}")
         # self._init_log()
         self.excel_fn = Path("prepare.xlsx")
         if self.excel_fn.exists():
@@ -416,7 +416,7 @@ class PrepareUpload(BaseApp):
         try:
             self.filemask = self.conf_ws["B3"]
         except:
-            self.filemask = "**/*" # default
+            self.filemask = "**/*"  # default
 
     def _fill_in_candidate(self, c) -> None:
         if c["schemaId"].value is None:
@@ -494,10 +494,14 @@ class PrepareUpload(BaseApp):
             ws_conf["C1"] = "Format: Object 1234567"
 
             ws_conf["A2"] = "orgUnit"
-            ws_conf["C2"] = """Um die ID Suche auf eine orgUnit (Bereich) einzuschränken. Optional. z.B. EMSudseeAustralien"""
+            ws_conf[
+                "C2"
+            ] = """Um die ID Suche auf eine orgUnit (Bereich) einzuschränken. Optional. z.B. EMSudseeAustralien"""
 
             ws_conf["A3"] = "Filemask"
-            ws_conf["C3"] = """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'."""
+            ws_conf[
+                "C3"
+            ] = """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'."""
             ws_conf.column_dimensions["B"].width = 20
 
         for cell in ws_conf.iter_rows(min_col=1, max_col=1)[0]:

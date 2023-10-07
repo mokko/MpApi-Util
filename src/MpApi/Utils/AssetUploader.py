@@ -28,7 +28,7 @@ from mpapi.record import Record
 from openpyxl import Workbook  # load_workbook
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
-import pyexiv2 # type: ignore
+import pyexiv2  # type: ignore
 import re
 import shutil
 from typing import Any, Optional
