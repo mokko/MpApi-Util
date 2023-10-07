@@ -28,7 +28,7 @@ from mpapi.record import Record
 from openpyxl import Workbook  # load_workbook
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
-import pyexiv2
+import pyexiv2 # type: ignore
 import re
 import shutil
 from typing import Any, Optional
@@ -198,7 +198,7 @@ class AssetUploader(BaseApp):
                 #  print(f"   object reference known, continue {cells['ref'].value}")
                 try:
                     self._create_new_asset(cells)
-                    self._upload_file(cells)
+                    self._upload_file(cells, rno)
                     self._set_Standardbild(cells)
                 except KeyboardInterrupt:
                     print(
@@ -265,10 +265,10 @@ class AssetUploader(BaseApp):
         ws2["A7"] = "Ignore suspicious?"
         ws2["B7"] = "True"
 
-        for cell in ws2.iter_rows(min_col=1, max_col=1):
+        for cell in ws2.iter_rows(min_col=1, max_col=1)[0]:
             cell.font = Font(bold=True)
 
-        for cell in ws2.iter_rows(min_col=3, max_col=3):
+        for cell in ws2.iter_rows(min_col=3, max_col=3)[0]:
             cell.font = blue
 
         self._save_excel(path=excel_fn)
@@ -373,7 +373,6 @@ class AssetUploader(BaseApp):
 
             # save every thousand files to protect against interruption
             if rno is not None and rno % 1000 == 0:
-                # print("saving Excel...")
                 self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
@@ -698,7 +697,7 @@ class AssetUploader(BaseApp):
             # template.toFile(path=f".template{templateID}.orig.xml")
             return self.templateM
 
-    def _upload_file(self, cells) -> None:
+    def _upload_file(self, cells, rno) -> None:
         # print("enter _upload_file")
         if cells["attached"].value == None:
             fn = cells["fullpath"].value
@@ -708,7 +707,8 @@ class AssetUploader(BaseApp):
             ):
                 cells["attached"].value = "x"
             # save after every file that is uploaded
-            self._save_excel(path=excel_fn)
+            if rno is not None and rno % 10 == 0:
+                self._save_excel(path=excel_fn)
         else:
             print("   asset already attached")
 
