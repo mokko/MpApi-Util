@@ -25,6 +25,7 @@ Let's typically log errors?
 
 import logging
 from MpApi.Utils.Ria import RIA
+from MpApi.Utils.logic import has_parts
 from pathlib import Path
 from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.styles import Alignment, Font
@@ -87,7 +88,7 @@ class BaseApp:
 
         Return the objIds as list, not a semicolon-separated string list.
         """
-        if self._has_parts(identNr):
+        if has_parts(identNr):
             # look for whole equivalent
             self._get_objIds_for_whole(identNr=identNr)
         else:  # look for parts
@@ -258,7 +259,7 @@ class BaseApp:
     def _save_excel(self, path: Path) -> None:
         """Made this only to have same print msgs all the time"""
 
-        print(f"   saving Excel {path}")
+        print(f"   saving {path}")
         try:
             self.wb.save(filename=path)
         except KeyboardInterrupt:
