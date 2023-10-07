@@ -103,6 +103,8 @@ class PrepareUpload(BaseApp):
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         print(f"Logged in as '{user}'")
         self.limit = int(limit)
+        if self.limit:
+            print (f"Using limit {self.limit}")
         # self._init_log()
         self.excel_fn = Path("prepare.xlsx")
         if self.excel_fn.exists():
@@ -333,28 +335,13 @@ class PrepareUpload(BaseApp):
                 # print(f"Duplikat {identNr}")
             known_idents.add(identNr)
 
-        # let's not overwrite or modify file information in Excel if already written
-        # 2 lines are getting written by initialization
-        if self.ws.max_row > 2:
-            raise Exception("Error: Scan dir info already filled in")
-
+        self._check_scandir()
         src_dir = Path()  # Path(self.conf["src_dir"])
         print(f"* Scanning source dir: {src_dir}")
 
-        identNrF = IdentNrFactory()
-        self.schemas = identNrF.get_schemas()
-
-        try:
-            filemask = self.conf["filemask"]
-            filemask2 = f"*{self.conf['filemask']}*"
-        except:
-            filemask = ""  # -*
-            filemask2 = "*"
-        # todo: i am filtering files which have *-KK*;
-        # maybe I should allow all files???
         c = 3  # start writing in 3rd line
-        file_list = sorted(src_dir.rglob(filemask2))
-        # print (f"{filemask2} {file_list}")
+        file_list = sorted(src_dir.glob(self.filemask))
+        # print (f"{self.filemask}")
         known_idents = set()  # mark duplicates
         ignore_names = (
             "thumbs.db",
@@ -415,6 +402,21 @@ class PrepareUpload(BaseApp):
                 c["assetUploaded"].value = "None"
             else:
                 c["assetUploaded"].value = "; ".join(idL)
+
+    def _check_scandir(self):
+        # let's not overwrite or modify file information in Excel if already written
+        # 2 lines are getting written by initialization
+        if self.ws.max_row > 2:
+            raise Exception("Error: Scan dir info already filled in")
+
+        identNrF = IdentNrFactory()
+        self.schemas = identNrF.get_schemas()
+
+        conf_ws = self.wb["Conf"]
+        try:
+            self.filemask = self.conf_ws["B3"]
+        except:
+            self.filemask = "**/*" # default
 
     def _fill_in_candidate(self, c) -> None:
         if c["schemaId"].value is None:
@@ -490,8 +492,17 @@ class PrepareUpload(BaseApp):
             ws_conf = self.wb.create_sheet("Conf")
             ws_conf["A1"] = "template ID"
             ws_conf["C1"] = "Format: Object 1234567"
+
             ws_conf["A2"] = "orgUnit"
+            ws_conf["C2"] = """Um die ID Suche auf eine orgUnit (Bereich) einzuschränken. Optional. z.B. EMSudseeAustralien"""
+
+            ws_conf["A3"] = "Filemask"
+            ws_conf["C3"] = """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'."""
             ws_conf.column_dimensions["B"].width = 20
+
+        for cell in ws_conf.iter_rows(min_col=1, max_col=1)[0]:
+            cell.font = Font(bold=True)
+
         return ws
 
     def _objId_for_ident(self, c) -> None:
