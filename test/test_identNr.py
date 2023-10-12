@@ -14,7 +14,6 @@ with open(credentials) as f:
 
 
 def test_constructor():
-
     f = IdentNrFactory()
     iNr = f.new_from_str(text="V A 10557")
     assert iNr

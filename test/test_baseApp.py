@@ -9,7 +9,6 @@ cases = {
 
 
 def test_no_parts():
-
     ba = BaseApp()
     for identNr in cases:
         # print (f"{identNr}: {cases[identNr]}")

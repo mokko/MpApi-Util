@@ -98,7 +98,6 @@ class PrepareUpload(BaseApp):
         *,
         limit: int = -1,
     ) -> None:
-
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         print(f"Logged in as '{user}'")

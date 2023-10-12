@@ -34,6 +34,7 @@ import sys
 from tqdm import tqdm
 from typing import Iterator, Optional, Union
 
+
 # from typing import Any
 class ConfigError(Exception):
     pass

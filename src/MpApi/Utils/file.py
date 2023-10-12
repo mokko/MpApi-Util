@@ -1,5 +1,6 @@
 import re
 
+
 # functions, not methods
 def extractIdentNr(*, path: Path) -> Optional[str]:
     """

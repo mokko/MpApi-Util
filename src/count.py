@@ -6,7 +6,9 @@ import argparse
 from collections import defaultdict
 from pathlib import Path
 from tqdm import tqdm
+
 messages = []
+
 
 def _convert(size):
     units = ["bytes", "KB", "MB", "GB", "TB"]
@@ -21,25 +23,29 @@ def _convert(size):
 
 
 def _print_info(by_ext):
+    by_ext.pop("total", None)  #  omit the total line to reduce redundancy
     for suffix in sorted(by_ext):
         size, unit = _convert(by_ext[suffix]["size"])
         pw(f"'{suffix}' {by_ext[suffix]['number']} {size:.2f} {unit}")
+
 
 def pw(msg):
     """print and write to file"""
     messages.append(msg)
     print(msg)
 
+
 def write_messages():
     with open("count.txt", "w") as f:
         for msg in messages:
-            f.write(msg+"\n") 
+            f.write(msg + "\n")
+
+
 #
 #
-#    
+#
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="attach an asset file to a multimedia record and download it"
     )
@@ -67,15 +73,16 @@ if __name__ == "__main__":
     by_ext["total"]["number"] = 0
 
     problems = []
-    with tqdm(desc="files") as pbar:
+    with tqdm(desc=args.filemask, unit=" files") as pbar:
         for f in src_dir.glob(args.filemask):
             if f.is_dir():  # don't count dirs
                 continue
             try:
-                size = f.stat().st_size
                 # may fail for files with path > 255 chars
+                size = f.stat().st_size
             except:
                 problems.append(str(f))
+                print(f"problem {f}")
                 continue  # ignore files with problems
 
             suffix = f.suffix
@@ -101,4 +108,3 @@ if __name__ == "__main__":
         pw(f"files found: {c}")
         _print_info(by_ext)
     write_messages()
-

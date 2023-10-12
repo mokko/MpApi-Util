@@ -379,7 +379,6 @@ class Mover(BaseApp):
                 return True
 
         if c["move"].value is None:
-
             if self.orgUnit is None:
                 reference = c["fn_exists"]
             else:

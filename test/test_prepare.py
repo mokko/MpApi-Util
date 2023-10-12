@@ -90,7 +90,6 @@ def tast_create_ident_from_string():  # works
 
 
 def test_create_ident_from_shorter_string():
-
     m = Module()
     objModule = m.module(name="Object")
     mItem = m.moduleItem(parent=objModule)
