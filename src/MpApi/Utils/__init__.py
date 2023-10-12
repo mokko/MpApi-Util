@@ -11,6 +11,7 @@ from MpApi.Utils.BaseApp import BaseApp  # , NoContentError
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.du import Du
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
+from MpApi.Utils.count import count
 from MpApi.Utils.mover import Mover
 from MpApi.Utils.prepareUpload import PrepareUpload
 from MpApi.Utils.rename import Rename
@@ -47,6 +48,30 @@ def attacher():
         # Do we want to save with original filename?
         # We definitely dont want to overwrite existing files
         a.down(ID=args.ID)
+
+
+def count():
+    parser = argparse.ArgumentParser(
+        description="attach an asset file to a multimedia record and download it"
+    )
+
+    parser.add_argument(
+        "-f",
+        "--filemask",
+        help="specify a filemask if you want; defaults to '**/*' ",
+        default="**/*",
+    )
+    parser.add_argument(
+        "-s",
+        "--size",
+        help="show size?",
+        action="store_true",
+    )
+
+    args = parser.parse_args()
+
+    src_dir = Path()
+    count(src_dir=src_dir, filemask=args.filemask, size=args.size)
 
 
 def du():

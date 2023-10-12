@@ -10,7 +10,8 @@ license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
 dynamic = ["version", "description"]
 keywords = ["museum", "museumPlus", "api client"]
-requires-python = 3.11 # union types with | 
+#requires-python = "3.11.1" 
+# union types with | 
 dependencies = [
 	"flit",
 	"lxml >=4.8.0", 
@@ -30,6 +31,7 @@ Home = "https://github.com/mokko/MpApi-Util"
 
 [project.scripts]
 attach = 'MpApi.Utils:attacher'
+count = 'MpApi.Utils:count'
 #du = 'MpApi.Utils:du'
 brename ='MpApi.Utils:rename'
 #breplace = 'MpApi.Utils:replace'
@@ -39,3 +41,4 @@ reportx = 'MpApi.Utils:reportX'
 sren = 'MpApi.Utils:sren'
 update_schemas = 'MpApi.Utils:update_schemas'
 upload = 'MpApi.Utils:upload' # asset uploader
+

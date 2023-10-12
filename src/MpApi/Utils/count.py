@@ -2,7 +2,6 @@
 count the files in this directory potentially recursively
 """
 
-import argparse
 from collections import defaultdict
 from pathlib import Path
 from tqdm import tqdm
@@ -36,36 +35,12 @@ def pw(msg):
 
 
 def write_messages():
-    with open("count.txt", "w") as f:
+    with open("count.txt", "w", encoding="utf-8") as f:
         for msg in messages:
             f.write(msg + "\n")
 
 
-#
-#
-#
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="attach an asset file to a multimedia record and download it"
-    )
-
-    parser.add_argument(
-        "-f",
-        "--filemask",
-        help="specify a filemask if you want; defaults to '**/*' ",
-        default="**/*",
-    )
-    parser.add_argument(
-        "-s",
-        "--size",
-        help="speficy if you want the total size of all counted files",
-        action="store_true",
-    )
-
-    args = parser.parse_args()
-
-    src_dir = Path()
+def count(src_dir: Path = Path(), filemask: str = "*", size: bool = False):
     pw(f"Looking for {args.filemask} in {src_dir.cwd()}")
     c = 0  # counting files
     by_ext = defaultdict(dict)
@@ -82,10 +57,10 @@ if __name__ == "__main__":
                 size = f.stat().st_size
             except:
                 problems.append(str(f))
-                print(f"problem {f}")
+                print(f"problem '{f}'")
                 continue  # ignore files with problems
 
-            suffix = f.suffix
+            suffix = f.suffix  # .jpg != .JPG
             try:
                 by_ext[suffix]["number"] += 1
             except:
@@ -101,7 +76,7 @@ if __name__ == "__main__":
         pw(f"files found: {c}; total size {s:.2f} {unit}; problems {len(problems)}")
         _print_info(by_ext)
         if len(problems) > 0:
-            pw("PROBLEMS")
+            pw(f"PROBLEMS {len(problems)}")
             for f in problems:
                 pw(f)
     else:
