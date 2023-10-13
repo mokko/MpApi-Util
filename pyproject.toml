@@ -16,7 +16,7 @@ dependencies = [
 	"flit",
 	"lxml >=4.8.0", 
 	"openpyxl",
-	"pyexiv2",
+	"pil", # to read exif tags
     "requests >=2.6",
 	"tqdm",
 	"typing_extensions",

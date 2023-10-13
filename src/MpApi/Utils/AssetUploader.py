@@ -10,10 +10,6 @@ Should emulate the hotfolder eventually. That is we
 (g) move a successfully uploaded asset to another dir for safekeeping
 
 In order to make the process transparent it is carried out in several steps
-
-AssetUploader does NOT work RECURSIVELY
-
-
 """
 import copy
 from datetime import datetime
@@ -28,7 +24,7 @@ from mpapi.record import Record
 from openpyxl import Workbook  # load_workbook
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
-import pyexiv2  # type: ignore
+import PIL
 import re
 import shutil
 from typing import Any, Optional
@@ -570,8 +566,9 @@ class AssetUploader(BaseApp):
             return None
 
         try:
-            with pyexiv2.Image(str(path)) as img:
-                img_data = img.read_iptc()
+            with PIL.Image(str(path)) as img:
+                img_data = img._getexif()
+                # img_data = img.read_iptc() pyexiv2
         except:
             print("\tExif:Couldn't open for exif")
             return None
