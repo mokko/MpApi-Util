@@ -11,7 +11,7 @@ from MpApi.Utils.BaseApp import BaseApp  # , NoContentError
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.du import Du
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
-from MpApi.Utils.count import count
+from MpApi.Utils.count import counter
 from MpApi.Utils.mover import Mover
 from MpApi.Utils.prepareUpload import PrepareUpload
 from MpApi.Utils.rename import Rename
@@ -71,7 +71,7 @@ def count():
     args = parser.parse_args()
 
     src_dir = Path()
-    count(src_dir=src_dir, filemask=args.filemask, size=args.size)
+    counter(src_dir=src_dir, filemask=args.filemask, size=args.size)
 
 
 def du():

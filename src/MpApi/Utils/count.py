@@ -40,16 +40,16 @@ def write_messages():
             f.write(msg + "\n")
 
 
-def count(src_dir: Path = Path(), filemask: str = "*", size: bool = False):
-    pw(f"Looking for {args.filemask} in {src_dir.cwd()}")
+def counter(src_dir: Path = Path(), filemask: str = "*", size: bool = False):
+    pw(f"Looking for {filemask} in {src_dir.cwd()}")
     c = 0  # counting files
     by_ext = defaultdict(dict)
     by_ext["total"]["size"] = 0
     by_ext["total"]["number"] = 0
 
     problems = []
-    with tqdm(desc=args.filemask, unit=" files") as pbar:
-        for f in src_dir.glob(args.filemask):
+    with tqdm(desc=filemask, unit=" files") as pbar:
+        for f in src_dir.glob(filemask):
             if f.is_dir():  # don't count dirs
                 continue
             try:
@@ -71,7 +71,7 @@ def count(src_dir: Path = Path(), filemask: str = "*", size: bool = False):
             pbar.update()
             c += 1
     by_ext["total"]["number"] = c  # only update once
-    if args.size:
+    if size:
         s, unit = _convert(by_ext["total"]["size"])
         pw(f"files found: {c}; total size {s:.2f} {unit}; problems {len(problems)}")
         _print_info(by_ext)
