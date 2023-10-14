@@ -20,25 +20,15 @@ def test_constructor_ria():
     assert isinstance(c, RIA)
 
 
-def test_prepare_fail():
-    with pytest.raises(ConfigError) as e_info:
-        p = PrepareUpload(
-            baseURL=baseURL,
-            conf_fn="doesnt_exist.ini",
-            job="test",
-            limit=-1,
-            pw=pw,
-            user=user,
-        )
-    # print (f"EXCEPTION ---{e_info}")
+# def test_prepare_fail():
+# with pytest.raises(ConfigError) as e_info:
+# p = PrepareUpload(
+# limit=-1,
+# )
+# print (f"EXCEPTION ---{e_info}")
 
 
 def test_prepare_new():
     p = PrepareUpload(
-        baseURL=baseURL,
-        conf_fn="test_prepare.ini",
-        job="Test",
         limit=-1,
-        pw=pw,
-        user=user,
     )

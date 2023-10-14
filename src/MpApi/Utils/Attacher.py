@@ -9,7 +9,7 @@ DESIGN CHOICES
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
-from mpapi.record import Record
+from MpApi.Record import Record  # tested?
 from pathlib import Path
 
 

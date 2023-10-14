@@ -15,11 +15,11 @@ import copy
 from datetime import datetime
 from lxml import etree
 from mpapi.constants import get_credentials
+from mpapi.module import Module
+from MpApi.Record import Record  # should be MpApi.Record.Multimedia
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.logic import extractIdentNr, has_parts, is_suspicious, whole_for_parts
 from MpApi.Utils.Ria import RIA
-from mpapi.module import Module
-from mpapi.record import Record
 
 from openpyxl import Workbook  # load_workbook
 from openpyxl.styles import Alignment, Font
@@ -261,11 +261,13 @@ class AssetUploader(BaseApp):
         ws2["A7"] = "Ignore suspicious?"
         ws2["B7"] = "True"
 
-        for cell in ws2.iter_rows(min_col=1, max_col=1)[0]:
-            cell.font = Font(bold=True)
+        for row in ws2.iter_rows(min_col=1, max_col=1):
+            for cell in row:
+                cell.font = Font(bold=True)
 
-        for cell in ws2.iter_rows(min_col=3, max_col=3)[0]:
-            cell.font = blue
+        for row in ws2.iter_rows(min_col=3, max_col=3):
+            for cell in row:
+                cell.font = blue
 
         self._save_excel(path=excel_fn)
 

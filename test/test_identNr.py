@@ -1,16 +1,14 @@
 from mpapi.module import Module
+
+# from mpapi.constants import get_credentials
 from MpApi.Utils.identNr import IdentNrFactory
 
 # from lxml import etree  # type: ignore
 from pathlib import Path
-import pytest
+
+# import pytest
 
 # NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
-
-credentials = Path(__file__).parents[1] / "sdata/credentials.py"
-
-with open(credentials) as f:
-    exec(f.read())
 
 
 def test_constructor():

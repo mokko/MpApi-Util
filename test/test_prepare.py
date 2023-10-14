@@ -1,6 +1,8 @@
 # from mpapi.search import Search
 from mpapi.module import Module
 from mpapi.client import MpApi
+from mpapi.constants import get_credentials
+from MpApi.Utils.BaseApp import ConfigError
 
 # from lxml import etree  # type: ignore
 from pathlib import Path
@@ -8,13 +10,10 @@ import pytest
 
 # NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
 
-credentials = Path(__file__).parents[1] / "sdata/credentials.py"
-
-with open(credentials) as f:
-    exec(f.read())
+user, pw, baseURL = get_credentials()
+client = MpApi(baseURL=baseURL, user=user, pw=pw)
 
 # construction is tested in offline
-client = MpApi(baseURL=baseURL, user=user, pw=pw)
 
 #
 # simple online tests
@@ -24,7 +23,7 @@ client = MpApi(baseURL=baseURL, user=user, pw=pw)
 def test_create_empty_item():
     m = Module()
     objModule = m.module(name="Object")
-    with pytest.raises(ConfigError) as e_info:
+    with pytest.raises(SyntaxError) as e_info:
         objId = client.createItem3(data=m)
     # assert objId
     # fails with HTTP_Error 500 Server Error

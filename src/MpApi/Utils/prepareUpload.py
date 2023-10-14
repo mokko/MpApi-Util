@@ -57,7 +57,7 @@ Update April 2023
 - changes to cli frontend
   (1) no more separate config file ('prepare.ini'), instead we use prepare.xlsx 
   (2) We now scan current working directory 
-  (3) We get RIA credentials from $HOME\.RIA file  
+  (3) We get RIA credentials from $HOME/.RIA file  
   (4) 'prepare scandir' (without -p for phase)
   (5) hardcoded "prepare.xlsx" file name
   (6) scandisk renamed to scandir with alias init to be more similar to mover and upload
@@ -503,8 +503,9 @@ class PrepareUpload(BaseApp):
             ] = """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'."""
             ws_conf.column_dimensions["B"].width = 20
 
-        for cell in ws_conf.iter_rows(min_col=1, max_col=1)[0]:
-            cell.font = Font(bold=True)
+        for row in ws_conf.iter_rows(min_col=1, max_col=1):
+            for cell in row:
+                cell.font = Font(bold=True)
 
         return ws
 
