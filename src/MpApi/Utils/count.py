@@ -22,20 +22,24 @@ def _convert(size):
 
 
 def _print_info(by_ext):
-    by_ext.pop("total", None)  #  omit the total line to reduce redundancy
     for suffix in sorted(by_ext):
         size, unit = _convert(by_ext[suffix]["size"])
         pw(f"'{suffix}' {by_ext[suffix]['number']} {size:.2f} {unit}")
 
 
 def pw(msg):
-    """print and write to file"""
-    messages.append(msg)
+    """print and also write to message cache to later write all messages to file"""
     print(msg)
+    messages.append(msg)
 
 
 def write_messages():
-    with open("count.txt", "w", encoding="utf-8") as f:
+    """
+    Write the messages from cache (list in message) to disc.
+    """
+    fn = "count.txt"
+    print(f"About to write messages to {fn}")
+    with open(fn, "w", encoding="utf-8") as f:
         for msg in messages:
             f.write(msg + "\n")
 
@@ -74,6 +78,7 @@ def counter(src_dir: Path = Path(), filemask: str = "*", size: bool = False):
     if size:
         s, unit = _convert(by_ext["total"]["size"])
         pw(f"files found: {c}; total size {s:.2f} {unit}; problems {len(problems)}")
+        by_ext.pop("total", None)  #  omit the total line to reduce redundancy
         _print_info(by_ext)
         if len(problems) > 0:
             pw(f"PROBLEMS {len(problems)}")

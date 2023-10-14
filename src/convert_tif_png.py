@@ -21,7 +21,7 @@ def convert_path(p: Path, mkdir: bool = True) -> Path:
         if mkdir:
             new_parent.mkdir(exist_ok=True)
     else:
-        print("********** WARNING ********** ")
+        # print("********** WARNING ********** ")
         return parent / new_name
     return new_parent / new_name
 
