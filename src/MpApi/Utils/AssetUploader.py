@@ -24,7 +24,9 @@ from MpApi.Utils.Ria import RIA
 from openpyxl import Workbook  # load_workbook
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
-import PIL
+from PIL import Image
+from PIL.ExifTags import Base as ExifBase
+
 import re
 import shutil
 from typing import Any, Optional
@@ -551,7 +553,7 @@ class AssetUploader(BaseApp):
             cells["asset_fn_exists"].font = teal
             print(f"   asset {new_asset_id} created")
 
-    def _exiv_creator(self, *, path: Path) -> Optional[str]:
+    def _exif_creator(self, *, path: Path) -> Optional[str]:
         """
         Expect a pathlib path, try to read that file with exiv and return
         (a) a string with a single creator,
@@ -568,20 +570,21 @@ class AssetUploader(BaseApp):
             return None
 
         try:
-            with PIL.Image(str(path)) as img:
-                img_data = img._getexif()
+            with Image.open(str(path)) as img:
+                img_data = img.getexif()
                 # img_data = img.read_iptc() pyexiv2
         except:
             print("\tExif:Couldn't open for exif")
             return None
 
         try:
-            img_data["Iptc.Application2.Byline"]
+            return img_data[ExifBase.Artist.value]
+            # old: img_data["Iptc.Application2.Byline"]
         except:
             print("\tExif:Didn't find photographer info")
             return None
-        else:
-            return "; ".join(img_data["Iptc.Application2.Byline"])
+        # else:
+        #    return "; ".join(img_data[ExifBase.Artist.value])
 
     def _file_to_list(self, *, path: Path, rno=None):
         """
@@ -797,7 +800,7 @@ class AssetUploader(BaseApp):
         # assuming attached is either None or x, but not "" or anything
         if cells["photographer"].value is None and cells["attached"].value is None:
             # print("in photographer")
-            creator = self._exiv_creator(path=path)
+            creator = self._exif_creator(path=path)
             if creator is None:
                 cells["photographer"].value = "None"
             else:

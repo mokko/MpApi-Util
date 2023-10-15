@@ -90,9 +90,8 @@ class BaseApp:
         Return the objIds as list, not a semicolon-separated string list.
         """
         if has_parts(identNr):
-            # look for whole equivalent
             self._get_objIds_for_whole(identNr=identNr)
-        else:  # look for parts
+        else:
             self._get_objIds_for_part(identNr=identNr)
 
     def _get_objIds_for_part(self, *, identNr: str) -> set[int]:
@@ -110,7 +109,7 @@ class BaseApp:
         What happens if a whole is provided? Then it checks for a two part
         signature which makes little sense.
         """
-        if not self._has_parts(identNr=identNr):
+        if not has_parts(identNr=identNr):
             print("WARNING: _get_objIds_for_whole already received a whole")
             return {}  # empty set
 
