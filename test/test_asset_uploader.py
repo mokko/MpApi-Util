@@ -52,26 +52,6 @@ def test_get_objIds_for_whole():
             assert objIdL == cases[identNr]
 
 
-# def test_get_parts():
-# cases = {
-# "V A 106 a": False,
-# "V A 146": True,
-# "V A 1934 a,b": False,
-# "IXIX A 1934 a,b": False,  # identNr does not exist
-# }
-# True/False signifies if _get_whole should return True
-
-# u = AssetUploader()
-# for identNr in cases:
-# objIdL = u._get_parts(identNr=identNr)
-# print(f"{identNr}: {objIdL=}")
-# if cases[identNr]:
-# assert objIdL
-# else:
-# assert not objIdL
-# if identNr == "V A 106 a"
-#    assert ident_whole == "V A 106"
-# print (f"{identNr}: {cases[identNr]}")
-
+def test_
 
 # def test_initial_offset():

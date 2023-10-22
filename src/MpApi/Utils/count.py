@@ -38,6 +38,15 @@ def write_messages():
     Write the messages from cache (list in message) to disc.
     """
     fn = "count.txt"
+
+    try:
+        _write_messages(fn)
+    except PermissionError:
+        # if we dont have write permission, let's write to C
+        _write_messages(r"C:\m3\count.txt")
+
+
+def _write_messages(fn):
     print(f"About to write messages to {fn}")
     with open(fn, "w", encoding="utf-8") as f:
         for msg in messages:
