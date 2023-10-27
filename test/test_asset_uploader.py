@@ -52,6 +52,4 @@ def test_get_objIds_for_whole():
             assert objIdL == cases[identNr]
 
 
-def test_
-
 # def test_initial_offset():

@@ -34,31 +34,30 @@ Usage:
 """
 from dataclass import dataclass, field
 
+
 class Ident_Cache:
     def __init__(self) -> None:
         cache_strict = {}
         cache_begins_with = {}
 
-    def get_strict(self, *, as_str:str) -> IdentNr:
+    def get_strict(self, *, as_str: str) -> IdentNr:
         if identNr in cache_strict:
             return cache_strict[identNr]
         else:
             objIds = self.ria.get_strict(identNr=identNr)
             identNr = IdentNr(as_str=identNr, objIds=objIds)
-            cache_strict[identNr] = identNr 
+            cache_strict[identNr] = identNr
             return objIds
 
-
-    def get_begins_with(self, *, as_str:str) -> IdentNr:
+    def get_begins_with(self, *, as_str: str) -> IdentNr:
         if as_str in cache_strict_begins_with:
             return cache_begins_with[as_str]
         else:
-            objIds = self.ria.get_strict(identNr=as_str) # should return new identNr 
-            identNr = IdentNr(as_str=identNr, objIds=objIds, objNumber)
+            objIds = self.ria.get_strict(identNr=as_str)  # should return new identNr
+            identNr = IdentNr(as_str=identNr, objIds=objIds)  # objNumber
             cache_begins_with[as_str] = identNr
             return objIds
 
-        
 
 @dataclass(slots=True)
 class IdentNr:
@@ -66,6 +65,7 @@ class IdentNr:
     To cache identNr that were extracted from filenames and their corresponding objIds.
     There can be multiple objIds for each identNr
     """
-    as_str:str
-    objNumber:str
-    objIds:field(default_factory=list)
+
+    as_str: str
+    objNumber: str
+    objIds: field(default_factory=list)

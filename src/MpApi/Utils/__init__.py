@@ -1,6 +1,6 @@
-"""Higer-level tools for MpApi, the unofficial MuseumPlus Client"""
+"""Higer-level tools for MpApi, the unofficial MuseumPlus Client in Python"""
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"  # include restart in init/toml
 import argparse
 
 from mpapi.client import MpApi
@@ -20,6 +20,7 @@ from MpApi.Utils.sren import Sren
 from MpApi.Utils.unzipChunks import iter_chunks
 
 from pathlib import Path
+import subprocess
 import sys
 
 user, pw, baseURL = get_credentials()
@@ -195,6 +196,13 @@ def reportX():
     args = parser.parse_args()
     r = ReportX(limit=args.limit)
     r.write_report("reportx.xlsx")
+
+
+def restart():
+    new_call = sys.argv[1:]  # e.g. restart upload cont -> upload cont
+    retval = 1
+    while retval != 0:  # a return value of zero indicates a normal exit
+        retval = subprocess.run(new_call, shell=True)
 
 
 def sren():
