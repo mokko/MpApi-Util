@@ -303,7 +303,7 @@ def upload():
         u = AssetUploader()
         ioffset = u.initial_offset()
         print(f"   initial offset: {ioffset}")
-        csize = 3000
+        csize = 5000
         while True:
             limit = c * csize + ioffset
             offset = (c - 1) * csize + ioffset
