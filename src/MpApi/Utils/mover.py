@@ -25,8 +25,14 @@ teal = Font(color="008080")
 
 
 class Mover(BaseApp):
-    def __init__(self, *, limit):
-        self.limit = int(limit)  # allows to break the go loop after number of items
+    def __init__(self, *, limit: int = -1):
+        """
+        breaks the go loop after number of items
+        limit counts rows in Excel file, so limit < 3 is meaningless
+        """
+        self.limit = int(limit)
+        if self.limit != -1 and self.limit < 3:
+            raise ValueError("ERROR: Use limit = -1 (no limit) or > 2!")
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         self.wb = self._init_excel(path=excel_fn)
@@ -95,11 +101,11 @@ class Mover(BaseApp):
         elif fn.startswith("DSC") or fn.startswith("IMG_"):
             # default camera filenames are not sufficiently unique
             return True
-        elif re.match("\d+", p.stem):
+        elif re.match(r"\d+", p.stem):
             return True
         elif p.stem.isspace():
             return True
-        elif re.match("\w+{1:3}", p.stem):
+        elif re.match(r"\w+{1:3}", p.stem):
             return True
         return False
 

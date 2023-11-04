@@ -26,6 +26,15 @@ import sys
 user, pw, baseURL = get_credentials()
 
 
+def _version(args: dict) -> None:
+    """
+    Display version information and exit
+    """
+    if args.version:
+        print(f"Version: {__version__}")
+        sys.exit(0)
+
+
 def attacher():
     # load credentials inside attacher from comon file
     parser = argparse.ArgumentParser(
@@ -38,14 +47,18 @@ def attacher():
     )
     parser.add_argument("-f", "--file", help="path to file for upload")
     parser.add_argument("-i", "--ID", help="ID of asset record", required=True)
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
     args = parser.parse_args()
+    _version(args)
     a = Attacher()
     # an asset can only have one attachment
     if args.cmd == "up":
         if not args.file:
             raise SyntaxError("ERROR: Need path to file for upload!")
         a.up(ID=args.ID, file=args.file)
-    if args.cmd == "down":
+    elif args.cmd == "down":
         # Do we want to save with original filename?
         # We definitely dont want to overwrite existing files
         a.down(ID=args.ID)
@@ -68,8 +81,12 @@ def count():
         help="show size?",
         action="store_true",
     )
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
 
     args = parser.parse_args()
+    _version(args)
 
     src_dir = Path()
     counter(src_dir=src_dir, filemask=args.filemask, size=args.size)
@@ -93,6 +110,7 @@ def move():
     )
     parser.add_argument(
         "first",
+        nargs="?",
         help="command, either init, scandir or move",
         choices=["init", "move", "rescan", "scandir", "wipe"],
     )
@@ -102,9 +120,8 @@ def move():
     )
 
     args = parser.parse_args()
-    if args.version:
-        print(f"Version: {__version__}")
-        sys.exit(0)
+    _version(args)
+
     m = Mover(limit=args.limit)
     if args.first == "init":
         m.init()
@@ -124,6 +141,7 @@ def prepareUpload():
     parser = argparse.ArgumentParser(description="prepare - prepare for asset upload")
     parser.add_argument(
         "phase",
+        nargs="?",
         help="phase to run",
         choices=["checkria", "createobjects", "init", "scandir"],
     )
@@ -133,10 +151,7 @@ def prepareUpload():
     )
 
     args = parser.parse_args()
-
-    if args.version:
-        print(f"Version: {__version__}")
-        sys.exit(0)
+    _version(args)
 
     if not args.phase:
         raise SyntaxError("-p parameter required!")
@@ -159,16 +174,20 @@ def ren():
     parser = argparse.ArgumentParser(
         description="Rename tool using an Excel spreadsheet for manual check and documentation"
     )
-    parser.add_argument("-s", "--src", help="Scan source directory")
     parser.add_argument("-d", "--dst", help="destination directory")
-    parser.add_argument("-x", "--xsl", required=True, help="Excel file path")
     parser.add_argument(
         "-e",
         "--execute",
         action="store_true",
         help="Execute the copy prepared in the specified Excel file",
     )
+    parser.add_argument("-s", "--src", help="Scan source directory")
+    parser.add_argument("-x", "--xsl", required=True, help="Excel file path")
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
     args = parser.parse_args()
+    _version(args)
 
     r = Rename()
     if args.src:
@@ -193,7 +212,11 @@ def reportX():
         help="Stop the scan after specified number of files",
         default=-1,
     )
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
     args = parser.parse_args()
+    _version(args)
     r = ReportX(limit=args.limit)
     r.write_report("reportx.xlsx")
 
@@ -222,17 +245,15 @@ def sren():
         description="Simple tool to rename files in current directory"
     )
     parser.add_argument(
-        "-v", "--version", help="display version information", action="store_true"
-    )
-
-    parser.add_argument(
         "-a", "--act", help="actually do the changes", action="store_true"
     )
-
     parser.add_argument(
         "-f",
         "--filemask",
         help="supply filemask for pathlib",
+    )
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
     )
     parser.add_argument(
         "cmd",
@@ -248,10 +269,7 @@ def sren():
     parser.add_argument("second", help="second string", nargs="?", default=False)
 
     args = parser.parse_args()
-
-    if args.version:
-        print(f"Version: {__version__}")
-        sys.exit(0)
+    _version(args)
 
     r = Sren(act=args.act, filemask=args.filemask)
     if args.cmd == "add":
@@ -293,9 +311,7 @@ def upload():
     )
 
     args = parser.parse_args()
-    if args.version:
-        print(f"Version: {__version__}")
-        sys.exit(0)
+    _version(args)
 
     u = AssetUploader(limit=args.limit)
     if args.cmd == "cont":
@@ -355,6 +371,7 @@ def update_schemas():
         "-v", "--version", help="display version info and exit", action="store_true"
     )
     args = parser.parse_args()
+    _version(args)
 
     if args.schemas_fn is None:  # setting default
         print("Using default schemas file.")
@@ -363,10 +380,7 @@ def update_schemas():
         print(f"Using user supplied schemas file '{args.schemas_fn}'.")
         f = IdentNrFactory(schemas_fn=args.schemas_fn)
 
-    if args.version:
-        print(f"Version: {__version__}")
-        sys.exit(0)
-    elif args.excel is not None:
+    if args.excel is not None:
         print("Excel function not yet implemented")
         # f.update_schemas_excel(fn=args.excel)
         sys.exit(0)

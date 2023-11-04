@@ -6,10 +6,17 @@
 folder1/TIFF/filename.tif -> forder1/PNG/filename.png
 """
 import argparse
+import concurrent.futures
 from PIL import Image
 from pathlib import Path
 
 MAX_SIZE = 2000  # size in px of longest edge
+
+
+def convert_img(src: Path, dest: Path):
+    img = Image.open(src)
+    img = resize(img)
+    img.save(dest, optimize=True)
 
 
 def convert_path(p: Path, mkdir: bool = True) -> Path:
@@ -55,16 +62,15 @@ if __name__ == "__main__":
         print(f"Using limit {args.limit}")
 
     c = 1
-    for p in Path(".").glob("**/*.tif"):
-        new_p = convert_path(p)  # haven't created new dir yet
-        print(f"{c}:{p} -> {new_p}")
-        if new_p.exists():
-            print(f"   exists already")
-        else:
-            img = Image.open(p)
-            img = resize(img)
-            img.save(new_p, optimize=True)
-        if c == args.limit:
-            print("Limit reached")
-            break
-        c += 1
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for p in Path(".").glob("**/*.tif"):
+            new_p = convert_path(p)  # haven't created new dir yet
+            print(f"{c}:{p} -> {new_p}")
+            if new_p.exists():
+                print(f"   exists already")
+            else:
+                executor.map(convert_img, (p, new_p))
+            if c == args.limit:
+                print("Limit reached")
+                break
+            c += 1

@@ -41,9 +41,9 @@ from shutil import copyfile
 from typing import Optional
 
 # QUICK AND DIRTY CONF
-src_dir = "\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS\Konvolute\EM_Ozeanien_Deterts_Dias_Hauser-Schäublin\02_Medien\TIFF\VIII Oz K 214\F1_01_TIFF"
+src_dir = r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS\Konvolute\EM_Ozeanien_Deterts_Dias_Hauser-Schäublin\02_Medien\TIFF\VIII Oz K 214\F1_01_TIFF"
 start_no = 666  # -> VIII B 666.tif
-dest_dir = "//pk.de/smb/Mediadaten/Projekte/AKU/MDVOS/data"
+dest_dir = r"//pk.de/smb/Mediadaten/Projekte/AKU/MDVOS/data"
 
 
 class Rename:

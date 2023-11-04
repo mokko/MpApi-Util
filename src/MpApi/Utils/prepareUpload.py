@@ -102,8 +102,9 @@ class PrepareUpload(BaseApp):
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         print(f"Logged in as '{user}'")
         self.limit = int(limit)
-        if self.limit:
-            print(f"Using limit {self.limit}")
+        if self.limit != -1 and self.limit < 3:
+            raise ValueError("ERROR: limit < 3 is pointless!")
+        print(f"Using limit {self.limit}")
         # self._init_log()
         self.excel_fn = Path("prepare.xlsx")
         if self.excel_fn.exists():
@@ -294,7 +295,7 @@ class PrepareUpload(BaseApp):
         them red.
         """
 
-        def _per_row(*, c: int, path: Path) -> None:
+        def _per_row(*, c: int, path: Path, known_idents: set) -> None:
             """
             c: row count
             specific to this scandisk task of prepare command
@@ -302,9 +303,10 @@ class PrepareUpload(BaseApp):
             writes to self.ws
             """
             identNr = extractIdentNr(path=path)
+            identNrF = IdentNrFactory()
             print(f"   {path.name} -> {identNr}")
             self.ws[f"A{c}"] = path.name
-            self.ws[f"B{c}"] = identNr
+            self.ws[f"B{c}"] = str(identNr)
             self.ws[f"H{c}"] = str(path.absolute())
             if identNr is not None:
                 schema = identNrF._extract_schema(text=identNr)
@@ -341,7 +343,7 @@ class PrepareUpload(BaseApp):
         c = 3  # start writing in 3rd line
         file_list = sorted(src_dir.glob(self.filemask))
         # print (f"{self.filemask}")
-        known_idents = set()  # mark duplicates
+        known_idents: set[str] = set()  # mark duplicates
         ignore_names = (
             "thumbs.db",
             "desktop.ini",
@@ -360,7 +362,7 @@ class PrepareUpload(BaseApp):
             if self.limit == c:
                 print("* Limit reached")
                 break
-            _per_row(c=c, path=path)
+            _per_row(c=c, path=path, known_idents=known_idents)
             print(f"{c} of {len(file_list)}")  # DDD{filemask2}
             c += 1
         self._save_excel(path=self.excel_fn)
@@ -440,6 +442,7 @@ class PrepareUpload(BaseApp):
             if not objIdL:
                 return "None"
             return self._rm_garbage("; ".join(str(objId) for objId in objIdL))
+        return "None"
 
     def _get_objIds2(self, *, identNr: str, strict: bool) -> str:
         """
@@ -468,6 +471,7 @@ class PrepareUpload(BaseApp):
             if not real_parts:
                 return "None"
             return "; ".join(real_parts)
+        return "None"
 
     def _init_sheet(self, workbook: Workbook) -> openpyxl.worksheet.worksheet.Worksheet:
         """
@@ -549,7 +553,7 @@ class PrepareUpload(BaseApp):
         # else:
         #    print(f"* Excel has data: {self.ws.max_row} rows")
 
-    def _suspicious_characters(self, *, identNr: str) -> bool:
+    def _suspicious_characters(self, *, identNr: str | None) -> bool:
         # print (f"***suspicious? {identNr}")
 
         msg = "suspicious_characters:"
