@@ -10,8 +10,7 @@ license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
 dynamic = ["version", "description"]
 keywords = ["museum", "museumPlus", "api client"]
-#requires-python = "3.11.1" 
-# union types with | 
+requires-python=">=3.11.1" # union types with | 
 dependencies = [
 	"flit",
 	"lxml >=4.8.0", 
@@ -24,6 +23,10 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest >=2.7.3",
+]
+mypy = [
+    "types-Pillow",
+    "openpyxl-stubs",
 ]
 
 [project.urls]

@@ -53,7 +53,7 @@ def _write_messages(fn):
             f.write(msg + "\n")
 
 
-def counter(src_dir: Path = Path(), filemask: str = "*", size: bool = False):
+def counter(src_dir: Path = Path(), filemask: str = "*", show_size: bool = False):
     pw(f"Looking for {filemask} in {src_dir.cwd()}")
     c = 0  # counting files
     by_ext = defaultdict(dict)
@@ -84,7 +84,7 @@ def counter(src_dir: Path = Path(), filemask: str = "*", size: bool = False):
             pbar.update()
             c += 1
     by_ext["total"]["number"] = c  # only update once
-    if size:
+    if show_size:
         s, unit = _convert(by_ext["total"]["size"])
         pw(f"files found: {c}; total size {s:.2f} {unit}; problems {len(problems)}")
         by_ext.pop("total", None)  #  omit the total line to reduce redundancy

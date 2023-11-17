@@ -11,14 +11,14 @@ TODO
 # import argparse
 from mpapi.client import MpApi
 from mpapi.module import Module
+from mpapi.constants import get_credentials
 from pathlib import Path
 from MpApi.Utils.BaseApp import BaseApp, NoContentError
 
 
 if __name__ == "__main__":
-    base = BaseApp()
-    creds = base._read_credentials()
-    client = MpApi(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
+    user, pw, baseURL = get_credentials()
+    client = MpApi(baseURL=baseURL, user=user, pw=pw)
     m = client.getOrgUnits2(mtype="Object")
     fn = "writableOrgUnits.xml"
     print(f"Writing to {fn}")

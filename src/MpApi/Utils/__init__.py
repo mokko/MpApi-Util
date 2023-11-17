@@ -89,7 +89,7 @@ def count():
     _version(args)
 
     src_dir = Path()
-    counter(src_dir=src_dir, filemask=args.filemask, size=args.size)
+    counter(src_dir=src_dir, filemask=args.filemask, show_size=args.size)
 
 
 def du():

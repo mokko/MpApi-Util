@@ -5,7 +5,7 @@ from PIL.ExifTags import Base as ExifBase
 test_files = "test.tif"
 
 
-def test_exif():
+def tast_exif():
     with Image.open("VII a 62.tif") as img:
         img_data = img.getexif()
     if img_data is None:

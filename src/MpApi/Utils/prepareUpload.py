@@ -200,6 +200,8 @@ class PrepareUpload(BaseApp):
             self._asset_exists_already(cells)
             self._objId_for_ident(cells)
             self._fill_in_candidate(cells)
+            if rno is not None and rno % 1000 == 0:
+                self._save_excel(path=self.excel_fn)
         self._save_excel(path=self.excel_fn)
 
     def create_objects(self) -> None:
@@ -274,7 +276,7 @@ class PrepareUpload(BaseApp):
 
         self._raise_if_excel_has_no_content()
         mk_dupes_dir()
-        for row in self._loop_table():  # start at 3rd row
+        for row, c in self._loop_table():  # start at 3rd row
             src_cell = row[6]
             filename_cell = row[0]
             dest_dir = Path(self.conf["mv_dupes"])
@@ -364,6 +366,8 @@ class PrepareUpload(BaseApp):
                 break
             _per_row(c=c, path=path, known_idents=known_idents)
             print(f"{c} of {len(file_list)}")  # DDD{filemask2}
+            if c % 1000 == 0:
+                self._save_excel(path=self.excel_fn)
             c += 1
         self._save_excel(path=self.excel_fn)
 
