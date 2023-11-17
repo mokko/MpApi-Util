@@ -9,12 +9,10 @@ from mpapi.constants import get_credentials
 from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.BaseApp import BaseApp  # , NoContentError
 from MpApi.Utils.Attacher import Attacher
-from MpApi.Utils.du import Du
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
 from MpApi.Utils.count import counter
 from MpApi.Utils.mover import Mover
 from MpApi.Utils.prepareUpload import PrepareUpload
-from MpApi.Utils.rename import Rename
 from MpApi.Utils.reportX import ReportX
 from MpApi.Utils.sren import Sren
 from MpApi.Utils.unzipChunks import iter_chunks
@@ -92,18 +90,6 @@ def count():
     counter(src_dir=src_dir, filemask=args.filemask, show_size=args.size)
 
 
-def du():
-    if not Path(credentials).exists():
-        raise ValueError("ERROR: Credentials not found!")
-    parser = argparse.ArgumentParser(
-        description="du - the download/upload tool for mpapi"
-    )
-    parser.add_argument("-c", "--cmd", help="'down' or 'up'", required=True)
-    parser.add_argument("-i", "--input", help="path to Excel sheet", required=True)
-    args = parser.parse_args()
-    du = Du(cmd=args.cmd, Input=args.input, baseURL=baseURL, pw=pw, user=user)
-
-
 def move():
     parser = argparse.ArgumentParser(
         description="move asset files that are alreay in RIA to storage location"
@@ -168,35 +154,6 @@ def prepareUpload():
         p.mv_dupes()
     elif args.phase == "createobjects":
         p.create_objects()
-
-
-def ren():
-    parser = argparse.ArgumentParser(
-        description="Rename tool using an Excel spreadsheet for manual check and documentation"
-    )
-    parser.add_argument("-d", "--dst", help="destination directory")
-    parser.add_argument(
-        "-e",
-        "--execute",
-        action="store_true",
-        help="Execute the copy prepared in the specified Excel file",
-    )
-    parser.add_argument("-s", "--src", help="Scan source directory")
-    parser.add_argument("-x", "--xsl", required=True, help="Excel file path")
-    parser.add_argument(
-        "-v", "--version", help="display version information", action="store_true"
-    )
-    args = parser.parse_args()
-    _version(args)
-
-    r = Rename()
-    if args.src:
-        # let's use the dictionary cache if, and only if, we need to find the jpg sisters
-        # of the tifs
-        # r.mk_cache(start_dir=src_dir)
-        r.scan(src_dir=args.src, dest_dir=args.dst, xls_fn=args.xsl)
-    elif args.execute:
-        r.execute(xls_fn=args.xsl)
 
 
 def reportX():
