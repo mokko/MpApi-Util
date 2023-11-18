@@ -8,10 +8,10 @@ Module or a set functions?
 
 from pathlib import Path
 import re
-from typing import Any, Optional
+from typing import Any
 
 
-def extractIdentNr(*, path: Path) -> Optional[str]:
+def extractIdentNr(*, path: Path) -> str|None:
     """
     extracts IdentNr (=identifier, Signatur) from filename (as Pathlib path). Developed
     specifically for cataogue cards and not widely tested beyond.
@@ -74,7 +74,7 @@ def extractIdentNr(*, path: Path) -> Optional[str]:
         elif re.search(r"\d+", stem2):
             # number can be sole item e.g. if objId is used as identNr
             return stem2
-
+    return None # make mypy happy
 
 def has_parts(identNr: str) -> bool:
     """

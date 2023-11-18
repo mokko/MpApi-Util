@@ -56,11 +56,11 @@ def _write_messages(fn):
 def counter(src_dir: Path = Path(), filemask: str = "*", show_size: bool = False):
     pw(f"Looking for {filemask} in {src_dir.cwd()}")
     c = 0  # counting files
-    by_ext = defaultdict(dict)
+    by_ext:defaultdict = defaultdict(dict)
     by_ext["total"]["size"] = 0
     by_ext["total"]["number"] = 0
 
-    problems = []
+    problems = list()
     with tqdm(desc=filemask, unit=" files") as pbar:
         for f in src_dir.glob(filemask):
             if f.is_dir():  # don't count dirs
@@ -69,7 +69,7 @@ def counter(src_dir: Path = Path(), filemask: str = "*", show_size: bool = False
                 # may fail for files with path > 255 chars
                 size = f.stat().st_size
             except:
-                problems.append(str(f))
+                problems.append(f) # used to be str(f)
                 print(f"problem '{f}'")
                 continue  # ignore files with problems
 

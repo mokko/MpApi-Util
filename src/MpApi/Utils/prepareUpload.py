@@ -196,12 +196,19 @@ class PrepareUpload(BaseApp):
         """
         self._raise_if_excel_has_no_content()
         for cells, rno in self._loop_table2(sheet=self.ws):
-            print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
+            if cells['assetUploaded'] is not None and cells['identNr'] is not None:
+                self.mode = "ff"
+            else:
+                self.mode = ""
             self._asset_exists_already(cells)
             self._objId_for_ident(cells)
             self._fill_in_candidate(cells)
+            self._checkria_messages(cells, rno)
+
             if rno is not None and rno % 1000 == 0:
-                self._save_excel(path=self.excel_fn)
+                # dont save when in fast forward mode
+                if not self.mode == "ff":  
+                    self._save_excel(path=self.excel_fn)
         self._save_excel(path=self.excel_fn)
 
     def create_objects(self) -> None:
@@ -260,8 +267,9 @@ class PrepareUpload(BaseApp):
                     )
                     c["objIds"].value = objIds_str
                     c["candidate"].value = None
-                    # save immediately since likely to die
-                    self._save_excel(path=self.excel_fn)
+                    if rno is not None and rno % 5 == 0:
+                        # save almost immediately since likely to die
+                        self._save_excel(path=self.excel_fn)
         self._save_excel(path=self.excel_fn)
 
     def mv_dupes(self) -> None:
@@ -401,12 +409,15 @@ class PrepareUpload(BaseApp):
         ws2 = self.wb["Conf"]
         orgUnit = self._get_orgUnit(cell="B2")  # can return None
         if c["assetUploaded"].value == None:
-            # Let's not make org_unit optional!
             idL = self.client.fn_to_mulId(fn=c["filename"].value, orgUnit=orgUnit)
             if len(idL) == 0:
                 c["assetUploaded"].value = "None"
             else:
                 c["assetUploaded"].value = "; ".join(idL)
+
+    def _checkria_messages(self, c, rno):
+        print(f"{c['filename'].value} -> {c['identNr'].value} {c["candidate"].value}")
+        print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
 
     def _check_scandir(self):
         # let's not overwrite or modify file information in Excel if already written
@@ -433,7 +444,6 @@ class PrepareUpload(BaseApp):
                 and c["partsObjIds"].value == "None"
                 and c["duplicate"].value != "Duplikat"
             ):
-                print(f"{c['filename'].value} -> {c['identNr'].value} candidate")
                 c["candidate"].value = "x"
 
     def _get_objIds(self, *, identNr: str, strict: bool) -> str:

@@ -177,18 +177,25 @@ class Mover(BaseApp):
                     if to.exists():
                         # should not happen, as conflicts should be resolved earlier
                         self.ws[f"I{rno}"].font = red
-                        self._save_excel(path=excel_fn)
-                        raise Exception(f"file exists already: '{to}'")
+                        #self._save_excel(path=excel_fn)
+                        self._warning(f"F{rno}", f"WARNING: target location exists")
+                        # raise Exception(f"file exists already: '{to}'")
                     else:
                         if not to.parent.exists():
                             to.parent.mkdir(parents=True)
-                        shutil.move(fro, to)
-                        self.ws[f"I{rno}"].font = teal
-                        c["moved"].value = "x"
+                        try:
+                            shutil.move(fro, to)
+                        except PermissionError as e:
+                            #self.ws[f"I{rno}"].font = red
+                            self._warning(f"F{rno}", f"PermissionError {e}")
+                        else:
+                            self.ws[f"I{rno}"].font = teal
+                            c["moved"].value = "x"
                 else:
                     print(f"   doesn't exist anymore")
             if rno % 1000 == 0:  # save every so often
-                self._save_excel(path=excel_fn)
+                if c["moved"] != "x":
+                    self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
     def rescan(self):
@@ -333,6 +340,11 @@ class Mover(BaseApp):
 
         # if (count/200).is_integer():
         #    self._save_excel(path=excel_fn)
+
+    def _warning(self, cell_label:str, msg:str) -> None:
+        print(msg)
+        self.ws[cell_label].value = msg
+        self.ws[cell_label].font = red
 
     def _write_filename(self, c, path):
         if c["filename"].value is None:
