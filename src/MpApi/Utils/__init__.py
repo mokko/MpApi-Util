@@ -140,7 +140,7 @@ def prepareUpload():
     _version(args)
 
     if not args.phase:
-        raise SyntaxError("-p parameter required!")
+        raise SyntaxError("ERROR: Phase required!")
 
     p = PrepareUpload(
         limit=args.limit,

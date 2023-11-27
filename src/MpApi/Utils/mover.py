@@ -163,39 +163,19 @@ class Mover(BaseApp):
             if c["move"].value == "x" and c["moved"].value is None:
                 if c["targetpath"].value is None:
                     self._save_excel(path=excel_fn)
-                    raise SyntaxError(
-                        "ERROR: Move says move, but targetpath has no info!"
-                    )
+                    self._warning(f"F{rno}", "ERROR: Move says move, but targetpath has no info!")
+                    #raise SyntaxError(
+                    #    "ERROR: Move says move, but targetpath has no info!"
+                    #)
                 fro = Path(c["relpath"].value)
-                to = Path(c["targetpath"].value)
                 print(f"{rno}/{self.ws.max_row}: {fro}")
-                # print(f"   {to}")
-                if fro.exists():
-                    # don't overwrite existing files
-                    # since files with same name can exist in muliple folders
-                    # it's quite possible that files with same name exist multiple times
-                    if to.exists():
-                        # should not happen, as conflicts should be resolved earlier
-                        self.ws[f"I{rno}"].font = red
-                        #self._save_excel(path=excel_fn)
-                        self._warning(f"F{rno}", f"WARNING: target location exists")
-                        # raise Exception(f"file exists already: '{to}'")
-                    else:
-                        if not to.parent.exists():
-                            to.parent.mkdir(parents=True)
-                        try:
-                            shutil.move(fro, to)
-                        except PermissionError as e:
-                            #self.ws[f"I{rno}"].font = red
-                            self._warning(f"F{rno}", f"PermissionError {e}")
-                        else:
-                            self.ws[f"I{rno}"].font = teal
-                            c["moved"].value = "x"
+                if c["targetpath"].value is not None:
+                    to = Path(c["targetpath"].value)
+                    self._move(fro,to, rno, c)
                 else:
-                    print(f"   doesn't exist anymore")
+                    print("WARNING: target path is None")
             if rno % 1000 == 0:  # save every so often
-                if c["moved"] != "x":
-                    self._save_excel(path=excel_fn)
+                self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
     def rescan(self):
@@ -224,6 +204,7 @@ class Mover(BaseApp):
     def scandir(self):
         """
         I dont want to fill in targetpath if move != x
+        Now, I do want to fill in targetpath if move != x
         """
         # check if excel exists, has the expected shape and is writable
         self._check_scandir()
@@ -319,6 +300,35 @@ class Mover(BaseApp):
             excludeL = exclude_str.split(";")
             self.exclude_dirs = [d.strip() for d in excludeL]
 
+    def _move(self, fro:Path,to:Path,rno:int, c:dict) -> None:
+        """
+        Copy file at fro to the path at to, make directories at target and write success 
+        in Excel.
+        """
+        if fro.exists():
+            # don't overwrite existing files
+            # since files with same name can exist in muliple folders
+            # it's quite possible that files with same name exist multiple times
+            if to.exists():
+                # should not happen, as conflicts should be resolved earlier
+                self.ws[f"I{rno}"].font = red
+                #self._save_excel(path=excel_fn)
+                self._warning(f"F{rno}", f"WARNING: target location exists")
+                # raise Exception(f"file exists already: '{to}'")
+            else:
+                if not to.parent.exists():
+                    to.parent.mkdir(parents=True)
+                try:
+                    shutil.move(fro, to)
+                except PermissionError as e:
+                    #self.ws[f"I{rno}"].font = red
+                    self._warning(f"F{rno}", f"PermissionError {e}")
+                else:
+                    self.ws[f"I{rno}"].font = teal
+                    c["moved"].value = "x"
+        else:
+            print(f"   doesn't exist anymore")
+
     def _scan_per_file(self, *, path: Path, count: int) -> None:
         """
         Writes to self.ws
@@ -410,7 +420,11 @@ class Mover(BaseApp):
                 c["move"].value = None
 
     def _write_targetpath(self, c):
-        if c["move"].value == "x":
+        """
+        I used to only write targetpath for condidates; now we write targetpath
+        if there is a filename.
+        """
+        if c["filename"].value is not None:
             fro = Path(c["relpath"].value)
             to = self.target_dir / fro
             while to.exists():

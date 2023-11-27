@@ -205,10 +205,10 @@ class PrepareUpload(BaseApp):
             self._fill_in_candidate(cells)
             self._checkria_messages(cells, rno)
 
-            if rno is not None and rno % 1000 == 0:
+            if rno is not None and rno % 100 == 0:
                 # dont save when in fast forward mode
-                if not self.mode == "ff":  
-                    self._save_excel(path=self.excel_fn)
+                # if not self.mode == "ff":  
+                self._save_excel(path=self.excel_fn)
         self._save_excel(path=self.excel_fn)
 
     def create_objects(self) -> None:
@@ -253,7 +253,7 @@ class PrepareUpload(BaseApp):
         # templateM.toFile(path="debug.template.xml")
 
         for c, rno in self._loop_table2(sheet=self.ws):
-            print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
+            print(f"{rno} of {self.ws.max_row}") #, end="\r" flush=True
             if c["identNr"].value is None:
                 # without a identNr we cant fill in a identNr in template
                 # should not happen, that identNr is empty and cadinate = x
@@ -373,8 +373,8 @@ class PrepareUpload(BaseApp):
                 print("* Limit reached")
                 break
             _per_row(c=c, path=path, known_idents=known_idents)
-            print(f"{c} of {len(file_list)}")  # DDD{filemask2}
-            if c % 1000 == 0:
+            print(f"sd {c} of {len(file_list)}")  # DDD{filemask2}
+            if c % 500 == 0:
                 self._save_excel(path=self.excel_fn)
             c += 1
         self._save_excel(path=self.excel_fn)
@@ -416,7 +416,7 @@ class PrepareUpload(BaseApp):
                 c["assetUploaded"].value = "; ".join(idL)
 
     def _checkria_messages(self, c, rno):
-        print(f"{c['filename'].value} -> {c['identNr'].value} {c["candidate"].value}")
+        print(f"cr {c['filename'].value} -> {c['identNr'].value} {c["candidate"].value}")
         print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
 
     def _check_scandir(self):
