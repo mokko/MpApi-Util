@@ -1,8 +1,9 @@
 import re
 from pathlib import Path
 
+
 # functions, not methods
-def extractIdentNr(*, path: Path) -> str|None:
+def extractIdentNr(*, path: Path) -> str | None:
     """
     Attempts to extract the full identifier (identNr) from a filename.
     Multiple file extensions are ignored, only the real_stem is processed.
@@ -18,4 +19,4 @@ def extractIdentNr(*, path: Path) -> str|None:
     # print (m)
     if m:
         return m.group(1)
-    return None # make mypy happy
+    return None  # make mypy happy

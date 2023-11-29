@@ -163,15 +163,17 @@ class Mover(BaseApp):
             if c["move"].value == "x" and c["moved"].value is None:
                 if c["targetpath"].value is None:
                     self._save_excel(path=excel_fn)
-                    self._warning(f"F{rno}", "ERROR: Move says move, but targetpath has no info!")
-                    #raise SyntaxError(
+                    self._warning(
+                        f"F{rno}", "ERROR: Move says move, but targetpath has no info!"
+                    )
+                    # raise SyntaxError(
                     #    "ERROR: Move says move, but targetpath has no info!"
-                    #)
+                    # )
                 fro = Path(c["relpath"].value)
                 print(f"{rno}/{self.ws.max_row}: {fro}")
                 if c["targetpath"].value is not None:
                     to = Path(c["targetpath"].value)
-                    self._move(fro,to, rno, c)
+                    self._move(fro, to, rno, c)
                 else:
                     print("WARNING: target path is None")
             if rno % 1000 == 0:  # save every so often
@@ -300,9 +302,9 @@ class Mover(BaseApp):
             excludeL = exclude_str.split(";")
             self.exclude_dirs = [d.strip() for d in excludeL]
 
-    def _move(self, fro:Path,to:Path,rno:int, c:dict) -> None:
+    def _move(self, fro: Path, to: Path, rno: int, c: dict) -> None:
         """
-        Copy file at fro to the path at to, make directories at target and write success 
+        Copy file at fro to the path at to, make directories at target and write success
         in Excel.
         """
         if fro.exists():
@@ -312,7 +314,7 @@ class Mover(BaseApp):
             if to.exists():
                 # should not happen, as conflicts should be resolved earlier
                 self.ws[f"I{rno}"].font = red
-                #self._save_excel(path=excel_fn)
+                # self._save_excel(path=excel_fn)
                 self._warning(f"F{rno}", f"WARNING: target location exists")
                 # raise Exception(f"file exists already: '{to}'")
             else:
@@ -320,8 +322,10 @@ class Mover(BaseApp):
                     to.parent.mkdir(parents=True)
                 try:
                     shutil.move(fro, to)
+                except FileNotFoundError as e:
+                    self._warning(f"F{rno}", f"FileNotFoundError {e}")                
                 except PermissionError as e:
-                    #self.ws[f"I{rno}"].font = red
+                    # self.ws[f"I{rno}"].font = red
                     self._warning(f"F{rno}", f"PermissionError {e}")
                 else:
                     self.ws[f"I{rno}"].font = teal
@@ -351,7 +355,7 @@ class Mover(BaseApp):
         # if (count/200).is_integer():
         #    self._save_excel(path=excel_fn)
 
-    def _warning(self, cell_label:str, msg:str) -> None:
+    def _warning(self, cell_label: str, msg: str) -> None:
         print(msg)
         self.ws[cell_label].value = msg
         self.ws[cell_label].font = red
