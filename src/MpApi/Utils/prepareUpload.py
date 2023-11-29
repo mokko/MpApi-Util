@@ -16,22 +16,25 @@ With this tool we
 - for those cases create object records by copying a template record
 - write the new identNr in the new record
 
-This tool is meant to be used by an editor. The editor runs the script multiple times
-in different phases. For each phase, the edior checks the results in the Excel file and, 
-if necessary, corrects something. There are three phases
-(1) scandir (formerly: scandisk)
+CONCEPT
+This tool is meant to be used by a person that we'll call the editor. The editor runs 
+the script multiple times in different phases. The script writes its output into an
+Excel file which we also use for configuration values. For each phase, the edior checks 
+the results typically in the Excel file and, if necessary, corrects something. 
+
+Prepare works on current working directory (aka pwd) and can work recursively, if so
+configured (using the filemask in Conf[iguration] sheet of the Excel file).
+
+There are now four phases
+(0) init
+(1) scandir 
 (2) checkria and
 (3) createobjects
-(4) movedupes:
+(4) movedupes (optional)
 
-   $ prepare scandir -j JobName
-   $ prepare checkria -j JobName 
-   $ prepare createobjects -j JobName   
-   $ prepare movedupes -j JobName   
-
-Preparation
-- write/edit/update configuration (e.g. prepare.ini)
-- cd to your project_dir with credentials.py file
+   $ prepare scandir 
+   $ prepare checkria  
+   $ prepare createobjects    
 
 After running scandisk
 - check IdentNr have successfully been extracted
@@ -50,10 +53,10 @@ After running checkria
 After running createobjects
 - preserve Excel file for documentation; contains ids of newly created records
 
-How should prepare.ini be structured?
-excel_fn = Excel filename, e.g. test.xlsx
-
-Update April 2023
+Update 
+November 2023
+- new step init to make it more similar to upload
+April 2023
 - changes to cli frontend
   (1) no more separate config file ('prepare.ini'), instead we use prepare.xlsx 
   (2) We now scan current working directory 
@@ -177,11 +180,8 @@ class PrepareUpload(BaseApp):
                 "col": "K",
             },
         }
-
         self.wb = self._init_excel(path=self.excel_fn)
         self.ws = self._init_sheet(workbook=self.wb)  # explicit is better than implicit
-        # die if not writable so that user can close it before waste of time
-        self._save_excel(path=self.excel_fn)
 
     #
     # public
@@ -196,7 +196,7 @@ class PrepareUpload(BaseApp):
         """
         self._raise_if_excel_has_no_content()
         for cells, rno in self._loop_table2(sheet=self.ws):
-            if cells['assetUploaded'] is not None and cells['identNr'] is not None:
+            if cells["assetUploaded"] is not None and cells["identNr"] is not None:
                 self.mode = "ff"
             else:
                 self.mode = ""
@@ -207,7 +207,7 @@ class PrepareUpload(BaseApp):
 
             if rno is not None and rno % 100 == 0:
                 # dont save when in fast forward mode
-                # if not self.mode == "ff":  
+                # if not self.mode == "ff":
                 self._save_excel(path=self.excel_fn)
         self._save_excel(path=self.excel_fn)
 
@@ -253,7 +253,7 @@ class PrepareUpload(BaseApp):
         # templateM.toFile(path="debug.template.xml")
 
         for c, rno in self._loop_table2(sheet=self.ws):
-            print(f"{rno} of {self.ws.max_row}") #, end="\r" flush=True
+            print(f"{rno} of {self.ws.max_row}")  # , end="\r" flush=True
             if c["identNr"].value is None:
                 # without a identNr we cant fill in a identNr in template
                 # should not happen, that identNr is empty and cadinate = x
@@ -270,6 +270,13 @@ class PrepareUpload(BaseApp):
                     if rno is not None and rno % 5 == 0:
                         # save almost immediately since likely to die
                         self._save_excel(path=self.excel_fn)
+        self._save_excel(path=self.excel_fn)
+
+    def init(self) -> None:
+        if self.excel_fn.exists():
+            raise Exception(f"* {self.excel_fn} exists already")
+
+        # die if not writable so that user can close it before waste of time
         self._save_excel(path=self.excel_fn)
 
     def mv_dupes(self) -> None:
@@ -351,8 +358,10 @@ class PrepareUpload(BaseApp):
         print(f"* Scanning source dir: {src_dir}")
 
         c = 3  # start writing in 3rd line
+        # todo: would be nice if we could stop after limit
+        print(f"FILEMASK {self.filemask}, starting scan...")
         file_list = sorted(src_dir.glob(self.filemask))
-        # print (f"{self.filemask}")
+        print(f"len(file_list) files found")
         known_idents: set[str] = set()  # mark duplicates
         ignore_names = (
             "thumbs.db",
@@ -416,23 +425,27 @@ class PrepareUpload(BaseApp):
                 c["assetUploaded"].value = "; ".join(idL)
 
     def _checkria_messages(self, c, rno):
-        print(f"cr {c['filename'].value} -> {c['identNr'].value} {c["candidate"].value}")
+        print(
+            f"cr {c['filename'].value} -> {c['identNr'].value} {c['candidate'].value}"
+        )
         print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
 
     def _check_scandir(self):
         # let's not overwrite or modify file information in Excel if already written
         # 2 lines are getting written by initialization
-        if self.ws.max_row > 2:
-            raise Exception("Error: Scan dir info already filled in")
+        # if self.ws.max_row > 2:
+        #    raise Exception("Error: Scan dir info already filled in")
 
         identNrF = IdentNrFactory()
         self.schemas = identNrF.get_schemas()
+        # if writable it's not open
+        self._save_excel(path=self.excel_fn)
 
         conf_ws = self.wb["Conf"]
         try:
-            self.filemask = self.conf_ws["B3"]
-        except:
-            self.filemask = "**/*"  # default
+            self.filemask = conf_ws["B3"].value
+        except Exception as e:
+            raise ValueError(f"Error: Filemask missing {e}")
 
     def _fill_in_candidate(self, c) -> None:
         if c["schemaId"].value is None:
@@ -489,7 +502,7 @@ class PrepareUpload(BaseApp):
 
     def _init_sheet(self, workbook: Workbook) -> openpyxl.worksheet.worksheet.Worksheet:
         """
-        Defines the Excel format of this app. Needs to be specific to app.
+        Returns the worksheet, makes a new document if necessary. Needs to be specific to app.
         """
         sheet_title = "prepareUpload"
         try:

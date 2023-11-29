@@ -145,7 +145,9 @@ def prepareUpload():
     p = PrepareUpload(
         limit=args.limit,
     )
-    if args.phase == "scandir" or args.phase == "init":
+    if args.phase == "init":
+        p.init()
+    elif args.phase == "scandir":
         p.scan_disk()
     elif args.phase == "checkria":
         p.checkria()
