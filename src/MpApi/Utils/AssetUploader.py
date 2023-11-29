@@ -32,9 +32,8 @@ import shutil
 from typing import Any, Optional
 from tqdm import tqdm
 
-excel_fn = Path(
-    "upload14.xlsx"
-)  # adding number of fields to prevent accidental overwriting of old versions
+# adding number of fields to prevent accidental overwriting of old versions
+excel_fn = Path("upload14.xlsx")
 bak_fn = Path("upload14.xlsx.bak")
 red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
@@ -48,8 +47,6 @@ IGNORE_NAMES = (
     "prepare.xlsx",
     "prepare.log",
     "prepare.ini",
-    "upload.xlsx",
-    "upload.xlsx.bak",
     str(excel_fn),
     str(bak_fn),
     "thumbs.db",
@@ -373,6 +370,7 @@ class AssetUploader(BaseApp):
 
             # save every thousand files to protect against interruption
             if rno is not None and rno % 1000 == 0:
+                self.backup_excel()
                 self._save_excel(path=excel_fn)
         self._save_excel(path=excel_fn)
 
