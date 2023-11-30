@@ -358,11 +358,7 @@ class PrepareUpload(BaseApp):
         print(f"* Scanning source dir: {src_dir}")
 
         c = 3  # start writing in 3rd line
-        # todo: would be nice if we could stop after limit
         print(f"FILEMASK {self.filemask}, starting scan...")
-        file_list = sorted(src_dir.glob(self.filemask))
-        print(f"len(file_list) files found")
-        known_idents: set[str] = set()  # mark duplicates
         ignore_names = (
             "thumbs.db",
             "desktop.ini",
@@ -370,17 +366,22 @@ class PrepareUpload(BaseApp):
             "prepare.log",
             "prepare.xlsx",
         )
-
-        for path in file_list:
+        file_list = list()
+        for file in src_dir.glob(self.filemask):
             if path.is_dir():
                 continue
             if path.name.startswith("."):
                 continue
             if path.name.lower().strip() in ignore_names:
                 continue
-            if self.limit == c:
+            file_list.append(file)
+            c += 1
+            if c == self.limit:
                 print("* Limit reached")
                 break
+        print(f"len(file_list) files found")
+        known_idents: set[str] = set()  # mark duplicates
+        for path in sorted(file_list):
             _per_row(c=c, path=path, known_idents=known_idents)
             print(f"sd {c} of {len(file_list)}")  # DDD{filemask2}
             if c % 500 == 0:

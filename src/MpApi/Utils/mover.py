@@ -323,7 +323,7 @@ class Mover(BaseApp):
                 try:
                     shutil.move(fro, to)
                 except FileNotFoundError as e:
-                    self._warning(f"F{rno}", f"FileNotFoundError {e}")                
+                    self._warning(f"F{rno}", f"FileNotFoundError {e}")
                 except PermissionError as e:
                     # self.ws[f"I{rno}"].font = red
                     self._warning(f"F{rno}", f"PermissionError {e}")

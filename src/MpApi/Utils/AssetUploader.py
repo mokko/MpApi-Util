@@ -20,6 +20,7 @@ from MpApi.Record import Record  # should be MpApi.Record.Multimedia
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.logic import extractIdentNr, has_parts, is_suspicious, whole_for_parts
 from MpApi.Utils.Ria import RIA
+from MpApi.Utils.Xls import Xls
 
 from openpyxl import Workbook  # load_workbook
 from openpyxl.styles import Alignment, Font
@@ -34,7 +35,7 @@ from tqdm import tqdm
 
 # adding number of fields to prevent accidental overwriting of old versions
 excel_fn = Path("upload14.xlsx")
-bak_fn = Path("upload14.xlsx.bak")
+bak_fn = Path("upload14.xlsx.bak")  # should go away
 red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
@@ -61,6 +62,7 @@ class AssetUploader(BaseApp):
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         self.objIds_cache: dict[str, str] = {}
+        self.xls = Xls(path=excel_fn)
 
         self.table_desc = {
             "filename": {
@@ -149,12 +151,6 @@ class AssetUploader(BaseApp):
             },
         }
 
-    def backup_excel(self):
-        try:
-            shutil.copy(excel_fn, bak_fn)
-        except KeyboardInterrupt:
-            print("Catching keyboard interrupt during Excel operation; try again...")
-
     def go(self) -> None:
         """
         Do the actual upload based on the preparations in the Excel file
@@ -200,7 +196,7 @@ class AssetUploader(BaseApp):
                         "Catching keyboard interrupt during RIA operation; try again..."
                     )
                 # dont save if here, save after loop instead
-        self._save_excel(path=excel_fn)
+        self.xls.save()
 
     def init(self) -> None:
         """
@@ -217,6 +213,9 @@ class AssetUploader(BaseApp):
         ws = self.wb.active
         ws.title = "Assets"
         self._write_table_description(description=self.table_desc, sheet=ws)
+        # self.wb = self.xls.get_or_create_wb()
+        # ws = self.xls.get_or_create_sheet(title="Assets")
+        # self.xls.write_table_descripion(description=self.table_desc, sheet=ws)
 
         #
         # Conf Sheet
@@ -268,7 +267,7 @@ class AssetUploader(BaseApp):
             for cell in row:
                 cell.font = blue
 
-        self._save_excel(path=excel_fn)
+        self.xls.save()
 
     def initial_offset(self) -> int:
         """
@@ -292,7 +291,7 @@ class AssetUploader(BaseApp):
         self._init_wbws()
         for cells, rno in self._loop_table2(sheet=self.ws):
             self._photo(cells)
-        self._save_excel(path=excel_fn)
+        self.xls.save()
 
     def scandir(self, *, Dir: Optional[Path] = None, offset: int = 0) -> None:
         """
@@ -319,21 +318,15 @@ class AssetUploader(BaseApp):
         # rm excel rows if file no longer exists on disk
         # self._drop_rows_if_file_gone(col="I", cont=len(attached_cache))
         print("   in case of substantial file changes, create new Excel sheet")
-        self._save_excel(path=excel_fn)
+        self.xls.save()
 
         c = 1  # counting files here, no offset for headlines
         print("Preparing file list...")
-        file_list = src_dir.glob(f"**/{self.filemask}")
-        file_list2 = list()
-        chunk_size = self.limit - offset
         print(f"   chunk size: {chunk_size}")
+        file_list = list()  # set not necessary because every file only one time
+        chunk_size = self.limit - offset
         with tqdm(total=chunk_size + len(attached_cache)) as pbar:
-            for p in file_list:
-                p_abs = str(p.absolute())
-                # dirty, temporary...
-                ignore_dir = "W:\0_Neu"
-                if p_abs.startswith(ignore_dir):
-                    continue
+            for p in src_dir.glob(f"**/{self.filemask}"):
                 if (
                     p.name.startswith(".")
                     or p.name.startswith("debug")
@@ -347,21 +340,17 @@ class AssetUploader(BaseApp):
                 # we dont need to ignore suffixes if we look for *.jpg etc.
                 elif self.filemask == "*" and p.suffix in IGNORE_SUFFIXES:
                     continue
-                    c += 1  # attached files we want to count
-                    # print(f"   already in RIA {p_abs}")
-                pbar.update()
-                if p_abs not in attached_cache:
-                    file_list2.append(p)
                 if self.limit == c:
                     print("* Limit reached")
                     break
-                c += 1
+                p_abs = str(file.absolute())
+                if p_abs not in attached_cache:
+                    file_list.append(file)
+                    pbar.update()
+                c += 1  # attached files we want to count
 
-        print(f"Sorting file list... {len(file_list2)}")
-        file_list2 = sorted(file_list2)
-
-        print("Scanning file list...")
-        for p in file_list2:
+        print(f"Scanning sorted file list... {len(file_list)}")
+        for p in sorted(file_list):
             print(f"scandir: {p}")
             rno = self._path_in_list(p.name, 0)
             # rno is the row number in Assets sheet
@@ -370,9 +359,9 @@ class AssetUploader(BaseApp):
 
             # save every thousand files to protect against interruption
             if rno is not None and rno % 1000 == 0:
-                self.backup_excel()
-                self._save_excel(path=excel_fn)
-        self._save_excel(path=excel_fn)
+                self.xls.backup()
+                self.xls.save()
+        self.xls.save()
 
     def standardbild(self) -> None:
         """
@@ -391,7 +380,7 @@ class AssetUploader(BaseApp):
                 )
                 continue
             self._set_Standardbild(c)
-        self._save_excel(path=excel_fn)
+        self.xls.save()
 
     def wipe(self) -> None:
         """
@@ -632,7 +621,7 @@ class AssetUploader(BaseApp):
         self.wb = self._init_excel(path=excel_fn)
 
         # die if not writable so that user can close it before waste of time
-        self._save_excel(path=excel_fn)
+        self.xls.save()
 
         try:
             self.ws = self.wb["Assets"]
@@ -708,7 +697,8 @@ class AssetUploader(BaseApp):
                 cells["attached"].value = "x"
             # save after every file that is uploaded
             if rno is not None and rno % 10 == 0:
-                self._save_excel(path=excel_fn)
+                self.xls.backup()  # todo: move to self.xls
+                self.xls.save()  # todo: move to self.xls
         else:
             print("   asset already attached")
 
@@ -724,7 +714,7 @@ class AssetUploader(BaseApp):
                 mulId = int(c["asset_fn_exists"].value)
                 self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
                 c["standardbild"].value = "erledigt"
-                self._save_excel(path=excel_fn)
+                self.xls.save()
                 print("\tstandardbild set")
 
     def _write_asset_fn(self, cells, fullpath):
