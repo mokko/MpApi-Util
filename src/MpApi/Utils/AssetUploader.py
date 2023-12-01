@@ -205,21 +205,18 @@ class AssetUploader(BaseApp):
         Don't overwrite existing Excel file.
         """
 
-        if excel_fn.exists():
-            print(f"WARN: Abort init since '{excel_fn}' exists already!")
-            return
-        self.wb = Workbook()
-        ws = self.wb.active
+        self.xls.raise_if_file()
+        wb = self.xls.get_or_create_wb()
+        ws = wb.active
         ws.title = "Assets"
-        self._write_table_description(description=self.table_desc, sheet=ws)
-        # self.wb = self.xls.get_or_create_wb()
+        self.xls.write_header(description=self.table_desc, sheet=ws)
         # ws = self.xls.get_or_create_sheet(title="Assets")
-        # self.xls.write_table_descripion(description=self.table_desc, sheet=ws)
+        # self.xls.write_header(description=self.table_desc, sheet=ws)
 
         #
         # Conf Sheet
         #
-        ws2 = self.wb.create_sheet("Conf")
+        ws2 = wb.create_sheet("Conf")
         ws2["A1"] = "templateID"
         ws2["B1"] = ""
         ws["C1"] = """Hendryks default jpg 6697400"""
@@ -321,9 +318,9 @@ class AssetUploader(BaseApp):
 
         c = 1  # counting files here, no offset for headlines
         print("Preparing file list...")
-        print(f"   chunk size: {chunk_size}")
         file_list = list()  # set not necessary because every file only one time
         chunk_size = self.limit - offset
+        print(f"   chunk size: {chunk_size}")
         with tqdm(total=chunk_size + len(attached_cache)) as pbar:
             for p in src_dir.glob(f"**/{self.filemask}"):
                 if (
@@ -342,9 +339,8 @@ class AssetUploader(BaseApp):
                 if self.limit == c:
                     print("* Limit reached")
                     break
-                p_abs = str(file.absolute())
-                if p_abs not in attached_cache:
-                    file_list.append(file)
+                if str(p.absolute()) not in attached_cache:
+                    file_list.append(p)
                     pbar.update()
                 c += 1  # attached files we want to count
 

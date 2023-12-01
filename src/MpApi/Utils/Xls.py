@@ -76,6 +76,23 @@ class Xls:
             )
         return False
 
+    def raise_if_no_file(self) -> bool:
+        """
+        Raise if no file at self.path.
+        """
+
+        if not self.path.exists():
+            raise Exception(f"ERROR {self.path} does NOT exist")
+        return False
+
+    def raise_if_file(self) -> bool:
+        """
+        Raise if file exists already; returns False if file does NOT exist.
+        """
+        if self.path.exists():
+            raise Exception(f"ERROR {self.path} does exist already")
+        return False
+
     def request_shutdown(self):
         """
         Prints a message and changes class variable. To be called in except KeyboardInterrupt.
@@ -101,18 +118,15 @@ class Xls:
             print("Planned shutdown.")
             sys.exit(0)
 
-    def write_table_description(
+    def write_header(
         self, *, description: dict, sheet: openpyxl.worksheet.worksheet.Worksheet
     ):
         """
-        Take the table description (a dict) and write it to the top of the specified
-        worksheet.
+        Take the table description (a dict) and write it to the top two lines of the
+        specified worksheet.
 
-        Expect a table description at self.table_desc and use that to write the first
-        two lines to an empty Excel sheet.
-
-        The table description is a dictionary structured as follows
-        self.table_desc = {
+        The table description is a dictionary that is structured as follows:
+        table_desc = {
             "filename": {
                 "label": "Asset Dateiname",
                 "desc": "aus Verzeichnis",

@@ -280,8 +280,7 @@ class PrepareUpload(BaseApp):
         self.xls.save()
 
     def init(self) -> None:
-        if self.excel_fn.exists():
-            raise Exception(f"* {self.excel_fn} exists already")
+        self.xls.raise_if_no_file()
 
         # die if not writable so that user can close it before waste of time
         # self._save_excel(path=self.excel_fn)
