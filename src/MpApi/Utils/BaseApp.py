@@ -26,6 +26,7 @@ Let's typically log errors?
 import logging
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.logic import has_parts
+from MpApi.Utils.Xls import Xls
 from pathlib import Path
 from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.styles import Alignment, Font
@@ -127,6 +128,8 @@ class BaseApp:
         Given a file path for an excel file, return the respective workbook
         or make a new one if the file doesn't exist.
         """
+        # return self.xls.get_create_wb()
+
         # let's avoid side effects, although we're not doing this everywhere
         if path.exists():
             # print (f"* Loading existing excel: '{data_fn}'")
@@ -256,15 +259,6 @@ class BaseApp:
             text = text.replace("<body>", "").replace("</body>", "")
         return text
 
-    def _save_excel(self, path: Path) -> None:
-        """Made this only to have same print msgs all the time"""
-
-        print(f"   saving {path}")
-        try:
-            self.wb.save(filename=path)
-        except KeyboardInterrupt:
-            print("Catching keyboard interrupt during Excel operation; try again...")
-
     def _get_orgUnit(self, *, cell: str) -> Optional[str]:
         """
         Stores the value specified in the paramter cell in self.orgUnit.
@@ -280,11 +274,21 @@ class BaseApp:
             orgUnit = None
         return orgUnit
 
+    def _save_excel(self, path: Path) -> None:
+        """Made this only to have same print msgs all the time"""
+
+        print(f"   saving {path}")
+        try:
+            self.wb.save(filename=path)
+        except KeyboardInterrupt:
+            print("Catching keyboard interrupt during Excel operation; try again...")
+
     def _suspicous_character(self, *, identNr: str):
         if identNr is None or any("-", ";") in str(identNr):
             return True
 
     def _wipe(self) -> None:
+        """There is a new version of wipe in Xls.wipe. Todo: Use that in the future."""
         rno = 3
         with tqdm(total=self.ws.max_row - 2) as pbar:
             while rno <= self.ws.max_row:

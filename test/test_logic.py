@@ -28,6 +28,7 @@ def test_extractIdent():
         "VI 35989 -KK RS.jpg": "VI 35989",
         "VI 35989 -KK.jpg": "VI 35989",
         "I C 972 a-h -KK -B.jpg": "I C 972 a-h",
+        "V A 142 a,b___-KK-A.tif": "V A 142 a,b",
     }
     for case in cases:
         case = Path(case)

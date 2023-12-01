@@ -84,6 +84,7 @@ from MpApi.Utils.BaseApp import BaseApp, ConfigError, NoContentError
 from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.logic import extractIdentNr
 from MpApi.Utils.Ria import RIA
+from MpApi.Utils.Xls import Xls
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font
 import openpyxl.cell.cell
@@ -114,6 +115,7 @@ class PrepareUpload(BaseApp):
             print(f"* {self.excel_fn} exists already")
         else:
             print(f"* About to make new Excel '{self.excel_fn}'")
+        self.xls = Xls(path=self.excel_fn)
 
         self.table_desc = {
             "filename": {
@@ -182,6 +184,8 @@ class PrepareUpload(BaseApp):
         }
         self.wb = self._init_excel(path=self.excel_fn)
         self.ws = self._init_sheet(workbook=self.wb)  # explicit is better than implicit
+        ws2 = self.wb["Conf"]
+        self.filemask = ws.cell["B3"]
 
     #
     # public
@@ -208,8 +212,9 @@ class PrepareUpload(BaseApp):
             if rno is not None and rno % 100 == 0:
                 # dont save when in fast forward mode
                 # if not self.mode == "ff":
-                self._save_excel(path=self.excel_fn)
-        self._save_excel(path=self.excel_fn)
+                # self._save_excel(path=self.excel_fn)
+                self.xls.save()
+        self.xls.save()  # _save_excel(path=self.excel_fn)
 
     def create_objects(self) -> None:
         """
@@ -269,15 +274,18 @@ class PrepareUpload(BaseApp):
                     c["candidate"].value = None
                     if rno is not None and rno % 5 == 0:
                         # save almost immediately since likely to die
-                        self._save_excel(path=self.excel_fn)
-        self._save_excel(path=self.excel_fn)
+                        # self._save_excel(path=self.excel_fn)
+                        self.xls.save()
+        # self._save_excel(path=self.excel_fn)
+        self.xls.save()
 
     def init(self) -> None:
         if self.excel_fn.exists():
             raise Exception(f"* {self.excel_fn} exists already")
 
         # die if not writable so that user can close it before waste of time
-        self._save_excel(path=self.excel_fn)
+        # self._save_excel(path=self.excel_fn)
+        self.xls.save()
 
     def mv_dupes(self) -> None:
         def mk_dupes_dir():
@@ -385,9 +393,11 @@ class PrepareUpload(BaseApp):
             _per_row(c=c, path=path, known_idents=known_idents)
             print(f"sd {c} of {len(file_list)}")  # DDD{filemask2}
             if c % 500 == 0:
-                self._save_excel(path=self.excel_fn)
+                # self._save_excel(path=self.excel_fn)
+                self.xls.save()
             c += 1
-        self._save_excel(path=self.excel_fn)
+        # self._save_excel(path=self.excel_fn)
+        self.xls.save()
 
     #
     # PRIVATE
@@ -440,8 +450,8 @@ class PrepareUpload(BaseApp):
         identNrF = IdentNrFactory()
         self.schemas = identNrF.get_schemas()
         # if writable it's not open
-        self._save_excel(path=self.excel_fn)
-
+        # self._save_excel(path=self.excel_fn)
+        self.xls.save()
         conf_ws = self.wb["Conf"]
         try:
             self.filemask = conf_ws["B3"].value

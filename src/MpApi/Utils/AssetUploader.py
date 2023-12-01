@@ -192,10 +192,9 @@ class AssetUploader(BaseApp):
                     self._upload_file(cells, rno)
                     self._set_Standardbild(cells)
                 except KeyboardInterrupt:
-                    print(
-                        "Catching keyboard interrupt during RIA operation; try again..."
-                    )
+                    self.xls.request_shutdown()
                 # dont save if here, save after loop instead
+        self.xls.shutdown_if_requested()
         self.xls.save()
 
     def init(self) -> None:
