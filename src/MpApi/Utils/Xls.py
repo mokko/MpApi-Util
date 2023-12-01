@@ -17,6 +17,10 @@ import shutil
 import sys
 
 
+class ConfigError(Exception):
+    pass
+
+
 class NoContentError(Exception):
     pass
 
@@ -62,6 +66,19 @@ class Xls:
                 self.wb = Workbook()
                 return self.wb
 
+    def file_exists(self) -> bool:
+        """
+        Returns True if Excel file exists at specified location.
+        """
+        return self.path.exists()
+
+    def raise_if_conf_value_missing(self, required: dict) -> None:
+        base_msg = "ERROR: Missing configuration value: "
+        conf_ws = self.wb["Conf"]
+        for cell in required:
+            if conf_ws[cell].value is None:
+                raise ConfigError(base_msg + required[cell])
+
     def raise_if_no_content(
         self, sheet: openpyxl.worksheet.worksheet.Worksheet
     ) -> bool:
@@ -76,6 +93,14 @@ class Xls:
             )
         return False
 
+    def raise_if_file(self) -> bool:
+        """
+        Raise if file exists already; returns False if file does NOT exist.
+        """
+        if self.path.exists():
+            raise Exception(f"ERROR {self.path} does exist already")
+        return False
+
     def raise_if_no_file(self) -> bool:
         """
         Raise if no file at self.path.
@@ -83,14 +108,6 @@ class Xls:
 
         if not self.path.exists():
             raise Exception(f"ERROR {self.path} does NOT exist")
-        return False
-
-    def raise_if_file(self) -> bool:
-        """
-        Raise if file exists already; returns False if file does NOT exist.
-        """
-        if self.path.exists():
-            raise Exception(f"ERROR {self.path} does exist already")
         return False
 
     def request_shutdown(self):

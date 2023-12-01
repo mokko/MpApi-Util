@@ -165,8 +165,8 @@ class AssetUploader(BaseApp):
         Is it allowed to re-run go multiple time, e.g. to restart attachment? Yes!
 
         BTW: go is now called 'up' in command line interface.
-
         """
+
         self._check_go()  # raise on error
 
         ws2 = self.wb["Conf"]
@@ -207,62 +207,9 @@ class AssetUploader(BaseApp):
 
         self.xls.raise_if_file()
         wb = self.xls.get_or_create_wb()
-        ws = wb.active
-        ws.title = "Assets"
+        ws = self.xls.get_or_create_sheet(title="Assets")
         self.xls.write_header(description=self.table_desc, sheet=ws)
-        # ws = self.xls.get_or_create_sheet(title="Assets")
-        # self.xls.write_header(description=self.table_desc, sheet=ws)
-
-        #
-        # Conf Sheet
-        #
-        ws2 = wb.create_sheet("Conf")
-        ws2["A1"] = "templateID"
-        ws2["B1"] = ""
-        ws["C1"] = """Hendryks default jpg 6697400"""
-
-        ws2["C1"] = "Asset"
-
-        ws2["A2"] = "verlinktes Modul"
-        ws2["B2"] = "Objekte"  # todo alternativer Wert Restaurierung
-
-        ws2["A3"] = "OrgUnit (optional)"
-        ws2["B3"] = ""
-        ws2[
-            "C3"
-        ] = """OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen). 
-        Die Suche der existierenden Assets wird auf den angegebenen Bereich eingeschränkt. 
-        Wenn kein Bereich angegenen, wird die Suche auch nicht eingeschränkt. Gültige 
-        orgUnits sind z.B. EMArchiv, EMMusikethnologie, EMMedienarchiv, EMPhonogrammArchiv"""
-        # ws2["C3"].alignment = Alignment(wrap_text=True)
-
-        ws2["A4"] = "Zielverzeichnis"
-        ws2[
-            "C4"
-        ] = """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
-        Backslash. Wenn Feld leer. wird Datei nicht bewegt."""
-        ws2["A5"] = "Filemask"
-        ws2["B5"] = "*.jpg"  # temporary new default
-        ws2["C5"] = "Filemask für rekursive Suche, default ist *"
-
-        ws2.column_dimensions["A"].width = 25
-        ws2.column_dimensions["B"].width = 25
-        ws2.column_dimensions["C"].width = 25
-
-        ws2["A6"] = "Erstellungsdatum"
-        ws2["B6"] = datetime.today().strftime("%Y-%m-%d")
-
-        ws2["A7"] = "Ignore suspicious?"
-        ws2["B7"] = "True"
-
-        for row in ws2.iter_rows(min_col=1, max_col=1):
-            for cell in row:
-                cell.font = Font(bold=True)
-
-        for row in ws2.iter_rows(min_col=3, max_col=3):
-            for cell in row:
-                cell.font = blue
-
+        self._make_conf()
         self.xls.save()
 
     def initial_offset(self) -> int:
@@ -436,16 +383,12 @@ class AssetUploader(BaseApp):
         """
         self._init_wbws()
 
-        check_if_none = {
-            "B1": "ERROR: Missing configuration value: No templateID provided!",
-            "B3": "ERROR: Missing configuration value: orgUnit not filled in!",
+        required = {
+            "B1": "No templateID provided!",
+            "B3": "orgUnit not filled in!",
             # B4 is now optional
-            # "B4": "ERROR: Missing configuration value: Target directory empty!",
         }
-        ws2 = self.wb["Conf"]
-        for cell in check_if_none:
-            if ws2[cell].value is None:
-                raise ConfigError(check_if_none[cell])
+        self.xls.raise_if_conf_value_missing(required)
 
         if not Path(self.ws["A3"].value).exists():
             # got here after I manually uploaded one file somehow
@@ -611,17 +554,11 @@ class AssetUploader(BaseApp):
         return rno
 
     def _init_wbws(self):
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-        self.wb = self._init_excel(path=excel_fn)
-
+        self.xls.raise_if_no_file()
+        self.wb = self.xls.get_or_create_wb()
         # die if not writable so that user can close it before waste of time
         self.xls.save()
-
-        try:
-            self.ws = self.wb["Assets"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Assets'")
+        self.ws = self.wb["Assets"]
 
     def _get_mulId(self, *, fullpath: Path) -> int | str:
         """
@@ -654,6 +591,54 @@ class AssetUploader(BaseApp):
             self.objIds_cache[identNr] = objIds
             # print(f"   new objId from RIA [{objIds}]")
             return objIds
+
+    def _make_conf(self) -> None:
+        ws2 = wb.create_sheet("Conf")
+        ws2["A1"] = "templateID"
+        ws2["B1"] = ""
+        ws["C1"] = "Hendryks default jpg 6697400"
+
+        ws2["C1"] = "Asset"
+
+        ws2["A2"] = "verlinktes Modul"
+        ws2["B2"] = "Objekte"  # todo alternativer Wert Restaurierung
+
+        ws2["A3"] = "OrgUnit (optional)"
+        ws2["B3"] = ""
+        ws2[
+            "C3"
+        ] = """OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen). 
+        Die Suche der existierenden Assets wird auf den angegebenen Bereich eingeschränkt. 
+        Wenn kein Bereich angegenen, wird die Suche auch nicht eingeschränkt. Gültige 
+        orgUnits sind z.B. EMArchiv, EMMusikethnologie, EMMedienarchiv, EMPhonogrammArchiv"""
+        # ws2["C3"].alignment = Alignment(wrap_text=True)
+
+        ws2["A4"] = "Zielverzeichnis"
+        ws2[
+            "C4"
+        ] = """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
+        Backslash. Wenn Feld leer. wird Datei nicht bewegt."""
+        ws2["A5"] = "Filemask"
+        ws2["B5"] = "*.jpg"  # temporary new default
+        ws2["C5"] = "Filemask für rekursive Suche, default ist *"
+
+        ws2.column_dimensions["A"].width = 25
+        ws2.column_dimensions["B"].width = 25
+        ws2.column_dimensions["C"].width = 25
+
+        ws2["A6"] = "Erstellungsdatum"
+        ws2["B6"] = datetime.today().strftime("%Y-%m-%d")
+
+        ws2["A7"] = "Ignore suspicious?"
+        ws2["B7"] = "True"
+
+        for row in ws2.iter_rows(min_col=1, max_col=1):
+            for cell in row:
+                cell.font = Font(bold=True)
+
+        for row in ws2.iter_rows(min_col=3, max_col=3):
+            for cell in row:
+                cell.font = blue
 
     def _move_file(self, *, src: str, dst: str) -> None:
         """

@@ -109,13 +109,11 @@ class PrepareUpload(BaseApp):
         if self.limit != -1 and self.limit < 3:
             raise ValueError("ERROR: limit < 3 is pointless!")
         print(f"Using limit {self.limit}")
-        # self._init_log()
-        self.excel_fn = Path("prepare.xlsx")
-        if self.excel_fn.exists():
+        self.xls = Xls(path="prepare.xlsx")
+        if self.xls.file_exists():
             print(f"* {self.excel_fn} exists already")
         else:
             print(f"* About to make new Excel '{self.excel_fn}'")
-        self.xls = Xls(path=self.excel_fn)
 
         self.table_desc = {
             "filename": {
@@ -182,10 +180,13 @@ class PrepareUpload(BaseApp):
                 "col": "K",
             },
         }
-        self.wb = self._init_excel(path=self.excel_fn)
-        self.ws = self._init_sheet(workbook=self.wb)  # explicit is better than implicit
-        ws2 = self.wb["Conf"]
-        self.filemask = ws.cell["B3"]
+        self.wb = self.xls.get_or_create_wb()
+        self.ws = self.xls.get_or_create_sheet(title="prepareUpload")
+        # self.wb = self._init_excel(path=self.excel_fn)
+        # self.ws = self._init_sheet(workbook=self.wb)  # explicit is better than implicit
+        # conf_ws = self.wb["Conf"]
+        conf_ws = self.xls.get_or_create_sheet(title="Conf")
+        self.filemask = conf_ws.cell["B3"]
 
     #
     # public
@@ -198,7 +199,7 @@ class PrepareUpload(BaseApp):
         (b) figure out the objId for the identNr
         (c) based on this information, fill in the candidate cell
         """
-        self._raise_if_excel_has_no_content()
+        self.xls._raise_if_no_content()
         for cells, rno in self._loop_table2(sheet=self.ws):
             if cells["assetUploaded"] is not None and cells["identNr"] is not None:
                 self.mode = "ff"
@@ -239,9 +240,9 @@ class PrepareUpload(BaseApp):
             objIds_str = "; ".join(str(objId) for objId in objIds)
             return objIds_str
 
-        ws2 = self.wb["Conf"]
+        conf_ws = self.xls.get_or_create_sheet(title="Conf")
         try:
-            temp_str = ws2["B1"].value  # was "Object 12345". Keep that?
+            temp_str = conf_ws["B1"].value  # was "Object 12345". Keep that?
         except:
             raise ConfigError("Config value 'template' not defined!")
 
@@ -250,7 +251,7 @@ class PrepareUpload(BaseApp):
         tid = int(tid.strip())
         print(f"***template: {ttype} {tid}")
 
-        self._raise_if_excel_has_no_content()
+        self.xls._raise_if_no_content()
         # we want the same template for all records
 
         templateM = self.client.get_template(ID=tid, mtype=ttype)
@@ -280,10 +281,11 @@ class PrepareUpload(BaseApp):
         self.xls.save()
 
     def init(self) -> None:
-        self.xls.raise_if_no_file()
-
-        # die if not writable so that user can close it before waste of time
-        # self._save_excel(path=self.excel_fn)
+        self.xls.raise_if_file()
+        wb = self.xls.get_or_create_wb()
+        ws = self.xls.get_or_create_sheet(title="Prepare")
+        self.xls.write_header(description=self.table_desc, sheet=ws)
+        self._make_conf()
         self.xls.save()
 
     def mv_dupes(self) -> None:
@@ -296,7 +298,7 @@ class PrepareUpload(BaseApp):
         if "mv_dupes" not in self.conf:
             raise ConfigError("config value 'mv_dupes' missing")
 
-        self._raise_if_excel_has_no_content()
+        self.xls._raise_if_no_content()
         mk_dupes_dir()
         for row, c in self._loop_table():  # start at 3rd row
             src_cell = row[6]
@@ -510,45 +512,26 @@ class PrepareUpload(BaseApp):
             return "; ".join(real_parts)
         return "None"
 
-    def _init_sheet(self, workbook: Workbook) -> openpyxl.worksheet.worksheet.Worksheet:
-        """
-        Returns the worksheet, makes a new document if necessary. Needs to be specific to app.
-        """
-        sheet_title = "prepareUpload"
-        try:
-            ws = workbook[sheet_title]
-        except:  # new sheet
-            ws = self.wb.active
-        else:
-            return ws  # sheet exists already
+    def _make_conf(self) -> None:
+        # ws_conf = self.wb.create_sheet("Conf")
+        conf_ws = self.xls.get_or_create(title="Conf")
+        conf_ws["A1"] = "template ID"
+        conf_ws["C1"] = "Format: Object 1234567"
 
-        # this is a new sheet
-        ws.title = sheet_title
-        self._write_table_description(description=self.table_desc, sheet=ws)
+        conf_ws["A2"] = "orgUnit"
+        conf_ws[
+            "C2"
+        ] = """Um die ID Suche auf eine orgUnit (Bereich) einzuschränken. Optional. z.B. EMSudseeAustralien"""
 
-        try:
-            ws_conf = workbook["Conf"]
-        except:  # new sheet
-            ws_conf = self.wb.create_sheet("Conf")
-            ws_conf["A1"] = "template ID"
-            ws_conf["C1"] = "Format: Object 1234567"
+        conf_ws["A3"] = "Filemask"
+        conf_ws[
+            "C3"
+        ] = """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'."""
+        conf_ws.column_dimensions["B"].width = 20
 
-            ws_conf["A2"] = "orgUnit"
-            ws_conf[
-                "C2"
-            ] = """Um die ID Suche auf eine orgUnit (Bereich) einzuschränken. Optional. z.B. EMSudseeAustralien"""
-
-            ws_conf["A3"] = "Filemask"
-            ws_conf[
-                "C3"
-            ] = """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'."""
-            ws_conf.column_dimensions["B"].width = 20
-
-        for row in ws_conf.iter_rows(min_col=1, max_col=1):
+        for row in conf_ws.iter_rows(min_col=1, max_col=1):
             for cell in row:
                 cell.font = Font(bold=True)
-
-        return ws
 
     def _objId_for_ident(self, c) -> None:
         """
@@ -579,16 +562,6 @@ class PrepareUpload(BaseApp):
             else:
                 c["partsObjIds"].value = "None"
             c["partsObjIds"].alignment = Alignment(wrap_text=True)
-
-    def _raise_if_excel_has_no_content(self) -> bool:
-        # assuming that after scandisk excel has to have more than 2 lines
-        if self.ws.max_row < 3:
-            raise NoContentError(
-                f"ERROR: no data found; excel contains {self.ws.max_row} rows!"
-            )
-        return True
-        # else:
-        #    print(f"* Excel has data: {self.ws.max_row} rows")
 
     def _suspicious_characters(self, *, identNr: str | None) -> bool:
         # print (f"***suspicious? {identNr}")
