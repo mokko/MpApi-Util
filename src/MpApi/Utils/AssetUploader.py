@@ -177,6 +177,7 @@ class AssetUploader(BaseApp):
                 u_dir.mkdir()
 
         # breaks at limit, but doesn't save on its own
+        hits = 0
         for cells, rno in self._loop_table2(sheet=self.ws, offset=self.offset):
             # relative path; assume dir hasn't changed since scandir run
             print(f"{rno}: {cells['identNr'].value} up")
@@ -190,11 +191,11 @@ class AssetUploader(BaseApp):
                 try:
                     self._create_new_asset(cells)
                     self._upload_file(cells, rno)
-                    self._set_Standardbild(cells)
+                    hits = self._set_Standardbild(cells)
                 except KeyboardInterrupt:
                     self.xls.request_shutdown()
                 # dont save if here, save after loop instead
-        self.xls.shutdown_if_requested()
+                self.xls.shutdown_if_requested()
         self.xls.save()
 
     def init(self) -> None:
@@ -268,7 +269,7 @@ class AssetUploader(BaseApp):
         file_list = list()  # set not necessary because every file only one time
         chunk_size = self.limit - offset
         print(f"   chunk size: {chunk_size}")
-        with tqdm(total=chunk_size + len(attached_cache)) as pbar:
+        with tqdm(total=chunk_size + len(attached_cache), unit=" files") as pbar:
             for p in src_dir.glob(f"**/{self.filemask}"):
                 if (
                     p.name.startswith(".")
@@ -311,6 +312,7 @@ class AssetUploader(BaseApp):
         """
         print("Only setting Standardbild")
         self._check_scandir()
+        hits = 0
         for c, rno in self._loop_table2(sheet=self.ws):
             # relative path; assume dir hasn't changed since scandir run
             # fn = c["filename"].value
@@ -319,11 +321,12 @@ class AssetUploader(BaseApp):
             if c["ref"].value is None:
                 print("   no object reference cannot set standardbild")
                 continue
-            self._set_Standardbild(c)
+            hits += self._set_Standardbild(c)
             # will save even if nothing changed
-            if rno is not None and rno % 5 == 0:
+            if rno is not None and rno % 5 == 0 and hits > 0:
                 self.xls.save()
                 self.xls.backup()
+                hits = 0
             self.xls.shutdown_if_requested()
         self.xls.save()
 
@@ -602,10 +605,10 @@ class AssetUploader(BaseApp):
             return objIds
 
     def _make_conf(self) -> None:
-        ws2 = wb.create_sheet("Conf")
+        ws2 = self.xls.get_or_create_sheet(title="Conf")
         ws2["A1"] = "templateID"
         ws2["B1"] = ""
-        ws["C1"] = "Hendryks default jpg 6697400"
+        ws2["C1"] = "Hendryks default jpg 6697400"
 
         ws2["C1"] = "Asset"
 
@@ -691,19 +694,22 @@ class AssetUploader(BaseApp):
         else:
             print("   asset already attached")
 
-    def _set_Standardbild(self, c) -> None:
+    def _set_Standardbild(self, c) -> int:
         """
         Set asset as standardbild for known object; only succeeds if object has no
         Standardbild yet.
         """
         # print("enter _set_Standardbild")
         if c["standardbild"].value is not None:
-            if c["standardbild"].value.lower() and c["attached"].value.lower() == "x":
-                objId = int(c["objIds"].value)
-                mulId = int(c["asset_fn_exists"].value)
+            if c["standardbild"].value == "x" and c["attached"].value == "x":
+                objId = int(c["ref"].value)
+                mulId = int(c["asset_fn_exists"].value.split(";")[0])
+                # mulId = int(c["asset_fn_exists"].value)
                 print("   setting standardbild")
                 self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
                 c["standardbild"].value = "erledigt"
+                return 1
+        return 0
 
     def _write_asset_fn(self, cells, fullpath):
         if cells["asset_fn_exists"].value is None:
@@ -783,36 +789,18 @@ class AssetUploader(BaseApp):
                 cells["photographer"].value = creator
 
     def _write_ref(self, cells):
+        """
+        if asset_fn exists we assume that asset has already been uploaded
+        if no single objId has been identified, we will not create asset
+        """
         if cells["ref"].value is None:
-            # if asset_fn exists we assume that asset has already been uploaded
-            # if no single objId has been identified, we will not create asset
-            whole_objIds = cells["whole_objIds"].value
-            if cells["asset_fn_exists"].value == "None":
-                # if single objId has been identified use it as ref
-                objIds = cells["objIds"].value
-                # if single part objId has been identified use it as ref
-                if objIds != "None" and ";" not in str(objIds):
-                    print("   taking ref from objIds...")
-                    cells["ref"].value = int(objIds)
-                    cells["ref"].font = teal
-                # taking ref from part
-                elif cells["parts_objIds"].value != "None" and ";" not in str(
-                    cells["parts_objIds"].value
-                ):
-                    print("   taking ref from parts...")
-                    cells["ref"].value = (
-                        cells["parts_objIds"].value.split(" ")[0].strip()
-                    )
-                    cells["ref"].font = red
-                elif not "None" in whole_objIds:  # this only works for single entries
-                    ident_whole, objId = whole_objIds.split(": ")
-                    objId = int(objId)
-                    print("   taking ref from whole...")
-                    # assuming ref is empty at this point...
-                    cells["ref"].value = objId
-                else:  # right indent?
-                    cells["ref"].value = "None"
-                    cells["ref"].font = red  # seems not to work!
+            objIds = cells["objIds"].value
+            if objIds != "None" and ";" not in str(objIds):
+                print("   taking ref from objIds...")
+                cells["ref"].value = int(objIds)
+                cells["ref"].font = teal
+            # there used to be a thing that decided which objId to take
+            # from part or whole. that seemed not to work
 
     def _write_targetpath(self, cells):
         if cells["targetpath"].value is None:

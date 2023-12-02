@@ -46,7 +46,11 @@ class Xls:
             ws = self.wb[title]  # sheet exists already
         except:  # new sheet
             ws = self.wb.active
-            ws.title = title
+            if ws.title == "Sheet":
+                ws.title = title
+            else:
+                self.wb.create_sheet(title)
+            ws = self.wb[title]
         return ws
 
     def get_or_create_wb(self) -> Workbook:
@@ -130,7 +134,6 @@ class Xls:
         """
         Do the shutdown if class variable is set. To be used in the loop at an appropriate time.
         """
-        print("ÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜ")
         if self.shutdown_requested:
             self.save()
             print("Planned shutdown.")
