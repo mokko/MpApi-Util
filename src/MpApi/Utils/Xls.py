@@ -114,7 +114,7 @@ class Xls:
         """
         Prints a message and changes class variable. To be called in except KeyboardInterrupt.
         """
-        print("Keyboard interrupt received, requesting gentle shutdown...")
+        print("Keyboard interrupt received, requesting shutdown...")
         self.shutdown_requested = True
 
     def save(self) -> None:
@@ -130,6 +130,7 @@ class Xls:
         """
         Do the shutdown if class variable is set. To be used in the loop at an appropriate time.
         """
+        print("ÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜ")
         if self.shutdown_requested:
             self.save()
             print("Planned shutdown.")

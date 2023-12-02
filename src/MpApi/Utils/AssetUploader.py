@@ -313,15 +313,18 @@ class AssetUploader(BaseApp):
         self._check_scandir()
         for c, rno in self._loop_table2(sheet=self.ws):
             # relative path; assume dir hasn't changed since scandir run
-            fn = c["filename"].value
+            # fn = c["filename"].value
 
             print(f"{rno}: {c['identNr'].value}")
             if c["ref"].value is None:
-                print(
-                    "   object reference unknown, not creating assets nor attachments"
-                )
+                print("   no object reference cannot set standardbild")
                 continue
             self._set_Standardbild(c)
+            # will save even if nothing changed
+            if rno is not None and rno % 5 == 0:
+                self.xls.save()
+                self.xls.backup()
+            self.xls.shutdown_if_requested()
         self.xls.save()
 
     def wipe(self) -> None:
@@ -555,10 +558,16 @@ class AssetUploader(BaseApp):
 
     def _init_wbws(self):
         self.xls.raise_if_no_file()
-        self.wb = self.xls.get_or_create_wb()
         # die if not writable so that user can close it before waste of time
         self.xls.save()
-        self.ws = self.wb["Assets"]
+        try:
+            self.wb
+        except:
+            self.wb = self.xls.get_or_create_wb()
+        try:
+            self.ws
+        except:
+            self.ws = self.wb["Assets"]
 
     def _get_mulId(self, *, fullpath: Path) -> int | str:
         """
@@ -684,18 +693,17 @@ class AssetUploader(BaseApp):
 
     def _set_Standardbild(self, c) -> None:
         """
-        If column standardbild = x, try to set asset as standardbild for known object;
-        only succeeds if object has no Standardbild yet.
+        Set asset as standardbild for known object; only succeeds if object has no
+        Standardbild yet.
         """
         # print("enter _set_Standardbild")
         if c["standardbild"].value is not None:
-            if c["standardbild"].value.lower() == "x":
+            if c["standardbild"].value.lower() and c["attached"].value.lower() == "x":
                 objId = int(c["objIds"].value)
                 mulId = int(c["asset_fn_exists"].value)
+                print("   setting standardbild")
                 self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
                 c["standardbild"].value = "erledigt"
-                self.xls.save()
-                print("\tstandardbild set")
 
     def _write_asset_fn(self, cells, fullpath):
         if cells["asset_fn_exists"].value is None:
