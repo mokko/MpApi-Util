@@ -714,8 +714,8 @@ class AssetUploader(BaseApp):
                         mulId = int(assetID.split(";")[0])
                     print("   setting standardbild")
                     r = self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
-                    print(f"xxx {r.status_code}")
-                    if r is not None and r.status_code == "402":
+                    if r is not None and r.status_code == 204:
+                        print(f"xxx {r.status_code}")
                         print("   setting column N to done")
                         c["standardbild"].value = "done"
                     else:

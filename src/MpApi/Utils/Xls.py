@@ -102,7 +102,7 @@ class Xls:
         Raise if file exists already; returns False if file does NOT exist.
         """
         if self.path.exists():
-            raise Exception(f"ERROR {self.path} does exist already")
+            raise Exception(f"ERROR: {self.path} exists already!")
         return False
 
     def raise_if_no_file(self) -> bool:
@@ -111,7 +111,7 @@ class Xls:
         """
 
         if not self.path.exists():
-            raise Exception(f"ERROR {self.path} does NOT exist")
+            raise Exception(f"ERROR: {self.path} does NOT exist!")
         return False
 
     def request_shutdown(self):
