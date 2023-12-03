@@ -702,7 +702,7 @@ class AssetUploader(BaseApp):
         stdbild = c["standardbild"].value  # just a shortcut
         if stdbild is not None:
             if stdbild == "done":
-                print("Standardbild says 'done' already")
+                print("   standardbild says 'done' already")
             else:
                 if stdbild == "x" and c["attached"].value == "x":
                     objId = int(c["ref"].value)
@@ -714,8 +714,11 @@ class AssetUploader(BaseApp):
                         mulId = int(assetID.split(";")[0])
                     print("   setting standardbild")
                     r = self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
-                    if r is not None and r.status_code == 402:
+                    if r is not None and r.status_code == "402":
+                        print("   setting column N to done")
                         c["standardbild"].value = "done"
+                    else:
+                        print("   NOT setting column N to done")
                     return 1
         return 0
 
