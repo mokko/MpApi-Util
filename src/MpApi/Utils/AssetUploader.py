@@ -451,7 +451,7 @@ class AssetUploader(BaseApp):
             print(f"   creatorID {creatorID} _create_from_template")
             r.set_creator(ID=creatorID)
         newAssetM = r.toModule()
-        newAssetM.toFile(path="debug.template.xml")
+        # newAssetM.toFile(path="debug.template.xml")
         new_asset_id = self.client.create_asset_from_template(
             templateM=newAssetM,
         )
@@ -699,16 +699,24 @@ class AssetUploader(BaseApp):
         Set asset as standardbild for known object; only succeeds if object has no
         Standardbild yet.
         """
-        # print("enter _set_Standardbild")
-        if c["standardbild"].value is not None:
-            if c["standardbild"].value == "x" and c["attached"].value == "x":
-                objId = int(c["ref"].value)
-                mulId = int(c["asset_fn_exists"].value.split(";")[0])
-                # mulId = int(c["asset_fn_exists"].value)
-                print("   setting standardbild")
-                self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
-                c["standardbild"].value = "erledigt"
-                return 1
+        stdbild = c["standardbild"].value  # just a shortcut
+        if stdbild is not None:
+            if stdbild == "done":
+                print("Standardbild says 'done' already")
+            else:
+                if stdbild == "x" and c["attached"].value == "x":
+                    objId = int(c["ref"].value)
+                    assetID = c["asset_fn_exists"].value
+                    # print(f"   {assetID=}")
+                    try:
+                        mulId = int(assetID)
+                    except:
+                        mulId = int(assetID.split(";")[0])
+                    print("   setting standardbild")
+                    r = self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
+                    if r is not None and r.status_code == 402:
+                        c["standardbild"].value = "done"
+                    return 1
         return 0
 
     def _write_asset_fn(self, cells, fullpath):

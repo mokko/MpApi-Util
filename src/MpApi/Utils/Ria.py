@@ -41,7 +41,10 @@ from mpapi.module import Module
 from mpapi.search import Search
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
 from pathlib import Path
+import requests
 from typing import Optional
+
+Response = requests.models.Response
 
 DEBUG = True
 
@@ -493,7 +496,7 @@ class RIA:
             text = text.replace("<body>", "").replace("</body>", "")
         return text
 
-    def mk_asset_standardbild2(self, *, objId: int, mulId: int) -> None:
+    def mk_asset_standardbild2(self, *, objId: int, mulId: int) -> Response | None:
         """
         Let's try another version where we only change one moduleReferenceItem, and not
         the whole record. In other words: let's use mpapi.updateRepeatableGroup()
@@ -560,8 +563,10 @@ class RIA:
                 xml=xml,
             )
             print(r)
+            return r
         else:
             print("Standardbild already exsts, aborting")
+            return None
 
     def mk_asset_standardbild(self, *, objId: int, mulId: int) -> None:
         """
