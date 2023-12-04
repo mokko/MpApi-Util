@@ -83,6 +83,14 @@ class Xls:
             if conf_ws[cell].value is None:
                 raise ConfigError(base_msg + required[cell])
 
+    def raise_if_content(self, sheet: openpyxl.worksheet.worksheet.Worksheet) -> bool:
+        """
+        Raises if sheet has more than 2 lines.
+        """
+        if sheet.max_row > 2:
+            raise NoContentError(f"ERROR: Excel contains {sheet.max_row} rows!")
+        return False
+
     def raise_if_no_content(
         self, sheet: openpyxl.worksheet.worksheet.Worksheet
     ) -> bool:
@@ -118,21 +126,31 @@ class Xls:
         """
         Prints a message and changes class variable. To be called in except KeyboardInterrupt.
         """
-        print("Keyboard interrupt received, requesting shutdown...")
+        print("Keyboard interrupt recieved, requesting shutdown...")
         self.shutdown_requested = True
 
     def save(self) -> None:
         """Made this only to have same print msgs all the time"""
         print(f"   saving {self.path}")
-
         try:
             self.wb.save(filename=self.path)
         except KeyboardInterrupt:
             self.request_shutdown()
 
+    def save_and_shutdown_if_requested(self):
+        self.save()
+        if self.shutdown_requested:
+            print("Planned shutdown.")
+            sys.exit(0)
+
     def shutdown_if_requested(self):
         """
         Do the shutdown if class variable is set. To be used in the loop at an appropriate time.
+
+        To be sure, we include a save here. That is the usual order should be
+        self.shutdown_if_requested()
+        self.save()
+        We could also rename this to save_and_shutdown_if_requested() and save one line.
         """
         if self.shutdown_requested:
             self.save()

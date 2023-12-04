@@ -296,7 +296,7 @@ class BaseApp:
                 pbar.update()
                 self.ws.delete_rows(rno)
                 # rno += 1
-        self._save_excel(path=self.xls.path)
+        self.xls.save()
 
     def _write_table_description(self, *, description: dict, sheet: worksheet):
         """

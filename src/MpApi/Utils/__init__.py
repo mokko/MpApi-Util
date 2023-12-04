@@ -181,10 +181,27 @@ def reportX():
 
 
 def restart():
-    new_call = sys.argv[1:]  # e.g. restart upload cont -> upload cont
-    retval = 1
-    while retval != 0:  # a return value of zero indicates a normal exit
+    """
+    restart a shell command several times or infinitely.
+    USAGE:
+        restart -x 3 echo m
+        restart echo m
+
+    Interrupt with CTRL+C
+    """
+    if sys.argv[1] == "-x":
+        start = 3
+        times = int(sys.argv[2])
+    else:
+        start = 1
+        times = -1
+
+    new_call = sys.argv[start:]  # e.g. restart upload cont -> upload cont
+    while times > 0 or times < 0:
         retval = subprocess.run(new_call, shell=True)
+        times -= 1
+        # if retval == 0:
+        #    break
 
 
 def sren():

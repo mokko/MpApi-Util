@@ -195,7 +195,7 @@ class AssetUploader(BaseApp):
                 except KeyboardInterrupt:
                     self.xls.request_shutdown()
                 # dont save if here, save after loop instead
-                self.xls.shutdown_if_requested()
+            self.xls.shutdown_if_requested()
         self.xls.save()
 
     def init(self) -> None:
@@ -707,15 +707,15 @@ class AssetUploader(BaseApp):
                 if stdbild == "x" and c["attached"].value == "x":
                     objId = int(c["ref"].value)
                     assetID = c["asset_fn_exists"].value
-                    # print(f"   {assetID=}")
                     try:
                         mulId = int(assetID)
                     except:
+                        # if multiple mulIDs, take the first
                         mulId = int(assetID.split(";")[0])
                     print("   setting standardbild")
                     r = self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
                     if r is not None and r.status_code == 204:
-                        print(f"xxx {r.status_code}")
+                        # print(f"xxx {r.status_code}")
                         print("   setting column N to done")
                         c["standardbild"].value = "done"
                     else:

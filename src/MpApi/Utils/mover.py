@@ -11,6 +11,7 @@ from datetime import datetime
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.Ria import RIA
+from MpApi.Utils.Xls import Xls
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
@@ -35,7 +36,9 @@ class Mover(BaseApp):
             raise ValueError("ERROR: Use limit = -1 (no limit) or > 2!")
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
-        self.wb = self._init_excel(path=excel_fn)
+        self.xls = Xls(path=excel_fn)
+
+        self.wb = self.xls.get_or_create_wb()
 
         self.table_desc = {
             "filename": {
@@ -117,52 +120,18 @@ class Mover(BaseApp):
         Don't overwrite existing Excel file.
         """
 
-        if excel_fn.exists():
-            print(f"WARN: Abort init since '{excel_fn}' exists already!")
-            return
-
-        self.wb = Workbook()
-        ws = self.wb.active
-        ws.title = "Dateien"
-
-        self._write_table_description(description=self.table_desc, sheet=ws)
-
-        #
-        # Conf Sheet
-        #
-        ws2 = self.wb.create_sheet("Conf")
-        ws2["A1"] = "target dir"
-
-        ws2["A2"] = "orgUnit"
-        ws2["C2"] = "z.B. EMArchiv, EMMusikethnologie, EMSudundSudostasien"
-
-        ws2["A3"] = "Filemask"
-        ws2["B3"] = "**/*.jpg"
-        ws2[
-            "C3"
-        ] = """vollständige Python filemask; rekursives Scannen kann dadurch ab- und angestellt werden."""
-
-        ws2["A4"] = "Exclude Dirs"
-        ws2["B4"] = "Andere Dokumente"
-        ws2[
-            "C4"
-        ] = """Mehrere Verzeichnisse durch ; trennen. Angegebene Verzeichnisse werden ignoriert."""
-
-        ws2["A5"] = "Erstellungsdatum"
-        ws2["B5"] = datetime.today().strftime("%Y-%m-%d")
-
-        ws2.column_dimensions["A"].width = 25
-
-        for each in "A1", "A2", "A3", "A4":
-            ws2[each].font = Font(bold=True)
-        self._save_excel(path=excel_fn)
+        self.xls.raise_if_file()
+        ws = self.xls.get_or_create_sheet(title="Dateien")
+        self.xls.write_header(description=self.table_desc, sheet=ws)
+        self._make_conf()
+        self.xls.save()
 
     def move(self):
         self._check_move()
         for c, rno in self._loop_table2(sheet=self.ws):
             if c["move"].value == "x" and c["moved"].value is None:
                 if c["targetpath"].value is None:
-                    self._save_excel(path=excel_fn)
+                    self.xls.save()
                     self._warning(
                         f"F{rno}", "ERROR: Move says move, but targetpath has no info!"
                     )
@@ -177,8 +146,8 @@ class Mover(BaseApp):
                 else:
                     print("WARNING: target path is None")
             if rno % 1000 == 0:  # save every so often
-                self._save_excel(path=excel_fn)
-        self._save_excel(path=excel_fn)
+                self.xls.save()
+        self.xls.save()
 
     def rescan(self):
         """
@@ -201,7 +170,7 @@ class Mover(BaseApp):
             else:
                 raise TypeError("ERROR: File not found!")
             count += 1
-        self._save_excel(path=excel_fn)  # save after every file/row
+        self.xls.save()  # save after every file/row
 
     def scandir(self):
         """
@@ -211,9 +180,7 @@ class Mover(BaseApp):
         # check if excel exists, has the expected shape and is writable
         self._check_scandir()
         print(f"   filemask: {self.filemask}")
-        if self.ws.max_row > 2:
-            print("   restarting scandir")
-            # raise ConfigError(f"ERROR: Mover's scandir can't re-run scandir!")
+        self.xls.raise_if_content(sheet=self.ws)
 
         c = 3
         with tqdm(total=self.ws.max_row - 2) as pbar:
@@ -240,12 +207,12 @@ class Mover(BaseApp):
                     # print("new path")
                     self._scan_per_file(path=p, count=c)
                     if c % 1000 == 0:  # save every so often
-                        self._save_excel(path=excel_fn)
+                        self.xls.save()
                 if self.limit == c:
                     print("* Limit reached")
                     break
                 c += 1
-            self._save_excel(path=excel_fn)
+            self.xls.save()
 
     def wipe(self):
         self._check_move()
@@ -258,7 +225,7 @@ class Mover(BaseApp):
         if not excel_fn.exists():
             raise ConfigError(f"ERROR: {excel_fn} NOT found!")
 
-        self._save_excel(path=excel_fn)
+        self.xls.save()
 
         try:
             self.ws = self.wb["Dateien"]
@@ -269,19 +236,14 @@ class Mover(BaseApp):
             raise ConfigError(f"ERROR: Excel empty!")
 
     def _check_scandir(self) -> None:
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-
-        self._save_excel(path=excel_fn)
+        self.xls.raise_if_no_file()
+        self.xls.save()
         try:
             self.ws = self.wb["Dateien"]
         except:
             raise ConfigError("ERROR: Excel file has no sheet 'Dateien'")
 
-        if self.ws.max_row < 2:
-            raise ConfigError(
-                f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
-            )
+        self.xls.raise_if_no_content()
         self.orgUnit = self._get_orgUnit(cell="B2")  # can be None
 
         conf_ws = self.wb["Conf"]
@@ -302,6 +264,33 @@ class Mover(BaseApp):
             excludeL = exclude_str.split(";")
             self.exclude_dirs = [d.strip() for d in excludeL]
 
+    def _make_conf(self) -> None:
+        ws2 = self.xls.get_or_create_sheet(title="Conf")
+        ws2["A1"] = "target dir"
+
+        ws2["A2"] = "orgUnit"
+        ws2["C2"] = "z.B. EMArchiv, EMMusikethnologie, EMSudundSudostasien"
+
+        ws2["A3"] = "Filemask"
+        ws2["B3"] = "**/*.jpg"
+        ws2[
+            "C3"
+        ] = """vollständige Python filemask; rekursives Scannen kann dadurch ab- und angestellt werden."""
+
+        ws2["A4"] = "Exclude Dirs"
+        ws2["B4"] = "Andere Dokumente"
+        ws2[
+            "C4"
+        ] = """Mehrere Verzeichnisse durch ; trennen. Angegebene Verzeichnisse werden ignoriert."""
+
+        ws2["A5"] = "Erstellungsdatum"
+        ws2["B5"] = datetime.today().strftime("%Y-%m-%d")
+
+        ws2.column_dimensions["A"].width = 25
+
+        for each in "A1", "A2", "A3", "A4":
+            ws2[each].font = Font(bold=True)
+
     def _move(self, fro: Path, to: Path, rno: int, c: dict) -> None:
         """
         Copy file at fro to the path at to, make directories at target and write success
@@ -314,7 +303,6 @@ class Mover(BaseApp):
             if to.exists():
                 # should not happen, as conflicts should be resolved earlier
                 self.ws[f"I{rno}"].font = red
-                # self._save_excel(path=excel_fn)
                 self._warning(f"F{rno}", f"WARNING: target location exists")
                 # raise Exception(f"file exists already: '{to}'")
             else:
@@ -351,9 +339,6 @@ class Mover(BaseApp):
         self._write_targetpath(c)
 
         print(f"{count}: {path.name} [{c['move'].value}] {path.parent}")
-
-        # if (count/200).is_integer():
-        #    self._save_excel(path=excel_fn)
 
     def _warning(self, cell_label: str, msg: str) -> None:
         print(msg)
