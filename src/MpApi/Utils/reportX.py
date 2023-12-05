@@ -7,8 +7,8 @@ The report is written in Excel (xlsx). It's basically a list of files with some 
 """
 import datetime
 from MpApi.Utils.logic import extractIdentNr
-import MpApi.Utils.BaseApp
-from MpApi.Utils.Xls import Xls, BaseApp, ConfigError
+from MpApi.Utils.BaseApp import BaseApp
+from MpApi.Utils.Xls import Xls, ConfigError
 from openpyxl import load_workbook, Workbook, worksheet
 from openpyxl.styles import Alignment, Font
 from pathlib import Path

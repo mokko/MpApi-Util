@@ -26,7 +26,7 @@ Let's typically log errors?
 import logging
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.logic import has_parts
-from MpApi.Utils.Xls import Xls
+from MpApi.Utils.Xls import Xls, ConfigError, NoContentError
 from pathlib import Path
 from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.styles import Alignment, Font
@@ -34,15 +34,6 @@ import re
 import sys
 from tqdm import tqdm
 from typing import Iterator, Optional, Union
-
-
-# from typing import Any
-class ConfigError(Exception):
-    pass
-
-
-class NoContentError(Exception):
-    pass
 
 
 class BaseApp:

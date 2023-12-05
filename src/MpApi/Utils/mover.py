@@ -9,17 +9,17 @@ mover move      do the actual moving of the files
 
 from datetime import datetime
 from mpapi.constants import get_credentials
-from MpApi.Utils.BaseApp import BaseApp, ConfigError
+from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.Ria import RIA
-from MpApi.Utils.Xls import Xls
-from openpyxl import Workbook, load_workbook
+from MpApi.Utils.Xls import Xls, ConfigError
+from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
 import re
 import shutil
 from tqdm import tqdm
 
-excel_fn = Path("mover.xlsx")  # do we want a central Excel?
+excel_fn = Path("mover.xlsx")
 red = Font(color="FF0000")
 # parser = etree.XMLParser(remove_blank_text=True)
 teal = Font(color="008080")
@@ -142,7 +142,10 @@ class Mover(BaseApp):
                 print(f"{rno}/{self.ws.max_row}: {fro}")
                 if c["targetpath"].value is not None:
                     to = Path(c["targetpath"].value)
-                    self._move(fro, to, rno, c)
+                    try:
+                        self._move(fro, to, rno, c)
+                    except KeyboardInterrupt:
+                        self.xls.request_shutdown()
                 else:
                     print("WARNING: target path is None")
             if rno % 500 == 0:  # save every so often
@@ -186,7 +189,7 @@ class Mover(BaseApp):
         print(f"   filemask: {self.filemask}")
 
         c = 3
-        with tqdm(total=self.ws.max_row - 2) as pbar:
+        with tqdm(total=self.ws.max_row - 2, unit=" files") as pbar:
             for p in Path().glob(self.filemask):
                 # print(f"S{p}")
                 p_abs = p.absolute()
@@ -208,7 +211,10 @@ class Mover(BaseApp):
                     pbar.update()
                 else:
                     # print("new path")
-                    self._scan_per_file(path=p, count=c)
+                    try:
+                        self._scan_per_file(path=p, count=c)
+                    except KeyboardInterrupt:
+                        self.xls.request_shutdown()
                     if c % 1000 == 0:  # save every so often
                         self.xls.save()
                 if self.limit == c:
@@ -227,25 +233,20 @@ class Mover(BaseApp):
     # private
     #
     def _check_move(self) -> None:
-        if not excel_fn.exists():
-            raise ConfigError(f"ERROR: {excel_fn} NOT found!")
-
+        self.xls.raise_if_no_file()
         self.xls.save()
 
-        try:
-            self.ws = self.wb["Dateien"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Dateien'")
-
-        if self.ws.max_row < 3:
-            raise ConfigError(f"ERROR: Excel empty!")
+        self.ws = self.xls.get_or_create_sheet("Dateien")
+        self.xls.raise_if_no_content()
 
     def _check_scandir(self) -> None:
         self.xls.raise_if_no_file()
         self.xls.save()
         self.xls.backup()
         self.ws = self.xls.get_sheet(title="Dateien")
-        self.xls.raise_if_content(sheet=self.ws)
+        # if we want to continue a scan that was interrupted e.g b/c it reached its limit
+        # we can't have this check
+        # self.xls.raise_if_content(sheet=self.ws)
         self.orgUnit = self._get_orgUnit(cell="B2")  # can be None
 
         conf_ws = self.wb["Conf"]
