@@ -123,21 +123,6 @@ class BaseApp:
         )
         return objId_set
 
-    def _init_excel(self, *, path: Path) -> Workbook:
-        """
-        Given a file path for an excel file, return the respective workbook
-        or make a new one if the file doesn't exist.
-        """
-        # return self.xls.get_create_wb()
-
-        # let's avoid side effects, although we're not doing this everywhere
-        if path.exists():
-            # print (f"* Loading existing excel: '{data_fn}'")
-            return load_workbook(path, data_only=True)
-        else:
-            # print (f"* Starting new excel: '{data_fn}'")
-            return Workbook()
-
     def _init_log(self) -> Path:
         fn: str = Path(sys.argv[0]).stem + ".log"
         print(f"* Using logfile '{fn}'")
@@ -274,15 +259,6 @@ class BaseApp:
             orgUnit = None
         return orgUnit
 
-    def _save_excel(self, path: Path) -> None:
-        """Made this only to have same print msgs all the time"""
-
-        print(f"   saving {path}")
-        try:
-            self.wb.save(filename=path)
-        except KeyboardInterrupt:
-            print("Catching keyboard interrupt during Excel operation; try again...")
-
     def _suspicous_character(self, *, identNr: str):
         if identNr is None or any("-", ";") in str(identNr):
             return True
@@ -297,37 +273,3 @@ class BaseApp:
                 self.ws.delete_rows(rno)
                 # rno += 1
         self.xls.save()
-
-    def _write_table_description(self, *, description: dict, sheet: worksheet):
-        """
-        Take the table description and write it to the top of the specified worksheet.
-
-        Expect a table description at self.table_desc and use that to write the first
-        two lines to an empty Excel sheet.
-
-        The table description is a dictionary structured as follows
-        self.table_desc = {
-            "filename": {
-                "label": "Asset Dateiname",
-                "desc": "aus Verzeichnis",
-                "col": "A",
-                "width": 20,
-            },
-        }
-
-        """
-
-        for itemId in description:
-            col = description[itemId]["col"]  # letter
-            sheet[f"{col}1"] = description[itemId]["label"]
-            sheet[f"{col}1"].font = Font(bold=True)
-            # print (f"{col} {self.table_desc[itemId]['label']}")
-            if "desc" in description[itemId]:
-                desc_txt = description[itemId]["desc"]
-                sheet[f"{col}2"] = desc_txt
-                sheet[f"{col}2"].font = Font(size=9, italic=True)
-                # print (f"\t{desc_txt}")
-            if "width" in description[itemId]:
-                width = description[itemId]["width"]
-                # print (f"\t{width}")
-                sheet.column_dimensions[col].width = width

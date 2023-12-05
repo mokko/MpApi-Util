@@ -7,7 +7,8 @@ The report is written in Excel (xlsx). It's basically a list of files with some 
 """
 import datetime
 from MpApi.Utils.logic import extractIdentNr
-from MpApi.Utils.BaseApp import BaseApp, ConfigError
+import MpApi.Utils.BaseApp
+from MpApi.Utils.Xls import Xls, BaseApp, ConfigError
 from openpyxl import load_workbook, Workbook, worksheet
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
@@ -25,7 +26,7 @@ class ReportX(BaseApp):
         We assume that the report is empty at the beginning, loop thru all files and enter
         each one into Excel table.
         """
-        xlsx_fn = Path(fn)
+        self.xls = Xls(path=fn)
         ws = self._init_report(path=xlsx_fn)
         ws2 = self.wb.create_sheet("Conf")
         rno = 2
@@ -65,12 +66,10 @@ class ReportX(BaseApp):
         Creates a new report and saves it in self.wb. Also returns the new first
         worksheet.
         """
-        if path.exists():
-            raise ConfigError(f"ERROR: Excel report '{path}' exists already. Abort!")
-        self.wb = self._init_excel(path=path)
-        ws = self.wb.active
+        self.xls.raise_if_file()
+        self.wb = self.xls.get_or_create_wb()
         now = datetime.datetime.now().strftime("%Y-%m-%d")
-        ws.title = now
+        ws = self.xls.get_or_create_sheet(now)
         print(f"new sheet {now}")
         ws["A1"] = "Dateiname"
         ws["B1"] = "Größe (KB)"
