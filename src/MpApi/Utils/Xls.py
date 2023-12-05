@@ -41,7 +41,16 @@ class Xls:
         except KeyboardInterrupt:
             self.request_shutdown()
 
-    def get_or_create_sheet(self, *, title) -> openpyxl.worksheet.worksheet.Worksheet:
+    def get_sheet(self, *, title: str) -> openpyxl.worksheet.worksheet.Worksheet:
+        try:
+            ws = self.wb[title]
+        except:
+            raise ConfigError(f"ERROR: Excel file has no sheet {title}")
+        return ws
+
+    def get_or_create_sheet(
+        self, *, title: str
+    ) -> openpyxl.worksheet.worksheet.Worksheet:
         try:
             ws = self.wb[title]  # sheet exists already
         except:  # new sheet

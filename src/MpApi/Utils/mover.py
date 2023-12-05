@@ -145,8 +145,11 @@ class Mover(BaseApp):
                     self._move(fro, to, rno, c)
                 else:
                     print("WARNING: target path is None")
-            if rno % 1000 == 0:  # save every so often
+            if rno % 500 == 0:  # save every so often
+                self.xls.backup()
                 self.xls.save()
+            self.xls.shutdown_if_requested()
+        self.xls.backup()
         self.xls.save()
 
     def rescan(self):
@@ -170,6 +173,7 @@ class Mover(BaseApp):
             else:
                 raise TypeError("ERROR: File not found!")
             count += 1
+        self.xls.backup()
         self.xls.save()  # save after every file/row
 
     def scandir(self):
@@ -180,7 +184,6 @@ class Mover(BaseApp):
         # check if excel exists, has the expected shape and is writable
         self._check_scandir()
         print(f"   filemask: {self.filemask}")
-        self.xls.raise_if_content(sheet=self.ws)
 
         c = 3
         with tqdm(total=self.ws.max_row - 2) as pbar:
@@ -212,7 +215,9 @@ class Mover(BaseApp):
                     print("* Limit reached")
                     break
                 c += 1
-            self.xls.save()
+                self.xls.shutdown_if_requested()
+        self.xls.backup()
+        self.xls.save()
 
     def wipe(self):
         self._check_move()
@@ -238,12 +243,9 @@ class Mover(BaseApp):
     def _check_scandir(self) -> None:
         self.xls.raise_if_no_file()
         self.xls.save()
-        try:
-            self.ws = self.wb["Dateien"]
-        except:
-            raise ConfigError("ERROR: Excel file has no sheet 'Dateien'")
-
-        self.xls.raise_if_no_content()
+        self.xls.backup()
+        self.ws = self.xls.get_sheet(title="Dateien")
+        self.xls.raise_if_content(sheet=self.ws)
         self.orgUnit = self._get_orgUnit(cell="B2")  # can be None
 
         conf_ws = self.wb["Conf"]
