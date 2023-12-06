@@ -36,10 +36,9 @@ from tqdm import tqdm
 # adding number of fields to prevent accidental overwriting of old versions
 excel_fn = Path("upload14.xlsx")
 bak_fn = Path("upload14.xlsx.bak")  # should go away
-red = Font(color="FF0000")
 parser = etree.XMLParser(remove_blank_text=True)
+red = Font(color="FF0000")
 teal = Font(color="008080")
-blue = Font(color="0000FF")
 
 IGNORE_NAMES = (
     "checksum.md5",
@@ -605,52 +604,32 @@ class AssetUploader(BaseApp):
             return objIds
 
     def _make_conf(self) -> None:
-        ws2 = self.xls.get_or_create_sheet(title="Conf")
-        ws2["A1"] = "templateID"
-        ws2["B1"] = ""
-        ws2["C1"] = "Hendryks default jpg 6697400"
-
-        ws2["C1"] = "Asset"
-
-        ws2["A2"] = "verlinktes Modul"
-        ws2["B2"] = "Objekte"  # todo alternativer Wert Restaurierung
-
-        ws2["A3"] = "OrgUnit (optional)"
-        ws2["B3"] = ""
-        ws2[
-            "C3"
-        ] = """OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen). 
+        conf = {
+            "A1": "templateID",
+            "B1": "orgUnit",
+            "C1": "nur Asset ID , Hendryks default jpg 6697400",
+            "A2": "verlinktes Modul",
+            "B2": "Objekte",
+            "C2": "noch nicht implementiert",
+            "A3": "OrgUnit (optional)",
+            "B3": "Andere Dokumente",
+            "C3": """OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen). 
         Die Suche der existierenden Assets wird auf den angegebenen Bereich eingeschränkt. 
         Wenn kein Bereich angegenen, wird die Suche auch nicht eingeschränkt. Gültige 
-        orgUnits sind z.B. EMArchiv, EMMusikethnologie, EMMedienarchiv, EMPhonogrammArchiv"""
-        # ws2["C3"].alignment = Alignment(wrap_text=True)
-
-        ws2["A4"] = "Zielverzeichnis"
-        ws2[
-            "C4"
-        ] = """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
-        Backslash. Wenn Feld leer. wird Datei nicht bewegt."""
-        ws2["A5"] = "Filemask"
-        ws2["B5"] = "*.jpg"  # temporary new default
-        ws2["C5"] = "Filemask für rekursive Suche, default ist *"
-
-        ws2.column_dimensions["A"].width = 25
-        ws2.column_dimensions["B"].width = 25
-        ws2.column_dimensions["C"].width = 25
-
-        ws2["A6"] = "Erstellungsdatum"
-        ws2["B6"] = datetime.today().strftime("%Y-%m-%d")
-
-        ws2["A7"] = "Ignore suspicious?"
-        ws2["B7"] = "True"
-
-        for row in ws2.iter_rows(min_col=1, max_col=1):
-            for cell in row:
-                cell.font = Font(bold=True)
-
-        for row in ws2.iter_rows(min_col=3, max_col=3):
-            for cell in row:
-                cell.font = blue
+        orgUnits sind z.B. EMArchiv, EMMusikethnologie, EMMedienarchiv, EMPhonogrammArchiv, EMSudseeAustralien""",
+            "A4": "Zielverzeichnis",
+            "B4": "",
+            "C4": """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
+        Backslash. Wenn Feld leer. wird Datei nicht bewegt.""",
+            "A5": "Filemask",
+            "B5": "**/*.jpg",  # temporary new default
+            "C5": "Filemask für rekursive Suche, default ist *",
+            "A6": "Erstellungsdatum",
+            "B6": datetime.today().strftime("%Y-%m-%d"),
+            "A7": "Ignore suspicious?",
+            "B7": "True",
+        }
+        self.xls.make_conf(conf)
 
     def _move_file(self, *, src: str, dst: str) -> None:
         """

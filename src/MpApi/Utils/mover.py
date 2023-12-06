@@ -268,31 +268,20 @@ class Mover(BaseApp):
             self.exclude_dirs = [d.strip() for d in excludeL]
 
     def _make_conf(self) -> None:
-        ws2 = self.xls.get_or_create_sheet(title="Conf")
-        ws2["A1"] = "target dir"
-
-        ws2["A2"] = "orgUnit"
-        ws2["C2"] = "z.B. EMArchiv, EMMusikethnologie, EMSudundSudostasien"
-
-        ws2["A3"] = "Filemask"
-        ws2["B3"] = "**/*.jpg"
-        ws2[
-            "C3"
-        ] = """vollständige Python filemask; rekursives Scannen kann dadurch ab- und angestellt werden."""
-
-        ws2["A4"] = "Exclude Dirs"
-        ws2["B4"] = "Andere Dokumente"
-        ws2[
-            "C4"
-        ] = """Mehrere Verzeichnisse durch ; trennen. Angegebene Verzeichnisse werden ignoriert."""
-
-        ws2["A5"] = "Erstellungsdatum"
-        ws2["B5"] = datetime.today().strftime("%Y-%m-%d")
-
-        ws2.column_dimensions["A"].width = 25
-
-        for each in "A1", "A2", "A3", "A4":
-            ws2[each].font = Font(bold=True)
+        conf = {
+            "A1": "target dir",
+            "A2": "orgUnit",
+            "C2": "z.B. EMArchiv, EMMusikethnologie, EMSudundSudostasien",
+            "A3": "Filemask",
+            "B3": "**/*.jpg",
+            "C3": """vollständige Python filemask; rekursives Scannen kann dadurch ab- und angestellt werden.""",
+            "A4": "Exclude Dirs",
+            "B4": "Andere Dokumente",
+            "C4": """Mehrere Verzeichnisse durch ; trennen. Angegebene Verzeichnisse werden ignoriert.""",
+            "A5": "Erstellungsdatum",
+            "B5": datetime.today().strftime("%Y-%m-%d"),
+        }
+        self.xls.make_conf(conf)
 
     def _move(self, fro: Path, to: Path, rno: int, c: dict) -> None:
         """

@@ -6,7 +6,8 @@ DESIGN CHOICES
 - This MpApi.Util is so little it is not even using Excel, yet it stays in MpApi.Utils.
 """
 
-from MpApi.Utils.BaseApp import BaseApp, ConfigError
+from MpApi.Utils.BaseApp import BaseApp
+from MpApi.Utils.Xls import ConfigError
 from MpApi.Utils.Ria import RIA
 from mpapi.module import Module
 from MpApi.Record import Record  # tested?

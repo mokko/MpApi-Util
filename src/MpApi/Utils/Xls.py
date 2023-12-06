@@ -16,6 +16,10 @@ from pathlib import Path
 import shutil
 import sys
 
+red = Font(color="FF0000")
+teal = Font(color="008080")
+blue = Font(color="0000FF")
+
 
 class ConfigError(Exception):
     pass
@@ -28,11 +32,11 @@ class NoContentError(Exception):
 class Xls:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
-        self.backup_fn = str(self.path) + ".bak"
+        self.backup_fn = Path(str(self.path) + ".bak")  # ugly
         self.wb = self.get_or_create_wb()
         self.shutdown_requested = False
 
-    def backup(self) -> None:
+    def backup(self) -> bool:
         """
         Write a new backup file of the Excel file.
         """
@@ -40,6 +44,7 @@ class Xls:
             shutil.copy(self.path, self.backup_fn)
         except KeyboardInterrupt:
             self.request_shutdown()
+        return True
 
     def get_sheet(self, *, title: str) -> openpyxl.worksheet.worksheet.Worksheet:
         try:
@@ -78,6 +83,26 @@ class Xls:
                 # print (f"* Starting new excel: '{data_fn}'")
                 self.wb = Workbook()
                 return self.wb
+
+    def make_conf(self, conf: dict[str, str]) -> None:
+        conf_ws = self.get_or_create_sheet(title="Conf")
+        max_row = 0
+        for cell in conf:
+            conf_ws[cell] = conf[cell]
+            no = int(cell[-1])
+            if no > max_row:
+                no = max_row
+
+        for col in ["A", "B", "C"]:
+            conf_ws.column_dimensions[col].width = 25
+
+        for row in conf_ws.iter_rows(min_col=1, max_col=1):
+            for cell in row:
+                cell.font = Font(bold=True)
+
+        for row in conf_ws.iter_rows(min_col=3, max_col=3):
+            for cell in row:
+                cell.font = blue
 
     def file_exists(self) -> bool:
         """
@@ -138,21 +163,22 @@ class Xls:
         print("Keyboard interrupt recieved, requesting shutdown...")
         self.shutdown_requested = True
 
-    def save(self) -> None:
+    def save(self) -> bool:
         """Made this only to have same print msgs all the time"""
         print(f"   saving {self.path}")
         try:
             self.wb.save(filename=self.path)
         except KeyboardInterrupt:
             self.request_shutdown()
+        return True
 
-    def save_and_shutdown_if_requested(self):
+    def save_and_shutdown_if_requested(self) -> None:
         self.save()
         if self.shutdown_requested:
             print("Planned shutdown.")
             sys.exit(0)
 
-    def shutdown_if_requested(self):
+    def shutdown_if_requested(self) -> None:
         """
         Do the shutdown if class variable is set. To be used in the loop at an appropriate time.
 
@@ -168,7 +194,7 @@ class Xls:
 
     def write_header(
         self, *, description: dict, sheet: openpyxl.worksheet.worksheet.Worksheet
-    ):
+    ) -> None:
         """
         Take the table description (a dict) and write it to the top two lines of the
         specified worksheet.
