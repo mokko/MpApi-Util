@@ -35,6 +35,7 @@ class Xls:
         self.backup_fn = Path(str(self.path) + ".bak")  # ugly
         self.wb = self.get_or_create_wb()
         self.shutdown_requested = False
+        self.changed = False # keep a state to know if saving is necessary
 
     def backup(self) -> bool:
         """
@@ -65,6 +66,7 @@ class Xls:
             else:
                 self.wb.create_sheet(title)
             ws = self.wb[title]
+            self.changed = True
         return ws
 
     def get_or_create_wb(self) -> Workbook:
@@ -81,6 +83,7 @@ class Xls:
                 return self.wb
             else:
                 # print (f"* Starting new excel: '{data_fn}'")
+                self.changed = True
                 self.wb = Workbook()
                 return self.wb
 
@@ -103,6 +106,7 @@ class Xls:
         for row in conf_ws.iter_rows(min_col=3, max_col=3):
             for cell in row:
                 cell.font = blue
+        self.changed = True
 
     def file_exists(self) -> bool:
         """
@@ -164,16 +168,29 @@ class Xls:
         self.shutdown_requested = True
 
     def save(self) -> bool:
-        """Made this only to have same print msgs all the time"""
+        """
+        Made this only to have same print msgs all the time
+        """
         print(f"   saving {self.path}")
         try:
             self.wb.save(filename=self.path)
         except KeyboardInterrupt:
             self.request_shutdown()
+        else:
+            self.changed = False
         return True
+
+    def save_if_change(self) -> bool:
+        """
+        Version of save that saves only if changes were registered in variable 
+        self.changed.
+        """
+        if self.changed:
+            self.save()
 
     def save_and_shutdown_if_requested(self) -> None:
         self.save()
+        self.changed = False
         if self.shutdown_requested:
             print("Planned shutdown.")
             sys.exit(0)
