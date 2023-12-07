@@ -98,7 +98,7 @@ def move():
         "first",
         nargs="?",
         help="command, either init, scandir or move",
-        choices=["init", "move", "rescan", "scandir", "wipe"],
+        choices=["init", "move", "scandir", "wipe"],
     )
     parser.add_argument("-l", "--limit", help="stop after number of files", default=-1)
     parser.add_argument(

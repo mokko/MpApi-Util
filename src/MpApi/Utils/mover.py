@@ -131,9 +131,11 @@ class Mover(BaseApp):
         for c, rno in self._loop_table2(sheet=self.ws):
             if c["move"].value == "x" and c["moved"].value is None:
                 if c["targetpath"].value is None:
-                    self.xls.save()
+                    # self.xls.save()
+                    # This case should no longer be frequent
                     self._warning(
-                        f"F{rno}", "ERROR: Move says move, but targetpath has no info!"
+                        f"F{rno}",
+                        "WARNING: Move says move, but targetpath has no info!",
                     )
                     # raise SyntaxError(
                     #    "ERROR: Move says move, but targetpath has no info!"
@@ -146,38 +148,16 @@ class Mover(BaseApp):
                         self._move(fro, to, rno, c)
                     except KeyboardInterrupt:
                         self.xls.request_shutdown()
+                    else:
+                        self.xls.changed()
                 else:
                     print("WARNING: target path is None")
-            if rno % 500 == 0:  # save every so often
+            if rno % 500 == 0 and self.xls.changed:  # save every so often
                 self.xls.backup()
                 self.xls.save()
             self.xls.shutdown_if_requested()
         self.xls.backup()
         self.xls.save()
-
-    def rescan(self):
-        """
-        Should we make a different command to re-run scandir, but this time we only
-        fill in missing information?
-        """
-        self._check_scandir()
-        print("Dropping files from Excel that don't exist anymore")
-        self._drop_rows_if_file_gone(col="H")
-        # currently we're deleting files that have been moved from Excel
-        # and we re-parse the rest of the Excel entries
-        # but we dont do a completely new scandir
-
-        count = 3
-        print("re-scanning remaining items in Excel only")
-        for c, rno in self._loop_table2():
-            if c["filename"].value is not None:
-                p = Path(c["filename"].value)
-                self._scan_per_file(path=p, count=count)
-            else:
-                raise TypeError("ERROR: File not found!")
-            count += 1
-        self.xls.backup()
-        self.xls.save()  # save after every file/row
 
     def scandir(self):
         """
@@ -236,8 +216,8 @@ class Mover(BaseApp):
         self.xls.raise_if_no_file()
         self.xls.save()
 
-        self.ws = self.xls.get_or_create_sheet("Dateien")
-        self.xls.raise_if_no_content()
+        self.ws = self.xls.get_or_create_sheet(title="Dateien")
+        self.xls.raise_if_no_content(sheet=self.ws)
 
     def _check_scandir(self) -> None:
         self.xls.raise_if_no_file()
