@@ -35,7 +35,7 @@ class Xls:
         self.backup_fn = Path(str(self.path) + ".bak")  # ugly
         self.wb = self.get_or_create_wb()
         self.shutdown_requested = False
-        self.changed = False # keep a state to know if saving is necessary
+        self.changed = False  # keep a state to know if saving is necessary
 
     def backup(self) -> bool:
         """
@@ -46,6 +46,12 @@ class Xls:
         except KeyboardInterrupt:
             self.request_shutdown()
         return True
+
+    def changed(self) -> None:
+        """
+        Set the object variable changed to signal that save is necessary.
+        """
+        self.changed = True
 
     def get_sheet(self, *, title: str) -> openpyxl.worksheet.worksheet.Worksheet:
         try:
@@ -86,6 +92,30 @@ class Xls:
                 self.changed = True
                 self.wb = Workbook()
                 return self.wb
+
+    def loop_table(
+        self,
+        *,
+        sheet: openpyxl.worksheet.worksheet.Worksheet,
+        offset: int = 3,
+        limit: int = -1,
+    ) -> Iterator[dict, int]:
+        """
+        Loop thru the data part of the Excel table. For convenience, return cells in dict by column
+        names. For this to work, we require a description of the table in the following form:
+
+
+        for c,rno in xls.loop_table(sheet=ws, limit=self.limit):
+            print (f"row number {rno} {c['filename']}")
+        """
+        rno = offset  # row number; used to report a different number
+        for row in sheet.iter_rows(min_row=offset):  # start at 3rd row
+            cells = self._rno2dict(rno)
+            yield cells, rno
+            if limit == rno:
+                print("* Limit reached")
+                break
+            rno += 1
 
     def make_conf(self, conf: dict[str, str]) -> None:
         conf_ws = self.get_or_create_sheet(title="Conf")
@@ -182,7 +212,7 @@ class Xls:
 
     def save_if_change(self) -> bool:
         """
-        Version of save that saves only if changes were registered in variable 
+        Version of save that saves only if changes were registered in variable
         self.changed.
         """
         if self.changed:
@@ -241,3 +271,18 @@ class Xls:
                 width = description[itemId]["width"]
                 # print (f"\t{width}")
                 sheet.column_dimensions[col].width = width
+
+    #
+    # private
+    #
+
+    def _rno2dict(self, rno: int) -> dict:
+        """
+        We read the provide a dict with labels as keys based on table description
+        (self.table_desc).
+        """
+        cells = dict()
+        for label in self.table_desc:
+            col = self.table_desc[label]["col"]
+            cells[label] = self.ws[f"{col}{rno}"]
+        return cells
