@@ -513,25 +513,15 @@ class PrepareUpload(BaseApp):
         return "None"
 
     def _make_conf(self) -> None:
-        # ws_conf = self.wb.create_sheet("Conf")
-        conf_ws = self.xls.get_or_create(title="Conf")
-        conf_ws["A1"] = "template ID"
-        conf_ws["C1"] = "Format: Object 1234567"
-
-        conf_ws["A2"] = "orgUnit"
-        conf_ws[
-            "C2"
-        ] = """Um die ID Suche auf eine orgUnit (Bereich) einzuschränken. Optional. z.B. EMSudseeAustralien"""
-
-        conf_ws["A3"] = "Filemask"
-        conf_ws[
-            "C3"
-        ] = """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'."""
-        conf_ws.column_dimensions["B"].width = 20
-
-        for row in conf_ws.iter_rows(min_col=1, max_col=1):
-            for cell in row:
-                cell.font = Font(bold=True)
+        conf = {
+            "A1": "template ID",
+            "C1": "Format: Object 1234567",
+            "A2": "orgUnit",
+            "C2": """Um die ID Suche auf eine orgUnit (Bereich) einzuschränken. Optional. z.B. EMSudseeAustralien""",
+            "A3": "Filemask",
+            "C3": """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'.""",
+        }
+        self.xls.make_conf(conf)
 
     def _objId_for_ident(self, c) -> None:
         """
