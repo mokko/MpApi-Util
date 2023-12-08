@@ -61,9 +61,8 @@ class AssetUploader(BaseApp):
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         self.objIds_cache: dict[str, str] = {}
-        self.xls = Xls(path=excel_fn)
 
-        self.table_desc = {
+        desc = {
             "filename": {
                 "label": "Asset Dateiname",
                 "desc": "aus Verzeichnis",
@@ -149,6 +148,7 @@ class AssetUploader(BaseApp):
                 "width": 5,
             },
         }
+        self.xls = Xls(path=excel_fn, description=desc)
 
     def go(self) -> None:
         """
@@ -177,7 +177,9 @@ class AssetUploader(BaseApp):
 
         # breaks at limit, but doesn't save on its own
         hits = 0
-        for cells, rno in self._loop_table2(sheet=self.ws, offset=self.offset):
+        for cells, rno in self.xls.loop(
+            sheet=self.ws, offset=self.offset, limit=self.limit
+        ):
             # relative path; assume dir hasn't changed since scandir run
             print(f"{rno}: {cells['identNr'].value} up")
             if cells["ref"].value == "None":
@@ -208,7 +210,7 @@ class AssetUploader(BaseApp):
         self.xls.raise_if_file()
         wb = self.xls.get_or_create_wb()
         ws = self.xls.get_or_create_sheet(title="Assets")
-        self.xls.write_header(description=self.table_desc, sheet=ws)
+        self.xls.write_header(sheet=ws)
         self._make_conf()
         self.xls.save()
 
@@ -232,7 +234,7 @@ class AssetUploader(BaseApp):
         filled in yet.
         """
         self._init_wbws()
-        for cells, rno in self._loop_table2(sheet=self.ws):
+        for cells, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
             self._photo(cells)
         self.xls.save()
 
@@ -312,7 +314,7 @@ class AssetUploader(BaseApp):
         print("Only setting Standardbild")
         self._check_scandir()
         hits = 0
-        for c, rno in self._loop_table2(sheet=self.ws):
+        for c, rno in self.xls.loop(sheet=self.ws, limit=sheet):
             # relative path; assume dir hasn't changed since scandir run
             # fn = c["filename"].value
 
@@ -525,7 +527,7 @@ class AssetUploader(BaseApp):
         """
         if rno is None:
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
-        cells = self._rno2dict(rno)
+        cells = self.xls._rno2dict(rno, sheet=self.ws)
         fullpath = path.absolute()  # .resolve() problems on UNC
         # only write in empty fields
         # relative path, but not if we use this recursively

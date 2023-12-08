@@ -126,49 +126,6 @@ class BaseApp:
         )
         return Path(fn)
 
-    def _loop_table(self) -> Union[Iterator, int]:
-        """
-        Loop thru the data part of the Excel table. Return row and number of row.
-
-        row = {
-            "filename": row[0],
-
-        }
-        """
-        c = 3  # counter; used report different number
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            yield row, c
-            if self.limit == c:
-                print("* Limit reached")
-                break
-            c += 1
-
-    def _loop_table2(self, *, sheet: worksheet, offset: int = 3) -> Iterator:
-        """
-        Loop thru the data part of the Excel table. For convenience, return cells in dict by column
-        names. For this to work, we require a description of the table in the following form:
-
-        self.table_desc = {
-            "filename": {
-                "label": "Asset Dateiname",
-                "desc": "aus Verzeichnis",
-                "col": "A",
-                "width": 20,
-            },
-        }
-
-        for c,rno in _loop_table2():
-            print (f"row number {rno} {c['filename']}")
-        """
-        rno = offset  # row number; used to report a different number
-        for row in sheet.iter_rows(min_row=offset):  # start at 3rd row
-            cells = self._rno2dict(rno)
-            yield cells, rno
-            if self.limit == rno:
-                print("* Limit reached")
-                break
-            rno += 1
-
     def _path_in_list(self, path: Path | str, cno: int) -> Optional[int]:
         """
         Returns row number as int if filename is already in list, else None.
@@ -212,17 +169,6 @@ class BaseApp:
             digits = 1
             new = parent / f"{stem}_{digits}{suffix}"
         return new
-
-    def _rno2dict(self, rno: int) -> dict:
-        """
-        We read the provide a dict with labels as keys based on table description
-        (self.table_desc).
-        """
-        cells = dict()
-        for label in self.table_desc:
-            col = self.table_desc[label]["col"]
-            cells[label] = self.ws[f"{col}{rno}"]
-        return cells
 
     # needs to go to Ria.py?
     def _rm_garbage(self, text: str) -> str:

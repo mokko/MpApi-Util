@@ -15,6 +15,7 @@ from openpyxl.styles import Alignment, Font
 from pathlib import Path
 import shutil
 import sys
+from typing import Iterator
 
 red = Font(color="FF0000")
 teal = Font(color="008080")
@@ -30,12 +31,16 @@ class NoContentError(Exception):
 
 
 class Xls:
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, description: dict[str, str]) -> None:
+        """
+        currently there can be only one description.
+        """
         self.path = Path(path)
         self.backup_fn = Path(str(self.path) + ".bak")  # ugly
         self.wb = self.get_or_create_wb()
         self.shutdown_requested = False
         self.changed = False  # keep a state to know if saving is necessary
+        self.description = description
 
     def backup(self) -> bool:
         """
@@ -47,7 +52,7 @@ class Xls:
             self.request_shutdown()
         return True
 
-    def changed(self) -> None:
+    def change(self) -> None:
         """
         Set the object variable changed to signal that save is necessary.
         """
@@ -93,24 +98,25 @@ class Xls:
                 self.wb = Workbook()
                 return self.wb
 
-    def loop_table(
+    def loop(
         self,
         *,
         sheet: openpyxl.worksheet.worksheet.Worksheet,
         offset: int = 3,
         limit: int = -1,
-    ) -> Iterator[dict, int]:
+    ) -> Iterator:
         """
-        Loop thru the data part of the Excel table. For convenience, return cells in dict by column
-        names. For this to work, we require a description of the table in the following form:
+        Loop thru the rows of specified sheet.
 
-
-        for c,rno in xls.loop_table(sheet=ws, limit=self.limit):
+        Returns a dict of cells in dict as well as the current row number (rno):
+        for c,rno in self.loop(sheet=ws, limit=self.limit):
             print (f"row number {rno} {c['filename']}")
+
+        For this to work, we need a description (self.description).
         """
         rno = offset  # row number; used to report a different number
         for row in sheet.iter_rows(min_row=offset):  # start at 3rd row
-            cells = self._rno2dict(rno)
+            cells = self._rno2dict(rno, sheet)
             yield cells, rno
             if limit == rno:
                 print("* Limit reached")
@@ -143,6 +149,30 @@ class Xls:
         Returns True if Excel file exists at specified location.
         """
         return self.path.exists()
+
+    def path_exists(self, path: Path | str, cno: int = 0) -> int | None:
+        """
+        Returns row number as int if filename is already in list, else None.
+
+        We are using the first column as default, but can also be specified.
+
+        Note that when you are using relative path, you need to be in correct directory.
+
+        Currently, we're using the filename from column A which SHOULD be unique in the
+        MuseumPlus context, but which is strange requirement in the world of directories,
+        where multiple dirs may contain files with the same name.
+
+        What happens if filenames are not unique? Files on disk will not be
+        uploaded listed in scandir and hence not uploaded and hence not moved.
+        """
+        rno = 3
+        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+            fn = row[cno].value
+            # print (f"_path_in_list: {fn=}{name=}")
+            if fn == str(path):
+                return rno
+            rno += 1
+        return None
 
     def raise_if_conf_value_missing(self, required: dict) -> None:
         base_msg = "ERROR: Missing configuration value: "
@@ -239,15 +269,13 @@ class Xls:
             print("Planned shutdown.")
             sys.exit(0)
 
-    def write_header(
-        self, *, description: dict, sheet: openpyxl.worksheet.worksheet.Worksheet
-    ) -> None:
+    def write_header(self, *, sheet: openpyxl.worksheet.worksheet.Worksheet) -> None:
         """
         Take the table description (a dict) and write it to the top two lines of the
         specified worksheet.
 
         The table description is a dictionary that is structured as follows:
-        table_desc = {
+        self.description = {
             "filename": {
                 "label": "Asset Dateiname",
                 "desc": "aus Verzeichnis",
@@ -257,18 +285,18 @@ class Xls:
         }
         """
 
-        for itemId in description:
-            col = description[itemId]["col"]  # letter
-            sheet[f"{col}1"] = description[itemId]["label"]
+        for itemId in self.description:
+            col = self.description[itemId]["col"]  # letter
+            sheet[f"{col}1"] = self.description[itemId]["label"]
             sheet[f"{col}1"].font = Font(bold=True)
             # print (f"{col} {self.table_desc[itemId]['label']}")
-            if "desc" in description[itemId]:
-                desc_txt = description[itemId]["desc"]
+            if "desc" in self.description[itemId]:
+                desc_txt = self.description[itemId]["desc"]
                 sheet[f"{col}2"] = desc_txt
                 sheet[f"{col}2"].font = Font(size=9, italic=True)
                 # print (f"\t{desc_txt}")
-            if "width" in description[itemId]:
-                width = description[itemId]["width"]
+            if "width" in self.description[itemId]:
+                width = self.description[itemId]["width"]
                 # print (f"\t{width}")
                 sheet.column_dimensions[col].width = width
 
@@ -276,13 +304,13 @@ class Xls:
     # private
     #
 
-    def _rno2dict(self, rno: int) -> dict:
+    def _rno2dict(self, rno: int, sheet: worksheet) -> dict:
         """
         We read the provide a dict with labels as keys based on table description
-        (self.table_desc).
+        (self.description).
         """
         cells = dict()
-        for label in self.table_desc:
-            col = self.table_desc[label]["col"]
-            cells[label] = self.ws[f"{col}{rno}"]
+        for label in self.description:
+            col = self.description[label]["col"]
+            cells[label] = sheet[f"{col}{rno}"]
         return cells

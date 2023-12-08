@@ -109,13 +109,12 @@ class PrepareUpload(BaseApp):
         if self.limit != -1 and self.limit < 3:
             raise ValueError("ERROR: limit < 3 is pointless!")
         print(f"Using limit {self.limit}")
-        self.xls = Xls(path="prepare.xlsx")
         if self.xls.file_exists():
             print(f"* {self.excel_fn} exists already")
         else:
             print(f"* About to make new Excel '{self.excel_fn}'")
 
-        self.table_desc = {
+        desc = {
             "filename": {
                 "label": "Dateiname",
                 "desc": "aus Verzeichnis",
@@ -180,6 +179,7 @@ class PrepareUpload(BaseApp):
                 "col": "K",
             },
         }
+        self.xls = Xls(path="prepare.xlsx", description=desc)
         self.wb = self.xls.get_or_create_wb()
         self.ws = self.xls.get_or_create_sheet(title="prepareUpload")
         # self.wb = self._init_excel(path=self.excel_fn)
@@ -284,7 +284,7 @@ class PrepareUpload(BaseApp):
         self.xls.raise_if_file()
         wb = self.xls.get_or_create_wb()
         ws = self.xls.get_or_create_sheet(title="Prepare")
-        self.xls.write_header(description=self.table_desc, sheet=ws)
+        self.xls.write_header(sheet=ws)
         self._make_conf()
         self.xls.save()
 

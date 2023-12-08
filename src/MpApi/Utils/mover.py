@@ -36,11 +36,8 @@ class Mover(BaseApp):
             raise ValueError("ERROR: Use limit = -1 (no limit) or > 2!")
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
-        self.xls = Xls(path=excel_fn)
 
-        self.wb = self.xls.get_or_create_wb()
-
-        self.table_desc = {
+        desc = {
             "filename": {
                 "label": "Dateiname",
                 "desc": "aus Verzeichnis",
@@ -96,6 +93,8 @@ class Mover(BaseApp):
                 "width": 40,
             },
         }
+        self.xls = Xls(path=excel_fn, description=desc)
+        self.wb = self.xls.get_or_create_wb()
 
     def is_suspicious(self, fn: str) -> bool:
         p = Path(fn)
@@ -122,13 +121,13 @@ class Mover(BaseApp):
 
         self.xls.raise_if_file()
         ws = self.xls.get_or_create_sheet(title="Dateien")
-        self.xls.write_header(description=self.table_desc, sheet=ws)
+        self.xls.write_header(sheet=ws)
         self._make_conf()
         self.xls.save()
 
     def move(self):
         self._check_move()
-        for c, rno in self._loop_table2(sheet=self.ws):
+        for c, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
             if c["move"].value == "x" and c["moved"].value is None:
                 if c["targetpath"].value is None:
                     # self.xls.save()
@@ -149,7 +148,7 @@ class Mover(BaseApp):
                     except KeyboardInterrupt:
                         self.xls.request_shutdown()
                     else:
-                        self.xls.changed()
+                        self.xls.change()
                 else:
                     print("WARNING: target path is None")
             if rno % 500 == 0 and self.xls.changed:  # save every so often
@@ -279,7 +278,11 @@ class Mover(BaseApp):
                 # raise Exception(f"file exists already: '{to}'")
             else:
                 if not to.parent.exists():
-                    to.parent.mkdir(parents=True)
+                    try:
+                        to.parent.mkdir(parents=True)
+                    except FileNotFoundError as e:
+                        self._warning(f"F{rno}", f"FileNotFoundError {e}")
+                        return None
                 try:
                     shutil.move(fro, to)
                 except FileNotFoundError as e:
@@ -297,7 +300,7 @@ class Mover(BaseApp):
         """
         Writes to self.ws
         """
-        c = self._rno2dict(count)
+        c = self.xls._rno2dict(count, sheet=self.ws)
         # only write in empty fields
         self._write_filename(c, path)
 
