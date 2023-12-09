@@ -181,9 +181,10 @@ class Xls:
         sheet: openpyxl.worksheet.worksheet.Worksheet,
     ) -> int | None:
         """
-        Returns row number as int if filename is already in list, else None.
+        Returns row number as int if filename is already in Excel sheet at specified row,
+        else None.
 
-        We are using the first column as default, but can also be specified.
+        We are using the first column as default, but can also be specified (cno).
 
         Note that when you are using relative path, you need to be in correct directory.
 
@@ -297,6 +298,16 @@ class Xls:
             self.save()
             print("Planned shutdown.")
             sys.exit(0)
+
+    def wipe(self, *, sheet: worksheet) -> None:
+        """Delete everything but the header. Slow."""
+        rno = 3
+        with tqdm(total=sheet.max_row - 2) as pbar:
+            while rno <= sheet.max_row:
+                # print(f"wiping row {rno}")
+                pbar.update()
+                sheet.delete_rows(rno)
+        self.xls.save()
 
     def write_header(self, *, sheet: openpyxl.worksheet.worksheet.Worksheet) -> None:
         """

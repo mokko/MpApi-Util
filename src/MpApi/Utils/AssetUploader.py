@@ -296,7 +296,7 @@ class AssetUploader(BaseApp):
         print(f"Scanning sorted file list... {len(file_list)}")
         for p in sorted(file_list):
             print(f"scandir: {p}")
-            rno = self.xls.path_exists(p.name, 0)
+            rno = self.xls.path_exists(path=p.name, cno=0, sheet=self.ws)
             # rno is the row number in Assets sheet
             # rno is None if file not in list
             rno = self._file_to_list(path=p, rno=rno)

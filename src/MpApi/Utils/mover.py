@@ -185,7 +185,7 @@ class Mover(BaseApp):
                     for each in self.exclude_dirs:
                         if p_abs_str.startswith(each):
                             continue
-                if self.xls.path_exists(p_abs, 7):
+                if self.xls.path_exists(path=p_abs, cno=7, sheet=self.ws):
                     # print(f"ff {p_abs.name}")
                     pbar.update()
                 else:
@@ -206,7 +206,9 @@ class Mover(BaseApp):
 
     def wipe(self):
         self._check_move()
-        self._wipe()
+        self.xls.wipe(sheet=self.ws)
+        self.backup()
+        self.save()
 
     #
     # private

@@ -43,32 +43,6 @@ class BaseApp:
         else:
             return RiaUtil(baseURL=self.baseURL, user=self.user, pw=self.pw)
 
-    def _drop_rows_if_file_gone(self, *, col: str = "A", cont: bool = False) -> None:
-        """
-        Loop thru Excel sheet "Assets" and check if the files still exist. We use
-        relative filename for that, so update has to be executed in right dir.
-        If the file no longer exists on disk (e.g. because it has been renamed),
-        we delete it from the excel sheet by deleting the row.
-
-        This is for the scandir step. NOT USED AT THE MOMENT.
-        """
-        if cont:
-            print("   continous mode, not looking for changes on disk")
-            return
-
-        print("Checking for file changes")
-        c = 3
-        with tqdm(total=self.ws.max_row - c) as pbar:
-            for row in self.ws.iter_rows(min_row=c):  # start at 3rd row
-                filename = self.ws[f"{col}{c}"].value
-                pbar.update()
-                if filename is not None:
-                    if not Path(filename).exists():
-                        print(f"Deleting Excel row {c} file gone '{filename}'")
-                        self.ws.delete_rows(c)
-                c += 1
-        print("   done")
-
     def _get_objIds_for_whole_or_parts(self, *, identNr: str) -> set[int]:
         """
         Receive the actual identNr. If it is (a) whole-part number, look for wholes;
@@ -162,14 +136,3 @@ class BaseApp:
     def _suspicous_character(self, *, identNr: str):
         if identNr is None or any("-", ";") in str(identNr):
             return True
-
-    def _wipe(self) -> None:
-        """There is a new version of wipe in Xls.wipe. Todo: Use that in the future."""
-        rno = 3
-        with tqdm(total=self.ws.max_row - 2) as pbar:
-            while rno <= self.ws.max_row:
-                # print(f"wiping row {rno}")
-                pbar.update()
-                self.ws.delete_rows(rno)
-                # rno += 1
-        self.xls.save()
