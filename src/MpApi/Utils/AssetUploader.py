@@ -296,7 +296,7 @@ class AssetUploader(BaseApp):
         print(f"Scanning sorted file list... {len(file_list)}")
         for p in sorted(file_list):
             print(f"scandir: {p}")
-            rno = self._path_in_list(p.name, 0)
+            rno = self.xls.path_exists(p.name, 0)
             # rno is the row number in Assets sheet
             # rno is None if file not in list
             rno = self._file_to_list(path=p, rno=rno)
@@ -371,7 +371,7 @@ class AssetUploader(BaseApp):
         cache = set()
         # loop without limit
         for row in self.ws.iter_rows(min_row=rno):  # start at 3rd row
-            cells = self._rno2dict(rno)
+            cells = self.xls._rno2dict(rno, sheet=self.ws)
             fullpath = cells["fullpath"].value
             attached = cells["attached"].value
             # print(f"{rno} {cells}")

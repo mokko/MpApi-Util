@@ -23,7 +23,6 @@ Let's avoid print messages from here! Not really, let's write the usual print me
 Let's typically log errors?
 """
 
-import logging
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.logic import has_parts
 from MpApi.Utils.Xls import Xls, ConfigError, NoContentError
@@ -113,42 +112,6 @@ class BaseApp:
             ident=ident_whole,
         )
         return objId_set
-
-    def _init_log(self) -> Path:
-        fn: str = Path(sys.argv[0]).stem + ".log"
-        print(f"* Using logfile '{fn}'")
-        logging.basicConfig(
-            datefmt="%Y%m%d %I:%M:%S %p",
-            filename=fn,
-            filemode="w",  # a =append?
-            level=logging.INFO,
-            format="%(asctime)s: %(message)s",
-        )
-        return Path(fn)
-
-    def _path_in_list(self, path: Path | str, cno: int) -> Optional[int]:
-        """
-        Returns row number as int if filename is already in list, else None.
-
-        We were using the first column, no column no (cno).
-
-        Currently, we're using the filename from column A which SHOULD be unique
-        in the MuseumPlus context, but which is strange requirement in the world
-        of directories, where multiple dirs may contain files with the same name.
-
-        We could switch to full path here for the identity test, if we wanted to.
-
-        What happens if filenames are not unique? Files on disk will not be
-        uploaded listed in scandir and hence not uploaded and hence not moved.
-        """
-        rno = 3
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
-            fn = row[cno].value
-            # print (f"_path_in_list: {fn=}{name=}")
-            if fn == str(path):
-                return rno
-            rno += 1
-        return None
 
     def _plus_one(self, p: Path) -> Path:
         """

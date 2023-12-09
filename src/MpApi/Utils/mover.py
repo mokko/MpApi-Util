@@ -185,7 +185,7 @@ class Mover(BaseApp):
                     for each in self.exclude_dirs:
                         if p_abs_str.startswith(each):
                             continue
-                if self._path_in_list(p_abs, 7):
+                if self.xls.path_exists(p_abs, 7):
                     # print(f"ff {p_abs.name}")
                     pbar.update()
                 else:

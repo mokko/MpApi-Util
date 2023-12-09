@@ -15,6 +15,7 @@ from openpyxl.styles import Alignment, Font
 from pathlib import Path
 import shutil
 import sys
+from tqdm import tqdm
 from typing import Iterator
 
 red = Font(color="FF0000")
@@ -57,6 +58,28 @@ class Xls:
         Set the object variable changed to signal that save is necessary.
         """
         self.changed = True
+
+    def drop_row_if_file_gone(self, *, col: str = "A", sheet: worksheet) -> None:
+        """
+        Loop thru Excel sheet "Assets" and check if the files still exist. We use
+        relative filename for that, so update has to be executed in right dir.
+        If the file no longer exists on disk (e.g. because it has been renamed),
+        we delete it from the excel sheet by deleting the row.
+
+        This is for the scandir step. NOT USED AT THE MOMENT.
+        """
+        print("Checking for file changes")
+        c = 3
+        with tqdm(total=sheet.max_row - c) as pbar:
+            for row in sheet.iter_rows(min_row=c):  # start at 3rd row
+                filename = sheet[f"{col}{c}"].value
+                pbar.update()
+                if filename is not None:
+                    if not Path(filename).exists():
+                        print(f"Deleting Excel row {c} file gone '{filename}'")
+                        sheet.delete_rows(c)
+                c += 1
+        print("   done")
 
     def get_sheet(self, *, title: str) -> openpyxl.worksheet.worksheet.Worksheet:
         try:
@@ -146,11 +169,17 @@ class Xls:
 
     def file_exists(self) -> bool:
         """
-        Returns True if Excel file exists at specified location.
+        Returns True if Excel Excel file (at self.path) exists at specified location.
         """
         return self.path.exists()
 
-    def path_exists(self, path: Path | str, cno: int = 0) -> int | None:
+    def path_exists(
+        self,
+        *,
+        cno: int = 0,
+        path: Path | str,
+        sheet: openpyxl.worksheet.worksheet.Worksheet,
+    ) -> int | None:
         """
         Returns row number as int if filename is already in list, else None.
 
@@ -166,7 +195,7 @@ class Xls:
         uploaded listed in scandir and hence not uploaded and hence not moved.
         """
         rno = 3
-        for row in self.ws.iter_rows(min_row=3):  # start at 3rd row
+        for row in sheet.iter_rows(min_row=3):  # start at 3rd row
             fn = row[cno].value
             # print (f"_path_in_list: {fn=}{name=}")
             if fn == str(path):
