@@ -134,7 +134,6 @@ def is_suspicious(identNr: str | None) -> bool:
     brackets = [("(", ")"), ("<", ">"), ("[", "]")]
     for btype in brackets:
         if identNr.count(btype[0]) != identNr.count(btype[1]):
-            # print(f"'{identNr}' unbalanced backets")
             return True
 
     # may not have brackets with inside space ( ex )
@@ -143,6 +142,10 @@ def is_suspicious(identNr: str | None) -> bool:
 
     # may not have suspicious characters
     if any(";", "[", "]") in identNr:
+        return True
+
+    # may not have >1 comma
+    if identNr.count(",") > 1:
         return True
 
     # if you get here identNr is NOT suspicious

@@ -287,6 +287,9 @@ class Mover(BaseApp):
                         return None
                 try:
                     shutil.move(fro, to)
+                except OSError as e:  # eg disk full
+                    self.xls.save()
+                    raise e
                 except FileNotFoundError as e:
                     self._warning(f"F{rno}", f"FileNotFoundError {e}")
                 except PermissionError as e:
@@ -296,7 +299,7 @@ class Mover(BaseApp):
                     self.ws[f"I{rno}"].font = teal
                     c["moved"].value = "x"
         else:
-            print(f"   doesn't exist anymore")
+            self._warning(f"F{rno}", f"does not exist (anymore)")
 
     def _scan_per_file(self, *, path: Path, count: int) -> None:
         """

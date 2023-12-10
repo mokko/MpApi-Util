@@ -189,6 +189,8 @@ def restart():
 
     Interrupt with CTRL+C
     """
+    import time
+
     if sys.argv[1] == "-x":
         start = 3
         times = int(sys.argv[2])
@@ -199,6 +201,8 @@ def restart():
     new_call = sys.argv[start:]  # e.g. restart upload cont -> upload cont
     while times > 0 or times < 0:
         retval = subprocess.run(new_call, shell=True)
+        if times % 2 == 0:
+            time.sleep(25)
         times -= 1
         # if retval == 0:
         #    break
