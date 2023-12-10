@@ -228,7 +228,7 @@ class Mover(BaseApp):
         # if we want to continue a scan that was interrupted e.g b/c it reached its limit
         # we can't have this check
         # self.xls.raise_if_content(sheet=self.ws)
-        self.orgUnit = self._get_orgUnit(cell="B2")  # can be None
+        self.orgUnit = self.xls.get_conf(cell="B2")  # can be None
 
         conf_ws = self.wb["Conf"]
         if conf_ws["B1"].value is None:

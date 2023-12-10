@@ -81,6 +81,19 @@ class Xls:
                 c += 1
         print("   done")
 
+    def get_conf(self, *, cell: str) -> str | None:
+        """
+        Returns the specified field from sheet conf or None if field is empty or
+        only consists of space.
+        """
+        conf_ws = self.wb["Conf"]
+        value = conf_ws[cell].value  # can be None
+        if value is None:
+            return None
+        elif value.isspace() or value == "":
+            value = None
+        return value
+
     def get_sheet(self, *, title: str) -> openpyxl.worksheet.worksheet.Worksheet:
         try:
             ws = self.wb[title]

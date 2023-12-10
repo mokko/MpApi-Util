@@ -414,7 +414,7 @@ class AssetUploader(BaseApp):
             )
 
         ws2 = self.wb["Conf"]
-        self.orgUnit = self._get_orgUnit(cell="B3")  # can be None
+        self.orgUnit = self.xls.get_conf(cell="B3")  # can be None
 
         if ws2["B5"].value is None:
             self.filemask: str = "*"

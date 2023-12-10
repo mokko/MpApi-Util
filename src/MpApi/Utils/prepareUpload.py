@@ -428,7 +428,7 @@ class PrepareUpload(BaseApp):
         mulIds or "None" we don't need to run it again.
         """
         ws2 = self.wb["Conf"]
-        orgUnit = self._get_orgUnit(cell="B2")  # can return None
+        orgUnit = self.xls.get_conf(cell="B2")  # can return None
         if c["assetUploaded"].value == None:
             idL = self.client.fn_to_mulId(fn=c["filename"].value, orgUnit=orgUnit)
             if len(idL) == 0:
@@ -472,7 +472,7 @@ class PrepareUpload(BaseApp):
                 c["candidate"].value = "x"
 
     def _get_objIds(self, *, identNr: str, strict: bool) -> str:
-        orgUnit = self._get_orgUnit(cell="B2")  # can return None
+        orgUnit = self.xls.get_conf(cell="B2")  # can return None
         for single in identNr.split(";"):
             ident = single.strip()
             objIdL = self.client.identNr_exists(
@@ -491,7 +491,7 @@ class PrepareUpload(BaseApp):
         We could move the logic that identifies parts to the RIA module though. But
         we have to move the garbage eliminator as well. Not today.
         """
-        orgUnit = self._get_orgUnit(cell="B2")  # can return None
+        orgUnit = self.xls.get_conf(cell="B2")  # can return None
         for single in identNr.split(";"):
             identNr = single.strip()
             resL = self.client.identNr_exists2(

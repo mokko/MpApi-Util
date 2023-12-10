@@ -36,13 +36,6 @@ from typing import Iterator, Optional, Union
 
 
 class BaseApp:
-    def _init_client(self) -> RIA:
-        # avoid reinitializing although not sure that makes a difference
-        if hasattr(self, "client"):
-            return self.client
-        else:
-            return RiaUtil(baseURL=self.baseURL, user=self.user, pw=self.pw)
-
     def _get_objIds_for_whole_or_parts(self, *, identNr: str) -> set[int]:
         """
         Receive the actual identNr. If it is (a) whole-part number, look for wholes;

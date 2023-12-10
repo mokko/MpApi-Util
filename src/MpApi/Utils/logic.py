@@ -108,14 +108,15 @@ def is_suspicious(identNr: str | None) -> bool:
         return True
 
     if identNr.isspace():
-        return True
+        return True  # consists only of space
 
+    # more than five parts
     partsL = identNr.split(" ")
     if len(partsL) < 0 or len(partsL) > 5:
         # print(f"'{identNr}' Too few or too many parts")
         return True
 
-    # return any(re.match("\d+",part) for part in partsL)
+    # has to have at least one number component
     any_number = False
     for part in partsL:
         if re.match(r"\d+", part):
@@ -124,24 +125,27 @@ def is_suspicious(identNr: str | None) -> bool:
         # print(f"'{identNr}' not any number")
         return True
 
-    # 2+ consecutive spaces
+    # may not have >2 consecutive spaces
     if re.search(r"\s{2,}", identNr):
         # print(f"'{identNr}' 2+ white space")
         return True
 
-    # unbalanced brackets
+    # may not have unbalanced brackets
     brackets = [("(", ")"), ("<", ">"), ("[", "]")]
     for btype in brackets:
         if identNr.count(btype[0]) != identNr.count(btype[1]):
             # print(f"'{identNr}' unbalanced backets")
             return True
 
+    # may not have brackets with inside space ( ex )
     if re.search(r"\w+\(|\)\w+", identNr):
-        # print(f"'{identNr}' brackets without space")
+        return True
+
+    # may not have suspicious characters
+    if any(";", "[", "]") in identNr:
         return True
 
     # if you get here identNr is NOT suspicious
-    # print(f"'{identNr}' not suspicious")
     return False
 
 
