@@ -202,7 +202,7 @@ def restart():
     while times > 0 or times < 0:
         retval = subprocess.run(new_call, shell=True)
         if times % 2 == 0:
-            time.sleep(25)
+            time.sleep(60)
         times -= 1
         # if retval == 0:
         #    break

@@ -10,13 +10,14 @@ USAGE
 """
 
 import openpyxl
-from openpyxl import Workbook, load_workbook, worksheet
+from openpyxl import Workbook, load_workbook  # worksheet
 from openpyxl.styles import Alignment, Font
+from openpyxl.worksheet.worksheet import Worksheet
 from pathlib import Path
 import shutil
 import sys
 from tqdm import tqdm
-from typing import Iterator
+from typing import Any, Iterator, SupportsIndex
 
 red = Font(color="FF0000")
 teal = Font(color="008080")
@@ -59,7 +60,7 @@ class Xls:
         """
         self.changed = True
 
-    def drop_row_if_file_gone(self, *, col: str = "A", sheet: worksheet) -> None:
+    def drop_row_if_file_gone(self, *, col: str = "A", sheet: Worksheet) -> None:
         """
         Loop thru Excel sheet "Assets" and check if the files still exist. We use
         relative filename for that, so update has to be executed in right dir.
@@ -81,29 +82,31 @@ class Xls:
                 c += 1
         print("   done")
 
-    def get_conf(self, *, cell: str) -> str | None:
+    def file_exists(self) -> bool:
+        """
+        Returns True if Excel Excel file (at self.path) exists at specified location.
+        """
+        return self.path.exists()
+
+    def get_conf(self, *, cell: str, default: Any = None) -> str | None:
         """
         Returns the specified field from sheet conf or None if field is empty or
         only consists of space.
         """
         conf_ws = self.wb["Conf"]
         value = conf_ws[cell].value  # can be None
-        if value is None:
-            return None
-        elif value.isspace() or value == "":
-            value = None
+        if value is None or value.isspace() or value == "":
+            value = default
         return value
 
-    def get_sheet(self, *, title: str) -> openpyxl.worksheet.worksheet.Worksheet:
+    def get_sheet(self, *, title: str) -> Worksheet:
         try:
             ws = self.wb[title]
         except:
             raise ConfigError(f"ERROR: Excel file has no sheet {title}")
         return ws
 
-    def get_or_create_sheet(
-        self, *, title: str
-    ) -> openpyxl.worksheet.worksheet.Worksheet:
+    def get_or_create_sheet(self, *, title: str) -> Worksheet:
         try:
             ws = self.wb[title]  # sheet exists already
         except:  # new sheet
@@ -137,7 +140,7 @@ class Xls:
     def loop(
         self,
         *,
-        sheet: openpyxl.worksheet.worksheet.Worksheet,
+        sheet: Worksheet,
         offset: int = 3,
         limit: int = -1,
     ) -> Iterator:
@@ -162,9 +165,9 @@ class Xls:
     def make_conf(self, conf: dict[str, str]) -> None:
         conf_ws = self.get_or_create_sheet(title="Conf")
         max_row = 0
-        for cell in conf:
-            conf_ws[cell] = conf[cell]
-            no = int(cell[-1])
+        for cell_label in conf:
+            conf_ws[cell_label] = conf[cell_label]
+            no = int(cell_label[-1])
             if no > max_row:
                 no = max_row
 
@@ -180,18 +183,12 @@ class Xls:
                 cell.font = blue
         self.changed = True
 
-    def file_exists(self) -> bool:
-        """
-        Returns True if Excel Excel file (at self.path) exists at specified location.
-        """
-        return self.path.exists()
-
     def path_exists(
         self,
         *,
         cno: int = 0,
         path: Path | str,
-        sheet: openpyxl.worksheet.worksheet.Worksheet,
+        sheet: Worksheet,
     ) -> int | None:
         """
         Returns row number as int if filename is already in Excel sheet at specified row,
@@ -224,7 +221,7 @@ class Xls:
             if conf_ws[cell].value is None:
                 raise ConfigError(base_msg + required[cell])
 
-    def raise_if_content(self, sheet: openpyxl.worksheet.worksheet.Worksheet) -> bool:
+    def raise_if_content(self, sheet: Worksheet) -> bool:
         """
         Raises if sheet has more than 2 lines.
         """
@@ -232,9 +229,7 @@ class Xls:
             raise NoContentError(f"ERROR: Excel contains {sheet.max_row} rows!")
         return False
 
-    def raise_if_no_content(
-        self, sheet: openpyxl.worksheet.worksheet.Worksheet
-    ) -> bool:
+    def raise_if_no_content(self, sheet: Worksheet) -> bool:
         """
         Assuming that after init excel has to have more than 2 lines.
         Returns False if there is content.
@@ -290,6 +285,8 @@ class Xls:
         """
         if self.changed:
             self.save()
+            return True
+        return False
 
     def save_and_shutdown_if_requested(self) -> None:
         self.save()
@@ -312,7 +309,7 @@ class Xls:
             print("Planned shutdown.")
             sys.exit(0)
 
-    def wipe(self, *, sheet: worksheet) -> None:
+    def wipe(self, *, sheet: Worksheet) -> None:
         """Delete everything but the header. Slow."""
         rno = 3
         with tqdm(total=sheet.max_row - 2) as pbar:
@@ -320,16 +317,16 @@ class Xls:
                 # print(f"wiping row {rno}")
                 pbar.update()
                 sheet.delete_rows(rno)
-        self.xls.save()
+        self.save()
 
-    def write_header(self, *, sheet: openpyxl.worksheet.worksheet.Worksheet) -> None:
+    def write_header(self, *, sheet: Worksheet) -> None:
         """
         Take the table description (a dict) and write it to the top two lines of the
         specified worksheet.
 
         The table description is a dictionary that is structured as follows:
         self.description = {
-            "filename": {
+            "filename": { # short label
                 "label": "Asset Dateiname",
                 "desc": "aus Verzeichnis",
                 "col": "A",
@@ -338,26 +335,23 @@ class Xls:
         }
         """
 
-        for itemId in self.description:
-            col = self.description[itemId]["col"]  # letter
-            sheet[f"{col}1"] = self.description[itemId]["label"]
+        for short in self.description:
+            col = self.description[short]["col"]  # single letter
+            sheet[f"{col}1"] = self.description[short]["label"]
             sheet[f"{col}1"].font = Font(bold=True)
-            # print (f"{col} {self.table_desc[itemId]['label']}")
-            if "desc" in self.description[itemId]:
-                desc_txt = self.description[itemId]["desc"]
+            if "desc" in self.description[short]:
+                desc_txt = self.description[short]["desc"]
                 sheet[f"{col}2"] = desc_txt
                 sheet[f"{col}2"].font = Font(size=9, italic=True)
-                # print (f"\t{desc_txt}")
-            if "width" in self.description[itemId]:
-                width = self.description[itemId]["width"]
-                # print (f"\t{width}")
+            if "width" in self.description[short]:
+                width = self.description[short]["width"]
                 sheet.column_dimensions[col].width = width
 
     #
     # private
     #
 
-    def _rno2dict(self, rno: int, sheet: worksheet) -> dict:
+    def _rno2dict(self, rno: int, sheet: Worksheet) -> dict[str, Any]:
         """
         We read the provide a dict with labels as keys based on table description
         (self.description).
