@@ -1,9 +1,15 @@
 """
+Operations (functions) on filenames that typically have to do with IdentNr.
+
+e.g.
+- extract IdentNr from filename
+- check if filename is suspicious
+
 Reoccuring logic that doesn't interface Excel and the RIA API. Reocurring Excel stuff goes 
 into BaseApp.py. Reoccuring API stuff goes into RIA.py. Perhaps I will find a better name
 for this package.
 
-Module or a set functions?
+Module or a set ?
 """
 
 from pathlib import Path
@@ -98,7 +104,8 @@ def has_parts(identNr: str) -> bool:
 
 def is_suspicious(identNr: str | None) -> bool:
     """
-    Returns True of identNr looks suspicious, False if it looks good.
+    Checks whether identNr looks suspicious or like a valid identNr.
+    Returns True if it looks suspicious, False if it looks good.
     """
     # print(f"***{identNr}")
     if identNr is None:
@@ -131,7 +138,7 @@ def is_suspicious(identNr: str | None) -> bool:
         return True
 
     # may not have unbalanced brackets
-    brackets = [("(", ")"), ("<", ">"), ("[", "]")]
+    brackets = (("(", ")"), ("<", ">"), ("[", "]"))
     for btype in brackets:
         if identNr.count(btype[0]) != identNr.count(btype[1]):
             return True
@@ -141,8 +148,9 @@ def is_suspicious(identNr: str | None) -> bool:
         return True
 
     # may not have suspicious characters
-    if any(";", "[", "]") in identNr:
-        return True
+    for char in (";", "[", "]"):
+        if char in identNr:
+            return True
 
     # may not have >1 comma
     if identNr.count(",") > 1:

@@ -110,22 +110,3 @@ class BaseApp:
             text = text.replace("<html>", "").replace("</html>", "")
             text = text.replace("<body>", "").replace("</body>", "")
         return text
-
-    def _get_orgUnit(self, *, cell: str) -> Optional[str]:
-        """
-        Stores the value specified in the paramter cell in self.orgUnit.
-        cell is a string like B2.
-
-        Some empty values are turned into None
-        """
-        conf_ws = self.wb["Conf"]
-        orgUnit = conf_ws[cell].value  # can be None
-        if orgUnit is None:
-            pass
-        elif orgUnit.strip() == "":
-            orgUnit = None
-        return orgUnit
-
-    def _suspicous_character(self, *, identNr: str):
-        if identNr is None or any("-", ";") in str(identNr):
-            return True

@@ -353,7 +353,7 @@ class Xls:
 
     def _rno2dict(self, rno: int, sheet: Worksheet) -> dict[str, Any]:
         """
-        We read the provide a dict with labels as keys based on table description
+        We read  the provide a dict with labels as keys based on table description
         (self.description).
         """
         cells = dict()

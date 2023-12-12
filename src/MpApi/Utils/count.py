@@ -50,7 +50,7 @@ def _write_messages(fn):
     print(f"About to write messages to {fn}")
     with open(fn, "w", encoding="utf-8") as f:
         for msg in messages:
-            f.write(msg + "\n")
+            f.write(f"{msg}\n")
 
 
 def counter(src_dir: Path = Path(), filemask: str = "*", show_size: bool = False):
