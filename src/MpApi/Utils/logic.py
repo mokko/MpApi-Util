@@ -102,15 +102,12 @@ def has_parts(identNr: str) -> bool:
     return False
 
 
-def is_suspicious(identNr: str | None) -> bool:
+def is_suspicious(identNr: str) -> bool:
     """
     Checks whether identNr looks suspicious or like a valid identNr.
     Returns True if it looks suspicious, False if it looks good.
     """
     # print(f"***{identNr}")
-    if identNr is None:
-        return True
-
     if not isinstance(identNr, str):
         return True
 
@@ -156,8 +153,15 @@ def is_suspicious(identNr: str | None) -> bool:
     if identNr.count(",") > 1:
         return True
 
-    # if you get here identNr is NOT suspicious
+    # identNr is NOT suspicious
     return False
+
+
+def not_suspicious(identNr: str) -> bool:
+    if is_suspicious(identNr=identNr):
+        return False
+    else:
+        return True
 
 
 def whole_for_parts(identNr: str) -> str:

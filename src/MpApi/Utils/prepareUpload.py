@@ -80,11 +80,11 @@ import logging
 from lxml import etree
 from mpapi.module import Module
 from mpapi.constants import get_credentials
-from MpApi.Utils.BaseApp import BaseApp, ConfigError, NoContentError
+from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.identNr import IdentNrFactory
-from MpApi.Utils.logic import extractIdentNr
+from MpApi.Utils.logic import extractIdentNr, not_suspicious
 from MpApi.Utils.Ria import RIA
-from MpApi.Utils.Xls import Xls
+from MpApi.Utils.Xls import Xls, ConfigError, NoContentError
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font
 import openpyxl.cell.cell
@@ -109,11 +109,6 @@ class PrepareUpload(BaseApp):
         if self.limit != -1 and self.limit < 3:
             raise ValueError("ERROR: limit < 3 is pointless!")
         print(f"Using limit {self.limit}")
-        if self.xls.file_exists():
-            print(f"* {self.excel_fn} exists already")
-        else:
-            print(f"* About to make new Excel '{self.excel_fn}'")
-
         desc = {
             "filename": {
                 "label": "Dateiname",
@@ -180,13 +175,18 @@ class PrepareUpload(BaseApp):
             },
         }
         self.xls = Xls(path="prepare.xlsx", description=desc)
+        if self.xls.file_exists():
+            print(f"* {self.xls.path} exists already")
+        else:
+            print(f"* About to make new Excel '{self.xls.path}'")
+
         self.wb = self.xls.get_or_create_wb()
         self.ws = self.xls.get_or_create_sheet(title="prepareUpload")
         # self.wb = self._init_excel(path=self.excel_fn)
         # self.ws = self._init_sheet(workbook=self.wb)  # explicit is better than implicit
         # conf_ws = self.wb["Conf"]
-        conf_ws = self.xls.get_or_create_sheet(title="Conf")
-        self.filemask = conf_ws.cell["B3"]
+        # conf_ws = self.xls.get_or_create_sheet(title="Conf")
+        self.filemask = self.xls.get_conf(cell="B3")
 
     #
     # public
@@ -240,25 +240,22 @@ class PrepareUpload(BaseApp):
             objIds_str = "; ".join(str(objId) for objId in objIds)
             return objIds_str
 
-        conf_ws = self.xls.get_or_create_sheet(title="Conf")
-        try:
-            temp_str = conf_ws["B1"].value  # was "Object 12345". Keep that?
-        except:
-            raise ConfigError("Config value 'template' not defined!")
-
+        temp_str = self.xls.get_conf(cell="B1")
+        if temp_str is None:
+            raise ConfigError("Template config missing!")
         ttype, tid = temp_str.split()
         ttype = ttype.strip()  # do i need to strip?
         tid = int(tid.strip())
         print(f"***template: {ttype} {tid}")
 
-        self.xls._raise_if_no_content()
+        self.xls.raise_if_no_content(sheet=self.ws)
         # we want the same template for all records
 
         templateM = self.client.get_template(ID=tid, mtype=ttype)
         # print ("Got template")
         # templateM.toFile(path="debug.template.xml")
 
-        for c, rno in self._loop_table2(sheet=self.ws):
+        for c, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
             print(f"{rno} of {self.ws.max_row}")  # , end="\r" flush=True
             if c["identNr"].value is None:
                 # without a identNr we cant fill in a identNr in template
@@ -460,7 +457,7 @@ class PrepareUpload(BaseApp):
             raise ValueError(f"Error: Filemask missing {e}")
 
     def _fill_in_candidate(self, c) -> None:
-        if c["schemaId"].value is None:
+        if c["schemaId"].value is None or c["schemaId"].value == "None":
             c["candidate"].font = red
         if c["candidate"].value is None:
             if (
@@ -468,6 +465,8 @@ class PrepareUpload(BaseApp):
                 and c["objIds"].value == "None"
                 and c["partsObjIds"].value == "None"
                 and c["duplicate"].value != "Duplikat"
+                and c["schemaId"].value != "None"
+                and not_suspicious(c["filename"].value)
             ):
                 c["candidate"].value = "x"
 
