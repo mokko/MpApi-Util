@@ -188,15 +188,22 @@ class AssetUploader(BaseApp):
                 )
                 continue  # SEEMS NOT TO WORK, so we try with else!
             else:
-                #  print(f"   object reference known, continue {cells['ref'].value}")
-                try:
-                    self._create_new_asset(cells)
-                    self._upload_file(cells, rno)
-                    hits = self._set_Standardbild(cells)
-                except KeyboardInterrupt:
-                    self.xls.request_shutdown()
-                # dont save if here, save after loop instead
+                if cells["fullpath"].value is not None:
+                    p = Path(cells["fullpath"].value)
+                if p and p.exists():
+                    self.xls.set_change()
+                    #  print(f"   object reference known, continue {cells['ref'].value}")
+                    try:
+                        self._create_new_asset(cells)
+                        self._upload_file(cells, rno)
+                        hits = self._set_Standardbild(cells)
+                    except KeyboardInterrupt:
+                        self.xls.request_shutdown()
+                else:
+                    cells["attached"].value = "File not found"
+                    print(f"WARN: {p} doesn't exist (anymore)")
             self.xls.shutdown_if_requested()
+            self.xls.save_if_change()
         self.xls.save()
 
     def init(self) -> None:
@@ -344,7 +351,9 @@ class AssetUploader(BaseApp):
     #
     # private
     #
-    def _attach_asset(self, *, path: str, mulId: int, target_path: str) -> bool:
+    def _attach_and_move_asset(
+        self, *, path: str, mulId: int, target_path: str
+    ) -> bool:
         """
         attach an asset file (at path) and, if successful, move the asset file to new
         location (target_path).
@@ -633,13 +642,14 @@ class AssetUploader(BaseApp):
         }
         self.xls.make_conf(conf)
 
-    def _move_file(self, *, src: str, dst: str) -> None:
+    def _move_file(self, *, src: str | Path, dst: str | Path) -> None:
         """
-        What do I do if src or dst are None?
+        src and dest may not be None.
         """
-        dstp = Path(dst)
-        if not dstp.exists():
-            shutil.move(src, dst)  # die if problems
+        src_p = Path(src)
+        dst_p = Path(dst)
+        if not dst_p.exists() and src_p.exists():
+            shutil.move(src, dst)  # dies if problems
             print(f"   moved to target '{dst}'")
         else:
             raise SyntaxError(f"ERROR: Target location already used! {dst}")
@@ -664,7 +674,7 @@ class AssetUploader(BaseApp):
         if cells["attached"].value == None:
             fn = cells["fullpath"].value
             ID = int(cells["asset_fn_exists"].value)
-            if self._attach_asset(
+            if self._attach_and_move_asset(
                 path=fn, mulId=ID, target_path=cells["targetpath"].value
             ):
                 cells["attached"].value = "x"

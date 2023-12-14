@@ -54,7 +54,7 @@ class Xls:
             self.request_shutdown()
         return True
 
-    def change(self) -> None:
+    def set_change(self) -> None:
         """
         Set the object variable changed to signal that save is necessary.
         """
