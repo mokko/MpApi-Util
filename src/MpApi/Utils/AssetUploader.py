@@ -7,7 +7,9 @@ Should emulate the hotfolder eventually. That is we
 (d) upload/attach files to an multimedia records
 (e) create a reference usually from object to multimedia record
 (f) potentially set Standardbild
-(g) move a successfully uploaded asset to another dir for safekeeping
+
+We no longer move successfully uploaded files; instead we record success in the 
+Excel.
 
 In order to make the process transparent it is carried out in several steps
 """
@@ -129,7 +131,7 @@ class AssetUploader(BaseApp):
                 "col": "K",  # 10
                 "width": 90,
             },
-            "targetpath": {
+            "targetpath": {  # not used at the moment
                 "label": "nach Bewegen der Datei",
                 "desc": "wenn Upload erfolgreich",
                 "col": "L",  # 11
@@ -159,7 +161,6 @@ class AssetUploader(BaseApp):
         (c) create a reference usually from object to multimedia record
         (d) update Excel to reflect changes
         (e) set Standardbild (if x in right place)
-        (f) move uploaded file in uploaded subdir.
 
         Is it allowed to re-run go multiple time, e.g. to restart attachment? Yes!
 
@@ -202,9 +203,11 @@ class AssetUploader(BaseApp):
                 else:
                     cells["attached"].value = "File not found"
                     print(f"WARN: {p} doesn't exist (anymore)")
+            if rno % 10 == 0:
+                self.xls.backup()
             self.xls.shutdown_if_requested()
             self.xls.save_if_change()
-        self.xls.save()
+        # self.xls.save()
 
     def init(self) -> None:
         """
@@ -351,9 +354,7 @@ class AssetUploader(BaseApp):
     #
     # private
     #
-    def _attach_and_move_asset(
-        self, *, path: str, mulId: int, target_path: str
-    ) -> bool:
+    def _attach_asset(self, *, path: str, mulId: int) -> bool:
         """
         attach an asset file (at path) and, if successful, move the asset file to new
         location (target_path).
@@ -367,8 +368,6 @@ class AssetUploader(BaseApp):
         ret = self.client.upload_attachment(file=path, ID=mulId)
         # print(f"   success on upload? {ret}")
         if ret.status_code == 204:
-            if target_path is not None:
-                self._move_file(src=path, dst=target_path)
             return True
         else:
             # should this raise an error?
@@ -562,7 +561,6 @@ class AssetUploader(BaseApp):
         self._write_parts(cells)
         self._write_whole(cells)
         self._write_ref(cells)
-        self._write_targetpath(cells)
         ref = cells["ref"].value
         print(f"   {rno}: {identNr} [{ref}]")
         self._write_photographer(cells, path)
@@ -623,12 +621,12 @@ class AssetUploader(BaseApp):
             "B2": "Objekte",
             "C2": "noch nicht implementiert",
             "A3": "OrgUnit (optional)",
-            "B3": "Andere Dokumente",
+            "B3": "",
             "C3": """OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen). 
         Die Suche der existierenden Assets wird auf den angegebenen Bereich eingeschränkt. 
         Wenn kein Bereich angegenen, wird die Suche auch nicht eingeschränkt. Gültige 
         orgUnits sind z.B. EMArchiv, EMMusikethnologie, EMMedienarchiv, EMPhonogrammArchiv, EMSudseeAustralien""",
-            "A4": "Zielverzeichnis",
+            "A4": "",  # was Zielverzeichnis
             "B4": "",
             "C4": """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
         Backslash. Wenn Feld leer. wird Datei nicht bewegt.""",
@@ -641,18 +639,6 @@ class AssetUploader(BaseApp):
             "B7": "True",
         }
         self.xls.make_conf(conf)
-
-    def _move_file(self, *, src: str | Path, dst: str | Path) -> None:
-        """
-        src and dest may not be None.
-        """
-        src_p = Path(src)
-        dst_p = Path(dst)
-        if not dst_p.exists() and src_p.exists():
-            shutil.move(src, dst)  # dies if problems
-            print(f"   moved to target '{dst}'")
-        else:
-            raise SyntaxError(f"ERROR: Target location already used! {dst}")
 
     def _prepare_template(self) -> Module:
         try:
@@ -674,14 +660,10 @@ class AssetUploader(BaseApp):
         if cells["attached"].value == None:
             fn = cells["fullpath"].value
             ID = int(cells["asset_fn_exists"].value)
-            if self._attach_and_move_asset(
-                path=fn, mulId=ID, target_path=cells["targetpath"].value
-            ):
+            if self._attach_asset(path=fn, mulId=ID):
+                self.xls.set_change()
                 cells["attached"].value = "x"
-            # save after every file that is uploaded
-            if rno is not None and rno % 10 == 0:
-                self.xls.backup()  # todo: move to self.xls
-                self.xls.save()  # todo: move to self.xls
+            # save after every file that is uploaded?
         else:
             print("   asset already attached")
 
@@ -804,17 +786,3 @@ class AssetUploader(BaseApp):
                 cells["ref"].font = teal
             # there used to be a thing that decided which objId to take
             # from part or whole. that seemed not to work
-
-    def _write_targetpath(self, cells):
-        if cells["targetpath"].value is None:
-            # print("in targetpath")
-            ws2 = self.wb["Conf"]
-            if ws2["B4"].value is not None:
-                u_dir = Path(ws2["B4"].value)
-                fn = Path(cells["filename"].value)
-                t = u_dir / fn
-                while t.exists():
-                    t = self._plus_one(t)
-                else:
-                    cells["targetpath"].value = str(t)
-                    cells["targetpath"].font = teal
