@@ -278,6 +278,17 @@ class Xls:
             self.changed = False
         return True
 
+    def save_bak_shutdown(self, *, rno, save: int = 1, bak: int = 10) -> None:
+        """
+        shutdown if requested, make a backup every n times (bak) and save
+        current status every m times (save).
+        """
+        self.shutdown_if_requested()
+        if rno is not None and rno % bak == 0:
+            self.backup()
+        if rno is not None and rno % save == 0:
+            self.save_if_change()
+
     def save_if_change(self) -> bool:
         """
         Version of save that saves only if changes were registered in variable

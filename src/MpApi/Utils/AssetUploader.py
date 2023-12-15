@@ -59,6 +59,8 @@ IGNORE_SUFFIXES = (".py", ".ini", ".lnk", ".tmp")
 class AssetUploader(BaseApp):
     def __init__(self, *, limit: int = -1, offset: int = 3) -> None:
         self.limit = int(limit)  # allows to break the go loop after number of items
+        if self.limit < 3:
+            raise ConfigError(f"ERROR: Limit too small {self.limit}")
         self.offset = int(offset)  # set to 3 by default to start at 3 row
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
@@ -192,22 +194,20 @@ class AssetUploader(BaseApp):
                 if cells["fullpath"].value is not None:
                     p = Path(cells["fullpath"].value)
                 if p and p.exists():
-                    self.xls.set_change()
                     #  print(f"   object reference known, continue {cells['ref'].value}")
                     try:
-                        self._create_new_asset(cells)
+                        self._create_new_asset(
+                            cells
+                        )  # writes asset id to asset_fn_exists
                         self._upload_file(cells, rno)
-                        hits = self._set_Standardbild(cells)
+                        self._set_Standardbild(cells)
                     except KeyboardInterrupt:
                         self.xls.request_shutdown()
                 else:
                     cells["attached"].value = "File not found"
                     print(f"WARN: {p} doesn't exist (anymore)")
-            if rno % 10 == 0:
-                self.xls.backup()
-            self.xls.shutdown_if_requested()
-            self.xls.save_if_change()
-        # self.xls.save()
+            self.xls.save_bak_shutdown(rno=rno, bak=10)
+        # self.xls.save_if_change()
 
     def init(self) -> None:
         """
@@ -310,11 +310,7 @@ class AssetUploader(BaseApp):
             # rno is the row number in Assets sheet
             # rno is None if file not in list
             rno = self._file_to_list(path=p, rno=rno)
-
-            # save every thousand files to protect against interruption
-            if rno is not None and rno % 1000 == 0:
-                self.xls.backup()
-                self.xls.save()
+            self.xls.save_bak_shutdown(rno=rno, save=500, bak=500)
         self.xls.save()
 
     def standardbild(self) -> None:
@@ -332,14 +328,8 @@ class AssetUploader(BaseApp):
             if c["ref"].value is None:
                 print("   no object reference cannot set standardbild")
                 continue
-            hits += self._set_Standardbild(c)
-            # will save even if nothing changed
-            if rno is not None and rno % 5 == 0 and hits > 0:
-                self.xls.save()
-                self.xls.backup()
-                hits = 0
-            self.xls.shutdown_if_requested()
-        self.xls.save()
+            self._set_Standardbild(c)
+            self.xls.save_bak_shutdown(rno=rno, save=5, bak=10)
 
     def wipe(self) -> None:
         """
@@ -350,6 +340,7 @@ class AssetUploader(BaseApp):
         """
         self._init_wbws()
         self._wipe()
+        self.xls.save()
 
     #
     # private
@@ -450,6 +441,7 @@ class AssetUploader(BaseApp):
         # print("enter _create_from_template")
         if objId is None or objId == "None":
             # Do we want to log this error/warning in Excel?
+            raise SyntaxError(f"objId {objId} not allowed")
             print(f"moduleItemdId '{objId}' not allowed! Not creating new asset.")
             return None
         r = Record(templateM)
@@ -468,8 +460,11 @@ class AssetUploader(BaseApp):
 
     def _create_new_asset(self, cells: dict) -> None:
         """
-        Copies a template specified in the configuration.
-        Gets called during upload (go) phase.
+        Copies a template specified in the configuration. Gets called during upload
+        (go) phase.
+
+
+        Writes ID of new asset in te field asset_fn_exists.
         """
         # print("_create_new_asset")
         if cells["asset_fn_exists"].value == "None":
@@ -481,14 +476,21 @@ class AssetUploader(BaseApp):
                 # an important way which warrants an error and the user's attention.
                 raise FileNotFoundError(f"File not found: '{fn}'")
             # print(f"fn: {fn}")
-            creatorID = cells["creatorID"].value
+            creatorID = cells["creatorID"].value  # can be None
             # print(f"   template with creatorID {creatorID}")
+
+            ref_objId = cells["ref"].value
+            if ref_objId is None:
+                print("WARNING: Ref objId not present! Not creating")
+                return None
+
             new_asset_id = self._create_from_template(
                 fn=fn,
-                objId=cells["ref"].value,
+                objId=ref_objId,
                 templateM=templateM,
                 creatorID=creatorID,
             )
+            self.xls.set_change()
             cells["asset_fn_exists"].value = new_asset_id
             cells["asset_fn_exists"].font = teal
             print(f"   asset {new_asset_id} created")
@@ -656,23 +658,29 @@ class AssetUploader(BaseApp):
             return self.templateM
 
     def _upload_file(self, cells, rno) -> None:
-        # print("enter _upload_file")
-        if cells["attached"].value == None:
+        # only upload if not already uploaded and if we have an ID to upload to
+        if (
+            cells["attached"].value is None
+            and cells["asset_fn_exists"].value is not None
+        ):
             fn = cells["fullpath"].value
+
             ID = int(cells["asset_fn_exists"].value)
             if self._attach_asset(path=fn, mulId=ID):
                 self.xls.set_change()
                 cells["attached"].value = "x"
-            # save after every file that is uploaded?
         else:
             print("   asset already attached")
 
-    def _set_Standardbild(self, c) -> int:
+    def _set_Standardbild(self, c) -> Optional[int]:
         """
         Set asset as standardbild for known object; only succeeds if object has no
         Standardbild yet.
         """
         stdbild = c["standardbild"].value  # just a shortcut
+        if c["asset_fn_exists"].value is None or c["asset_fn_exists"].value == "None":
+            print("WARNING: No asset to set standardbild to")
+            return None
         if stdbild is not None:
             if stdbild == "done":
                 print("   standardbild says 'done' already")
@@ -688,6 +696,7 @@ class AssetUploader(BaseApp):
                     print("   setting standardbild")
                     r = self.client.mk_asset_standardbild2(objId=objId, mulId=mulId)
                     if r is not None and r.status_code == 204:
+                        self.xls.set_change()
                         # print(f"xxx {r.status_code}")
                         print("   setting column N to done")
                         c["standardbild"].value = "done"
