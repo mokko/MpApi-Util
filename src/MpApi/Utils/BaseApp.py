@@ -80,6 +80,12 @@ class BaseApp:
         )
         return objId_set
 
+    def _init_limit(self, limit: int = -1) -> int:
+        limit = int(limit)
+        if limit > -1 and limit < 3:
+            raise ConfigError(f"ERROR: Limit too small {limit}")
+        return limit
+
     # needs to go to Ria.py?
     def _rm_garbage(self, text: str) -> str:
         """

@@ -4,15 +4,14 @@ Should emulate the hotfolder eventually. That is we
 (a) read in a configuration from an Excel file
 (b) process an input directory (non recursively),
 (c) create new multimedia (=asset) records from a template
-(d) upload/attach files to an multimedia records
-(e) create a reference usually from object to multimedia record
+(d) upload/attach files to a multimedia record
+(e) create a reference (usually from object to multimedia record)
 (f) potentially set Standardbild
 
-We no longer move successfully uploaded files; instead we record success in the 
-Excel.
-
-In order to make the process transparent it is carried out in several steps
+We no longer move successfully uploaded files; instead we record of state in the 
+Excel file.
 """
+
 import copy
 from datetime import datetime
 from lxml import etree
@@ -58,14 +57,14 @@ IGNORE_SUFFIXES = (".py", ".ini", ".lnk", ".tmp")
 
 class AssetUploader(BaseApp):
     def __init__(self, *, limit: int = -1, offset: int = 3) -> None:
-        self.limit = int(limit)  # allows to break the go loop after number of items
-        if self.limit < 3:
-            raise ConfigError(f"ERROR: Limit too small {self.limit}")
+        self.limit = self._init_limit(limit)
         self.offset = int(offset)  # set to 3 by default to start at 3 row
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         self.objIds_cache: dict[str, str] = {}
+        self.xls = Xls(path=excel_fn, description=self.desc())
 
+    def desc(self) -> dict:
         desc = {
             "filename": {
                 "label": "Asset Dateiname",
@@ -152,7 +151,7 @@ class AssetUploader(BaseApp):
                 "width": 5,
             },
         }
-        self.xls = Xls(path=excel_fn, description=desc)
+        return desc
 
     def go(self) -> None:
         """
@@ -660,9 +659,13 @@ class AssetUploader(BaseApp):
     def _upload_file(self, cells, rno) -> None:
         # only upload if not already uploaded and if we have an ID to upload to
         if (
-            cells["attached"].value is None
-            and cells["asset_fn_exists"].value is not None
+            cells["asset_fn_exists"].value is None
+            or cells["asset_fn_exists"].value == "None"
         ):
+            print("   WARNING: no asset to attach to!")
+            return None
+
+        if cells["attached"].value is None:
             fn = cells["fullpath"].value
 
             ID = int(cells["asset_fn_exists"].value)
