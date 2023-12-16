@@ -28,7 +28,7 @@ from mpapi.constants import NSMAP, parser
 from mpapi.module import Module
 from pathlib import Path
 import re
-from typing import Any, Iterator
+from typing import Any, Iterator, Self  # Self since 3.11
 
 
 class UnknownSchemaException(Exception):
@@ -125,7 +125,7 @@ class IdentNrFactory:
             else:
                 self.schemas = {}
 
-    def _parser_EM(self, iNr):
+    def _parser_EM(self, iNr: Self):
         """
         Parse identNr as string into four parts.
         Parse typical EM identNr using roman numeral in the beginning and number towards
@@ -141,7 +141,7 @@ class IdentNrFactory:
         iNr.part3 = m.group(3)
         iNr.part4 = m.group(4).lstrip()
 
-    def _parser_space(self, iNr: identNr) -> None:
+    def _parser_space(self, iNr: Self) -> None:
         """
         Use space as a separator to parse the parts
         """
@@ -189,7 +189,7 @@ class IdentNrFactory:
         self._load_schemas()
         return self.schemas
 
-    def new_from_str(self, *, text: str) -> IdentNr:
+    def new_from_str(self, *, text: str) -> Self:
         iNr = IdentNr()
         iNr.text = text
         self._parser_EM(iNr)  #  eg. V A Dlg 1234 a,b
@@ -204,7 +204,7 @@ class IdentNrFactory:
         iNr.schemaId = self.schemas[iNr.schema]["schemaId"]
         return iNr
 
-    def new_from_node(self, *, node: lxml.etree._Element) -> IdentNr:
+    def new_from_node(self, *, node: lxml.etree._Element) -> Self:
         """
         node is repeatableGroup[@name='ObjObjectNumberGrp']/repeatableGroupItem. There
         may only be one such item. Not sure

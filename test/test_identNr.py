@@ -48,11 +48,11 @@ def test_constructor():
 
 
 def test_cases():
+    f = IdentNrFactory()
     for ident_str in cases:
         ident_dict = cases[ident_str]
-        print(f"***{ident_str}")
-        print(f"***{ident_dict}")
-        f = IdentNrFactory()
+        # print(f"***{ident_str}")
+        # print(f"***{ident_dict}")
         iNr = f.new_from_str(text=ident_str)
         assert iNr.part1 == ident_dict[1]
         assert iNr.part2 == ident_dict[2]
