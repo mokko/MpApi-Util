@@ -105,76 +105,9 @@ class PrepareUpload(BaseApp):
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
         print(f"Logged in as '{user}'")
-        self.limit = int(limit)
-        if self.limit != -1 and self.limit < 3:
-            raise ValueError("ERROR: limit < 3 is pointless!")
+        self.limit = self._init_limit(limit)
         print(f"Using limit {self.limit}")
-        desc = {
-            "filename": {
-                "label": "Dateiname",
-                "desc": "aus Verzeichnis",
-                "col": "A",
-                "width": 20,
-            },
-            "identNr": {
-                "label": "IdentNr",
-                "desc": "aus Dateinamen",
-                "col": "B",
-                "width": 15,
-            },
-            "assetUploaded": {
-                "label": "Asset hochgeladen?",
-                "desc": "mulId(s) aus RIA",
-                "col": "C",
-                "width": 15,
-            },
-            "objIds": {
-                "label": "objId(s) aus RIA",
-                "desc": "für diese IdentNr",
-                "col": "D",
-                "width": 15,
-            },
-            "partsObjIds": {
-                "label": "Teile/Ganzes",
-                "desc": "objId für Teile/Ganzes",
-                "col": "E",
-                "width": 20,
-            },
-            "candidate": {
-                "label": "Kandidat",
-                "desc": "neue Objekte erzeugen?",
-                "col": "F",
-                "width": 7,
-            },
-            "notes": {
-                "label": "Bemerkung",
-                "desc": "",
-                "col": "G",
-                "width": 20,
-            },
-            "fullpath": {
-                "label": "Pfad",
-                "desc": "aus Verzeichnis",
-                "col": "H",
-                "width": 115,
-            },
-            "schema": {
-                "label": "Schema",
-                "desc": "aus IdentNr",
-                "col": "I",
-            },
-            "schemaId": {
-                "label": "SchemaId",
-                "desc": "aus IdentNr",
-                "col": "J",
-            },
-            "duplicate": {
-                "label": "Duplikat",
-                "desc": "aus IdentNr",
-                "col": "K",
-            },
-        }
-        self.xls = Xls(path="prepare.xlsx", description=desc)
+        self.xls = Xls(path="prepare.xlsx", description=self.desc())
         if self.xls.file_exists():
             print(f"* {self.xls.path} exists already")
         else:
@@ -182,11 +115,8 @@ class PrepareUpload(BaseApp):
 
         self.wb = self.xls.get_or_create_wb()
         self.ws = self.xls.get_or_create_sheet(title="prepareUpload")
-        # self.wb = self._init_excel(path=self.excel_fn)
-        # self.ws = self._init_sheet(workbook=self.wb)  # explicit is better than implicit
-        # conf_ws = self.wb["Conf"]
-        # conf_ws = self.xls.get_or_create_sheet(title="Conf")
         self.filemask = self.xls.get_conf(cell="B3")
+        print(f"Using filemask {filemask}")
 
     #
     # public
@@ -276,6 +206,74 @@ class PrepareUpload(BaseApp):
                         self.xls.save()
         # self._save_excel(path=self.excel_fn)
         self.xls.save()
+
+    def desc(self) -> dict:
+        desc = {
+            "filename": {
+                "label": "Dateiname",
+                "desc": "aus Verzeichnis",
+                "col": "A",
+                "width": 20,
+            },
+            "identNr": {
+                "label": "IdentNr",
+                "desc": "aus Dateinamen",
+                "col": "B",
+                "width": 15,
+            },
+            "assetUploaded": {
+                "label": "Asset hochgeladen?",
+                "desc": "mulId(s) aus RIA",
+                "col": "C",
+                "width": 15,
+            },
+            "objIds": {
+                "label": "objId(s) aus RIA",
+                "desc": "für diese IdentNr",
+                "col": "D",
+                "width": 15,
+            },
+            "partsObjIds": {
+                "label": "Teile/Ganzes",
+                "desc": "objId für Teile/Ganzes",
+                "col": "E",
+                "width": 20,
+            },
+            "candidate": {
+                "label": "Kandidat",
+                "desc": "neue Objekte erzeugen?",
+                "col": "F",
+                "width": 7,
+            },
+            "notes": {
+                "label": "Bemerkung",
+                "desc": "",
+                "col": "G",
+                "width": 20,
+            },
+            "fullpath": {
+                "label": "Pfad",
+                "desc": "aus Verzeichnis",
+                "col": "H",
+                "width": 115,
+            },
+            "schema": {
+                "label": "Schema",
+                "desc": "aus IdentNr",
+                "col": "I",
+            },
+            "schemaId": {
+                "label": "SchemaId",
+                "desc": "aus IdentNr",
+                "col": "J",
+            },
+            "duplicate": {
+                "label": "Duplikat",
+                "desc": "aus IdentNr",
+                "col": "K",
+            },
+        }
+        return desc
 
     def init(self) -> None:
         self.xls.raise_if_file()

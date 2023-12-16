@@ -272,6 +272,13 @@
   "schemaId": 87,
   "text": "V A 66835"
  },
+ "V A Dlg": {
+  "part1": "V",
+  "part2": " A Dlg",
+  "part3": "1",
+  "schemaId": 233,
+  "text": "V A Dlg 1"
+ },
  "V A Nls": {
   "part1": "V",
   "part2": " A Nls",

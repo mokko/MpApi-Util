@@ -58,6 +58,7 @@ IGNORE_SUFFIXES = (".py", ".ini", ".lnk", ".tmp")
 class AssetUploader(BaseApp):
     def __init__(self, *, limit: int = -1, offset: int = 3) -> None:
         self.limit = self._init_limit(limit)
+        print(f"Using limit {self.limit}")
         self.offset = int(offset)  # set to 3 by default to start at 3 row
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)

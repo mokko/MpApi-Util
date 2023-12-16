@@ -45,6 +45,7 @@ class IdentNr:
     part1: str = field(init=False)
     part2: str = field(init=False)
     part3: str = field(init=False)
+    part4: str = field(init=False)
     schema: str = field(init=False)
     schemaId: str = field(init=False)
 
@@ -73,6 +74,9 @@ class IdentNr:
                     </dataField>
                     <dataField name="Part3Txt">
                         <value>{self.part3}</value>
+                    </dataField>
+                    <dataField name="Part3Txt">
+                        <value>{self.part4}</value>
                     </dataField>
                     <dataField name="SortLnu">
                         <value>1</value>
@@ -121,6 +125,32 @@ class IdentNrFactory:
             else:
                 self.schemas = {}
 
+    def _parser_EM(self, iNr):
+        """
+        Parse identNr as string into four parts.
+        Parse typical EM identNr using roman numeral in the beginning and number towards
+        the end.
+        """
+        m = re.match(
+            r"([XVI]+)( [a-zA-Z] *[a-zA-Z]*) (\d+)( *[a-z0-9\,\-<> ]*)", iNr.text
+        )
+        if m is None:
+            raise SyntaxError("ERROR: Not recognized!")
+        iNr.part1 = m.group(1)
+        iNr.part2 = m.group(2)
+        iNr.part3 = m.group(3)
+        iNr.part4 = m.group(4).lstrip()
+
+    def _parser_space(self, iNr: identNr) -> None:
+        """
+        Use space as a separator to parse the parts
+        """
+        parts = identNr.text.split()
+        iNr.part1 = parts[0].strip()
+        iNr.part2 = " " + parts[1].strip()
+        iNr.part3 = " ".join(parts[2]).strip()  # rest lumped together
+        iNr.part4 = " ".join(parts[3:]).strip()  # rest lumped together
+
     def _save_schemas(self) -> None:
         print(f"saving schema at {self.schemas_fn}")
         with open(self.schemas_fn, "w") as outfile:
@@ -162,14 +192,11 @@ class IdentNrFactory:
     def new_from_str(self, *, text: str) -> IdentNr:
         iNr = IdentNr()
         iNr.text = text
-        parts = text.split()
-        iNr.part1 = parts[0].strip()
-        iNr.part2 = " " + parts[1].strip()
-        iNr.part3 = " ".join(parts[2:]).strip()  # rest lumped together
+        self._parser_EM(iNr)  #  eg. V A Dlg 1234 a,b
+        # self._parser_space(iNr)
         iNr.schema = self._extract_schema(text=text)
+        self._load_schemas()  # lazy loading
 
-        # lazy load schemas only once
-        self._load_schemas()
         try:
             schemaId = self.schemas[iNr.schema]
         except:
