@@ -75,7 +75,7 @@ class IdentNr:
                     <dataField name="Part3Txt">
                         <value>{self.part3}</value>
                     </dataField>
-                    <dataField name="Part3Txt">
+                    <dataField name="Part4Txt">
                         <value>{self.part4}</value>
                     </dataField>
                     <dataField name="SortLnu">
@@ -132,7 +132,7 @@ class IdentNrFactory:
         the end.
         """
         m = re.match(
-            r"([XVI]+)( [a-zA-Z] *[a-zA-Z]*) (\d+)( *[a-z0-9\,\-<> ]*)", iNr.text
+            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\,\-<> ]*)", iNr.text
         )
         if m is None:
             raise SyntaxError("ERROR: Not recognized!")

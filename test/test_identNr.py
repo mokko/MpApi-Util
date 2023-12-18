@@ -17,6 +17,12 @@ cases = {
         3: "11189",
         4: "a,b",
     },
+    "V C Dlg 3 ": {
+        1: "V",
+        2: " C Dlg",
+        3: "3",
+        4: "",
+    },
     "V A Dlg 11189 a,b": {
         1: "V",
         2: " A Dlg",
@@ -34,6 +40,18 @@ cases = {
         2: " a",
         3: "123",
         4: "a-c <1>",
+    },
+    "VIII ME 123": {
+        1: "VIII",
+        2: " ME",
+        3: "123",
+        4: "",
+    },
+    "VIII ME Nls 123": {
+        1: "VIII",
+        2: " ME Nls",
+        3: "123",
+        4: "",
     },
 }
 
@@ -58,3 +76,4 @@ def test_cases():
         assert iNr.part2 == ident_dict[2]
         assert iNr.part3 == ident_dict[3]
         assert iNr.part4 == ident_dict[4]
+        print(f"{ident_str} ok")
