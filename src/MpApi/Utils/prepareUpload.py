@@ -116,7 +116,7 @@ class PrepareUpload(BaseApp):
         self.wb = self.xls.get_or_create_wb()
         self.ws = self.xls.get_or_create_sheet(title="prepareUpload")
         self.filemask = self.xls.get_conf(cell="B3")
-        print(f"Using filemask {filemask}")
+        print(f"Using filemask {self.filemask}")
 
     #
     # public
@@ -170,9 +170,8 @@ class PrepareUpload(BaseApp):
             objIds_str = "; ".join(str(objId) for objId in objIds)
             return objIds_str
 
+        self._check_create_objects()
         temp_str = self.xls.get_conf(cell="B1")
-        if temp_str is None:
-            raise ConfigError("Template config missing!")
         ttype, tid = temp_str.split()
         ttype = ttype.strip()  # do i need to strip?
         tid = int(tid.strip())
@@ -431,13 +430,12 @@ class PrepareUpload(BaseApp):
             else:
                 c["assetUploaded"].value = "; ".join(idL)
 
-    def _checkria_messages(self, c, rno):
-        print(
-            f"cr {c['filename'].value} -> {c['identNr'].value} {c['candidate'].value}"
-        )
-        print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
+    def _check_create_objects(self) -> None:
+        self.xls.save()
+        required = {"B1": "Template config missing!"}
+        self.xls.raise_if_conf_value_missing(required)
 
-    def _check_scandir(self):
+    def _check_scandir(self) -> None:
         # let's not overwrite or modify file information in Excel if already written
         # 2 lines are getting written by initialization
         # if self.ws.max_row > 2:
@@ -448,11 +446,13 @@ class PrepareUpload(BaseApp):
         # if writable it's not open
         # self._save_excel(path=self.excel_fn)
         self.xls.save()
-        conf_ws = self.wb["Conf"]
-        try:
-            self.filemask = conf_ws["B3"].value
-        except Exception as e:
-            raise ValueError(f"Error: Filemask missing {e}")
+        self.xls.raise_if_conf_value_missing({"B3": "Filemask"})
+
+    def _checkria_messages(self, c, rno) -> None:
+        print(
+            f"cr {c['filename'].value} -> {c['identNr'].value} {c['candidate'].value}"
+        )
+        print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
 
     def _fill_in_candidate(self, c) -> None:
         if c["schemaId"].value is None or c["schemaId"].value == "None":

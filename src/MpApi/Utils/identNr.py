@@ -143,13 +143,13 @@ class IdentNrFactory:
 
     def _parser_space(self, iNr: Self) -> None:
         """
-        Use space as a separator to parse the parts
+        Use space as a separator to parse the text into parts.
         """
         parts = identNr.text.split()
         iNr.part1 = parts[0].strip()
         iNr.part2 = " " + parts[1].strip()
-        iNr.part3 = " ".join(parts[2]).strip()  # rest lumped together
-        iNr.part4 = " ".join(parts[3:]).strip()  # rest lumped together
+        iNr.part3 = parts[2].strip()  # rest lumped together
+        iNr.part4 = join(parts[3:]).strip()  # rest lumped together
 
     def _save_schemas(self) -> None:
         print(f"saving schema at {self.schemas_fn}")

@@ -307,6 +307,13 @@
   "schemaId": 80,
   "text": "V C 9700"
  },
+ "V C Dlg": {
+  "part1": "V",
+  "part2": " C Dlg",
+  "part3": "1",
+  "schemaId": 3169,
+  "text": "V C Dlg 1"
+ },
  "V C Nls": {
   "part1": "V",
   "part2": " C Nls",
