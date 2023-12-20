@@ -86,6 +86,28 @@ class BaseApp:
             raise ConfigError(f"ERROR: Limit too small {limit}")
         return limit
 
+    def _plus_one(self, p: Path) -> Path:
+        """
+        Receive a path and add or increase the number at the end to make filename unique
+
+        We're adding "_1" before the suffix.
+
+        (Still needed in mover.)
+        """
+        suffix = p.suffix  # returns str
+        stem = p.stem  # returns str
+        parent = p.parent  # returns Path
+        m = re.search(r"_(\d+)$", stem)
+        if m:
+            digits = int(m.group(1))
+            stem_no_digits = stem.replace(f"_{digits}", "")
+            digits += 1
+            new = parent / f"{stem_no_digits}_{digits}{suffix}"
+        else:
+            digits = 1
+            new = parent / f"{stem}_{digits}{suffix}"
+        return new
+
     # needs to go to Ria.py?
     def _rm_garbage(self, text: str) -> str:
         """

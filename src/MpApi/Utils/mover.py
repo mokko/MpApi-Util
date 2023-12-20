@@ -148,7 +148,7 @@ class Mover(BaseApp):
                     except KeyboardInterrupt:
                         self.xls.request_shutdown()
                     else:
-                        self.xls.change()
+                        self.xls.set_change()
                 else:
                     print("WARNING: target path is None")
             if rno % 500 == 0 and self.xls.changed:  # save every so often
