@@ -83,7 +83,7 @@ class BaseApp:
     def _init_limit(self, limit: int = -1) -> int:
         limit = int(limit)
         if limit > -1 and limit < 3:
-            raise ConfigError(f"ERROR: Limit too small {limit}")
+            raise ConfigError(f"ERROR: Positive limit too small: {limit}")
         return limit
 
     def _plus_one(self, p: Path) -> Path:

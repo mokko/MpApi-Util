@@ -54,6 +54,10 @@ class Xls:
             self.request_shutdown()
         return True
 
+    def backup_if_change(self) -> bool:
+        if self.changed:
+            return self.backup()
+
     def set_change(self) -> None:
         """
         Set the object variable changed to signal that save is necessary.
@@ -137,6 +141,17 @@ class Xls:
                 self.wb = Workbook()
                 return self.wb
 
+    def load_workbook() -> Workbook:
+        """
+        Load workbook from self.path or raise if file does not exist. Sets self.wb and
+        returns workbook.
+        """
+        if not self.path.exists():
+            raise ConfigError(f"ERROR: Excel file not found! {self.path}")
+
+        self.wb = load_workbook(self.path, data_only=True)
+        return self.wb
+
     def loop(
         self,
         *,
@@ -157,6 +172,29 @@ class Xls:
         for row in sheet.iter_rows(min_row=offset):  # start at 3rd row
             cells = self._rno2dict(rno, sheet)
             yield cells, rno
+            if limit == rno:
+                print("* Limit reached")
+                break
+            rno += 1
+
+    def loop2(
+        self,
+        *,
+        sheet: Worksheet,
+        offset: int = 3,
+        limit: int = -1,
+    ) -> Iterator:
+        """
+        Loop thru the rows of specified sheet.
+
+        A version that returns the row and doesn't require description dictionary:
+            for row,rno in self.loop2(sheet=ws, limit=self.limit):
+                print (f"row number {rno} {row[0]}")
+        """
+
+        rno = offset  # row number; used to report a different number
+        for row in sheet.iter_rows(min_row=offset):  # start at 3rd row
+            yield row, rno
             if limit == rno:
                 print("* Limit reached")
                 break

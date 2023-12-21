@@ -31,12 +31,14 @@ class Mover(BaseApp):
         breaks the go loop after number of items
         limit counts rows in Excel file, so limit < 3 is meaningless
         """
-        self.limit = int(limit)
-        if self.limit != -1 and self.limit < 3:
-            raise ValueError("ERROR: Use limit = -1 (no limit) or > 2!")
+        self.limit = self._init_limit(limit)
         user, pw, baseURL = get_credentials()
         self.client = RIA(baseURL=baseURL, user=user, pw=pw)
 
+        self.xls = Xls(path=excel_fn, description=self.desc())
+        self.wb = self.xls.get_or_create_wb()
+
+    def desc(self) -> dict:
         desc = {
             "filename": {
                 "label": "Dateiname",
@@ -93,9 +95,10 @@ class Mover(BaseApp):
                 "width": 40,
             },
         }
-        self.xls = Xls(path=excel_fn, description=desc)
-        self.wb = self.xls.get_or_create_wb()
+        return desc
 
+    # perhaps this method should live somewhere else with other operations on paths
+    # suspicious_asset_name
     def is_suspicious(self, fn: str) -> bool:
         p = Path(fn)
         if fn is None:
@@ -152,11 +155,11 @@ class Mover(BaseApp):
                 else:
                     print("WARNING: target path is None")
             if rno % 500 == 0 and self.xls.changed:  # save every so often
-                self.xls.backup()
-                self.xls.save()
+                self.xls.backup_if_change()
+                self.xls.save_if_change()
             self.xls.shutdown_if_requested()
-        self.xls.backup()
-        self.xls.save()
+        self.xls.backup_if_change()
+        self.xls.save_if_change()
 
     def scandir(self):
         """
@@ -187,7 +190,10 @@ class Mover(BaseApp):
                             continue
                 if self.xls.path_exists(path=p_abs, cno=7, sheet=self.ws):
                     # print(f"ff {p_abs.name}")
-                    pbar.update()
+                    try:
+                        pbar.update()
+                    except KeyboardInterrupt:
+                        self.xls.request_shutdown()
                 else:
                     # print("new path")
                     try:
@@ -287,14 +293,15 @@ class Mover(BaseApp):
                         return None
                 try:
                     shutil.move(fro, to)
-                except OSError as e:  # eg disk full
+                except PermissionError as e:
+                    # self.ws[f"I{rno}"].font = red
+                    self._warning(f"F{rno}", f"PermissionError {e}")
+                except OSError as e:
+                    # eg disk full
                     self.xls.save()
                     raise e
                 except FileNotFoundError as e:
                     self._warning(f"F{rno}", f"FileNotFoundError {e}")
-                except PermissionError as e:
-                    # self.ws[f"I{rno}"].font = red
-                    self._warning(f"F{rno}", f"PermissionError {e}")
                 else:
                     self.ws[f"I{rno}"].font = teal
                     c["moved"].value = "x"
