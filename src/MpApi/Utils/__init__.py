@@ -1,6 +1,6 @@
 """Higer-level tools for MpApi, the unofficial MuseumPlus Client in Python"""
 
-__version__ = "0.0.8"  # include restart in init/toml
+__version__ = "0.0.9"  # include mk_grp
 import argparse
 
 from mpapi.client import MpApi
@@ -16,6 +16,7 @@ from MpApi.Utils.prepareUpload import PrepareUpload
 from MpApi.Utils.reportX import ReportX
 from MpApi.Utils.sren import Sren
 from MpApi.Utils.unzipChunks import iter_chunks
+from MpApi.Utils.mk_grp import MakeGroup
 
 from pathlib import Path
 import subprocess
@@ -88,6 +89,27 @@ def count():
 
     src_dir = Path()
     counter(src_dir=src_dir, filemask=args.filemask, show_size=args.size)
+
+
+def mk_grp():
+    parser = argparse.ArgumentParser(
+        description="Create (make) a ObjectGroup in RIA based on an *.xlsx with objIds"
+    )
+    parser.add_argument("-c", "--col", help="column as 0-based integer", required=True)
+    parser.add_argument("-f", "--file", help="location of excel file", required=True)
+    parser.add_argument(
+        "-l",
+        "--limit",
+        help="line in excel file at which tasks are interrupted",
+        default=-1,
+    )
+    parser.add_argument("-s", "--sheet", help="Title of sheet to use", required=True)
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
+    args = parser.parse_args()
+    _version(args)
+    maker = MakeGroup(col=args.col, file=args.file, sheet=args.sheet, limit=args.limit)
 
 
 def move():

@@ -141,7 +141,7 @@ class Xls:
                 self.wb = Workbook()
                 return self.wb
 
-    def load_workbook() -> Workbook:
+    def load_workbook(self) -> Workbook:
         """
         Load workbook from self.path or raise if file does not exist. Sets self.wb and
         returns workbook.

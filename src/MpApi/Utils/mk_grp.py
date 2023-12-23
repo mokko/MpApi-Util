@@ -19,6 +19,8 @@ mk_grp -c 0 -f excel.xlsx -l 1000 -s Prepare
 
 from mpapi.client import MpApi
 from mpapi.module import Module
+from mpapi.constants import get_credentials
+from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.Xls import Xls, ConfigError
 from pathlib import Path
 
@@ -34,30 +36,38 @@ footer = """
 </application>"""
 
 
-class Make_Group:
-    def __init__(self, *, col: int, fn: Path, sheet: str, limit: int = -1) -> None:
+class MakeGroup(BaseApp):
+    def __init__(self, *, col: int, file: str, sheet: str, limit: int = -1) -> None:
         self.limit = self._init_limit(limit)
         self.col = int(col)
-        self.path = fn
-        self.xls = Xls(path=fn, description={})
+        self.sheet = str(sheet)
+        self.path = Path(file)
+        self.xls = Xls(path=self.path, description={})
         user, pw, baseURL = get_credentials()
         self.client = MpApi(baseURL=baseURL, user=user, pw=pw)
-        self.wb = self.xls.load_wb()
+        self.wb = self.xls.load_workbook()
         self.ws = self.xls.get_sheet(title=sheet)
 
         xml = header
+        known = list()
         for row, rno in self.xls.loop2(sheet=self.ws, limit=self.limit):
-            print("{rno} {row[self.col]}")
-            objId = int(row[self.col].value)
-            xml += f""" 
-                <moduleReference name="OgrObjectRef" targetModule="Object">
-                  <moduleReferenceItem moduleItemId="{objId}"/>
-                </moduleReference>"""
+            objId = row[self.col].value
+            print(f"{rno} {objId}")
+            if objId is not None and objId != "None":
+                objId = int(objId)
+                if objId not in known:
+                    xml += f""" 
+                        <moduleReference name="OgrObjectRef" targetModule="Object">
+                          <moduleReferenceItem moduleItemId="{objId}"/>
+                        </moduleReference>"""
+                known.append(objId)
         xml += footer
-
-        print(xml)
         m = Module(xml=xml)
         m.validate()
-        r = self.ria.createItem(module="ObjectGroup", xml=xml)
+        m.toFile(path="mk_grp.debug.xml")
+        print("validates, contacting RIA...")
+        # r = self.client.createItem(module="ObjectGroup", xml=xml)
+        # print(r.status_code)
+        id = self.client.createItem3(data=m)
         # TODO: We do want to print out group id
-        print(r.status_code)
+        print(f"ObjectGroup {id} created.")
