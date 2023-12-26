@@ -193,7 +193,6 @@ class Mover(BaseApp):
                             print(f"Ignore dir {p}")
                             IGNORE = True
                             break
-
                 if not IGNORE:
                     if self.xls.path_exists(path=p_abs, cno=7, sheet=self.ws):
                         # print(f"ff {p_abs.name}")
@@ -207,12 +206,12 @@ class Mover(BaseApp):
                             self._scan_per_file(path=p, count=c)
                         except KeyboardInterrupt:
                             self.xls.request_shutdown()
-                        if c % 1000 == 0:  # save every so often
-                            self.xls.save()
                     if self.limit == c:
                         print("* Limit reached")
                         break
-                c += 1
+                    c += 1
+                    if c % 1000 == 0:  # save every so often
+                        self.xls.save()
                 self.xls.shutdown_if_requested()
         self.xls.backup()
         self.xls.save()
