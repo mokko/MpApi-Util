@@ -171,6 +171,7 @@ class Mover(BaseApp):
         print(f"   filemask: {self.filemask}")
 
         c = 3
+        IGNORE = False
         with tqdm(total=self.ws.max_row - 2, unit=" files") as pbar:
             for p in Path().glob(self.filemask):
                 # print(f"S{p}")
@@ -185,26 +186,32 @@ class Mover(BaseApp):
                 elif p.name.lower() == "thumbs.db" or p.name.lower() == "desktop.ini":
                     continue
                 if self.exclude_dirs is not None:
+                    IGNORE = False
                     for each in self.exclude_dirs:
-                        if p_abs_str.startswith(each):
-                            continue
-                if self.xls.path_exists(path=p_abs, cno=7, sheet=self.ws):
-                    # print(f"ff {p_abs.name}")
-                    try:
-                        pbar.update()
-                    except KeyboardInterrupt:
-                        self.xls.request_shutdown()
-                else:
-                    # print("new path")
-                    try:
-                        self._scan_per_file(path=p, count=c)
-                    except KeyboardInterrupt:
-                        self.xls.request_shutdown()
-                    if c % 1000 == 0:  # save every so often
-                        self.xls.save()
-                if self.limit == c:
-                    print("* Limit reached")
-                    break
+                        # print(f"checking {each} vs {p}")
+                        if str(p).startswith(each):
+                            print(f"Ignore dir {p}")
+                            IGNORE = True
+                            break
+
+                if not IGNORE:
+                    if self.xls.path_exists(path=p_abs, cno=7, sheet=self.ws):
+                        # print(f"ff {p_abs.name}")
+                        try:
+                            pbar.update()
+                        except KeyboardInterrupt:
+                            self.xls.request_shutdown()
+                    else:
+                        # print("new path")
+                        try:
+                            self._scan_per_file(path=p, count=c)
+                        except KeyboardInterrupt:
+                            self.xls.request_shutdown()
+                        if c % 1000 == 0:  # save every so often
+                            self.xls.save()
+                    if self.limit == c:
+                        print("* Limit reached")
+                        break
                 c += 1
                 self.xls.shutdown_if_requested()
         self.xls.backup()
@@ -213,8 +220,8 @@ class Mover(BaseApp):
     def wipe(self):
         self._check_move()
         self.xls.wipe(sheet=self.ws)
-        self.backup()
-        self.save()
+        self.xls.backup()
+        # self.xls.save()
 
     #
     # private
@@ -247,12 +254,15 @@ class Mover(BaseApp):
         else:
             self.filemask = conf_ws["B3"].value
 
-        if conf_ws["B4"].value is None:
-            self.exclude_dirs = []
-        else:
+        self.exclude_dirs = []
+        if conf_ws["B4"].value is not None:
             exclude_str = conf_ws["B4"].value
             excludeL = exclude_str.split(";")
-            self.exclude_dirs = [d.strip() for d in excludeL]
+            for d in excludeL:
+                d = d.strip()
+                d += "\\"  # only works on windows
+                self.exclude_dirs.append(d)
+        print(f"{self.exclude_dirs=}")
 
     def _make_conf(self) -> None:
         conf = {
@@ -296,12 +306,12 @@ class Mover(BaseApp):
                 except PermissionError as e:
                     # self.ws[f"I{rno}"].font = red
                     self._warning(f"F{rno}", f"PermissionError {e}")
+                except FileNotFoundError as e:
+                    self._warning(f"F{rno}", f"FileNotFoundError {e}")
                 except OSError as e:
                     # eg disk full
                     self.xls.save()
                     raise e
-                except FileNotFoundError as e:
-                    self._warning(f"F{rno}", f"FileNotFoundError {e}")
                 else:
                     self.ws[f"I{rno}"].font = teal
                     c["moved"].value = "x"

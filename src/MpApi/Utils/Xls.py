@@ -366,6 +366,7 @@ class Xls:
                 # print(f"wiping row {rno}")
                 pbar.update()
                 sheet.delete_rows(rno)
+        self.changed = True
         self.save()
 
     def write_header(self, *, sheet: Worksheet) -> None:
