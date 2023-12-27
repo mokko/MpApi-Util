@@ -211,7 +211,7 @@ class Mover(BaseApp):
                         break
                     c += 1
                     if c % 1000 == 0:  # save every so often
-                        self.xls.save()
+                        self.xls.save_if_change()
                 self.xls.shutdown_if_requested()
         self.xls.backup()
         self.xls.save()
@@ -324,7 +324,7 @@ class Mover(BaseApp):
         c = self.xls._rno2dict(count, sheet=self.ws)
         # only write in empty fields
         self._write_filename(c, path)
-
+        self.xls.set_change()
         if c["relpath"].value is None:
             c["relpath"].value = str(path)
         if c["fullpath"].value is None:
