@@ -337,6 +337,12 @@ class Mover(BaseApp):
         print(f"{count}: {path.name} [{c['move'].value}] {path.parent}")
 
     def _warning(self, cell_label: str, msg: str) -> None:
+        """
+        For a given warning message msg, print it to STDOUT and also write it in red
+        into the specified by cell_label (e.g. A1).
+        """
+        if cell_label is None or cell_label == "" or cell_label.isspace():
+            raise SyntaxError("Error: Cell label missing!")
         print(msg)
         self.ws[cell_label].value = msg
         self.ws[cell_label].font = red
