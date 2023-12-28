@@ -143,7 +143,7 @@ class Mover(BaseApp):
                     #    "ERROR: Move says move, but targetpath has no info!"
                     # )
                 fro = Path(c["relpath"].value)
-                print(f"{rno}/{self.ws.max_row}: {fro}")
+                print(f"m{rno}/{self.ws.max_row}: {fro}")
                 if c["targetpath"].value is not None:
                     to = Path(c["targetpath"].value)
                     try:
@@ -160,6 +160,7 @@ class Mover(BaseApp):
             self.xls.shutdown_if_requested()
         self.xls.backup_if_change()
         self.xls.save_if_change()
+        print("Moving done")
 
     def scandir(self):
         """
@@ -170,7 +171,7 @@ class Mover(BaseApp):
         self._check_scandir()
         print(f"   filemask: {self.filemask}")
 
-        c = 3
+        c = self.ws.max_row + 1  # should at least be 3
         IGNORE = False
         with tqdm(total=self.ws.max_row - 2, unit=" files") as pbar:
             for p in Path().glob(self.filemask):
@@ -215,6 +216,7 @@ class Mover(BaseApp):
                 self.xls.shutdown_if_requested()
         self.xls.backup()
         self.xls.save()
+        print("Scanning done")
 
     def wipe(self):
         self._check_move()
@@ -334,7 +336,7 @@ class Mover(BaseApp):
         self._write_move(c)
         self._write_targetpath(c)
 
-        print(f"{count}: {path.name} [{c['move'].value}] {path.parent}")
+        print(f"s{count}: {path.name} [{c['move'].value}] {path.parent}")
 
     def _warning(self, cell_label: str, msg: str) -> None:
         """

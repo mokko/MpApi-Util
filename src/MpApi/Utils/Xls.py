@@ -316,7 +316,9 @@ class Xls:
             self.changed = False
         return True
 
-    def save_bak_shutdown(self, *, rno, save: int = 1, bak: int = 10) -> None:
+    def save_bak_shutdown(
+        self, *, rno: int | None, save: int = 1, bak: int = 10
+    ) -> None:
         """
         shutdown if requested, make a backup every n times (bak) and save
         current status every m times (save).
