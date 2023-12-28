@@ -131,18 +131,17 @@ def move():
     _version(args)
 
     m = Mover(limit=args.limit)
-    if args.first == "init":
-        m.init()
-    elif args.first == "move":
-        m.move()
-    elif args.first == "rescan":
-        m.rescan()
-    elif args.first == "scandir":
-        m.scandir()
-    elif args.first == "wipe":
-        m.wipe()
-    else:
-        print(f"Unknown command '{args.cmd}'")
+    match args.first:
+        case "init":
+            m.init()
+        case "move":
+            m.move()
+        case "scandir":
+            m.scandir()
+        case "wipe":
+            m.wipe()
+        case _:
+            print(f"Unknown command '{args.cmd}'")
 
 
 def prepareUpload():
