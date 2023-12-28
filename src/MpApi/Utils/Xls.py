@@ -296,6 +296,19 @@ class Xls:
             raise Exception(f"ERROR: {self.path} does NOT exist!")
         return False
 
+    def real_max_row(self, sheet: Worksheet) -> int:
+        """
+        I might need to find the last row that has content if ws.max_row is not realiable
+        and often includes empty rows.
+
+        In that case I would take max_row and go back to find the last row with content
+        in cell A.
+        """
+        real_max = sheet.max_row
+        while sheet[f"A{real_max}"].value in (None, ""):
+            real_max -= 1
+        return real_max
+
     def request_shutdown(self):
         """
         Prints a message and changes class variable. To be called in except KeyboardInterrupt.

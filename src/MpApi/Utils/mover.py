@@ -171,9 +171,9 @@ class Mover(BaseApp):
         self._check_scandir()
         print(f"   filemask: {self.filemask}")
 
-        c = self.ws.max_row + 1  # should at least be 3
+        c = self.xls.real_max_row(sheet=self.ws) + 1  # should at least be 3
         IGNORE = False
-        with tqdm(total=self.ws.max_row - 2, unit=" files") as pbar:
+        with tqdm(total=self.xls.real_max_row(sheet=self.ws), unit=" files") as pbar:
             for p in Path().glob(self.filemask):
                 # print(f"S{p}")
                 p_abs = p.absolute()
