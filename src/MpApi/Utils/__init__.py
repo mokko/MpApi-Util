@@ -53,14 +53,17 @@ def attacher():
     _version(args)
     a = Attacher()
     # an asset can only have one attachment
-    if args.cmd == "up":
-        if not args.file:
-            raise SyntaxError("ERROR: Need path to file for upload!")
-        a.up(ID=args.ID, file=args.file)
-    elif args.cmd == "down":
-        # Do we want to save with original filename?
-        # We definitely dont want to overwrite existing files
-        a.down(ID=args.ID)
+    match args.cmd:
+        case "up":
+            if not args.file:
+                raise SyntaxError("ERROR: Need path to file for upload!")
+            a.up(ID=args.ID, file=args.file)
+        case "down":
+            # Do we want to save with original filename?
+            # We definitely dont want to overwrite existing files
+            a.down(ID=args.ID)
+        case _:
+            print(f"Unknown command '{args.cmd}'")
 
 
 def count():
@@ -166,17 +169,20 @@ def prepareUpload():
     p = PrepareUpload(
         limit=args.limit,
     )
-    if args.phase == "init":
-        p.init()
-    elif args.phase == "scandir":
-        p.scan_disk()
-    elif args.phase == "checkria":
-        p.checkria()
-    elif args.phase == "movedupes":
-        print("* About to move dupes; make sure you have called checkria before.")
-        p.mv_dupes()
-    elif args.phase == "createobjects":
-        p.create_objects()
+    match args.phase:
+        case "init":
+            p.init()
+        case "scandir":
+            p.scan_disk()
+        case "checkria":
+            p.checkria()
+        case "movedupes":
+            print("* About to move dupes; make sure you have called checkria before.")
+            p.mv_dupes()
+        case "createobjects":
+            p.create_objects()
+        case _:
+            print(f"Unknown command '{args.phase}'")
 
 
 def reportX():
@@ -273,12 +279,13 @@ def sren():
     _version(args)
 
     r = Sren(act=args.act, filemask=args.filemask)
-    if args.cmd == "add":
-        r.add(args.first)
-    elif args.cmd == "replace":
-        r.replace(args.first, args.second)
-    else:
-        raise SyntaxError(f"Error: Unknown command {cmd}")
+    match args.cmd:
+        case "add":
+            r.add(args.first)
+        case "replace":
+            r.replace(args.first, args.second)
+        case _:
+            raise SyntaxError(f"Error: Unknown command {args.cmd}")
 
 
 def upload():
@@ -315,35 +322,36 @@ def upload():
     _version(args)
 
     u = AssetUploader(limit=args.limit)
-    if args.cmd == "cont":
-        c = 1
-        u = AssetUploader()
-        ioffset = u.initial_offset()
-        print(f"   initial offset: {ioffset}")
-        csize = 5000
-        while True:
-            limit = c * csize + ioffset
-            offset = (c - 1) * csize + ioffset
-            print(f"Setting {offset=} and {limit=} ")
-            u = AssetUploader(limit=limit, offset=offset)
-            u.backup_excel()
-            u.scandir(offset=offset)
+    match args.cmd:
+        case "cont":
+            c = 1
+            u = AssetUploader()
+            ioffset = u.initial_offset()
+            print(f"   initial offset: {ioffset}")
+            csize = 5000
+            while True:
+                limit = c * csize + ioffset
+                offset = (c - 1) * csize + ioffset
+                print(f"Setting {offset=} and {limit=} ")
+                u = AssetUploader(limit=limit, offset=offset)
+                u.backup_excel()
+                u.scandir(offset=offset)
+                u.go()
+                c += 1
+        case "photo":
+            u.photo()
+        case "init":
+            u.init()
+        case "scandir":
+            u.scandir()
+        case "standardbild":
+            u.standardbild()
+        case "up":
             u.go()
-            c += 1
-    elif args.cmd == "photo":
-        u.photo()
-    elif args.cmd == "init":
-        u.init()
-    elif args.cmd == "scandir":
-        u.scandir()
-    elif args.cmd == "standardbild":
-        u.standardbild()
-    elif args.cmd == "up":
-        u.go()
-    elif args.cmd == "wipe":
-        u.wipe()
-    else:
-        print(f"Unknown command '{args.cmd}'")
+        case "wipe":
+            u.wipe()
+        case _:
+            print(f"Unknown command '{args.cmd}'")
 
 
 def update_schemas():
