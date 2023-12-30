@@ -36,7 +36,6 @@ Home = "https://github.com/mokko/MpApi-Util"
 attach = 'MpApi.Utils:attacher'
 count = 'MpApi.Utils:count'
 #du = 'MpApi.Utils:du'
-brename ='MpApi.Utils:rename'
 #breplace = 'MpApi.Utils:replace'
 mk_grp = 'MpApi.Utils:mk_grp'
 mover = 'MpApi.Utils:move'

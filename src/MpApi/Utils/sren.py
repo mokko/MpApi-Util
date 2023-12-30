@@ -3,19 +3,17 @@ Simple renaming tool - rename files in current directory
 
     add a string before suffix  
         ren2 add ___-KK  
-        before: ./file.jpg
-        after:  ./file___-KK.jpg
+            ./file.jpg --> ./file___-KK.jpg
 
     replace string A with another string B
-        ren relpace "-" "___-KK"
-        before: ./file -KK.jpg
-        after:  ./file ___-KK.jpg
+        ren replace "-" "___-KK"
+            ./file -KK.jpg  --> ./file ___-KK.jpg
 
-    Directories are untouched. 
+    Directories will not be renamed. 
     
     If you want recursive use add **/ at the beginning of your filemask.
     
-    Files are always reamed in place, i.e. they stay in the dir they are in.    
+    Files are always renamed in place, i.e. they stay in the dir they are in.    
 """
 
 from pathlib import Path
@@ -26,7 +24,7 @@ DEBUG = True
 
 
 class Sren:
-    def __init__(self, *, act=False, filemask=None, rblock=False) -> None:
+    def __init__(self, *, act=False, filemask=None, rblock=True) -> None:
         """
         rblock blocks recursively adding a string that already exists in stem. By
         default, we switch that on.
