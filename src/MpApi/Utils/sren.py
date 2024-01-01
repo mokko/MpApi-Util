@@ -54,7 +54,7 @@ class Sren:
             # todo: test
             if self.rblock and stem.endswith(string):
                 print(
-                    f"rblock: String '{string}' exists already in stem, blocking duplication"
+                    f"{c}: rblock String '{string}' exists already in stem, blocking duplication"
                 )
                 dst = p
             else:
@@ -74,12 +74,26 @@ class Sren:
             new_stem = stem.replace(first, second)
             if self.rblock and second in stem:
                 print(
-                    f"rblock: Target string '{second}' exists already in stem, blocking replacment"
+                    f"{c}: rblock: Target string '{second}' exists already in stem, blocking replacment"
                 )
                 dst = p
             else:
                 dst = parent / f"{new_stem}{suffix}"
             self._move(p, dst, c)
+
+    def replace_suffix(self, first, second) -> None:
+        """
+        Replace working on suffix
+        """
+        for path, count in self._loop():
+            suffix = path.suffix
+            stem = path.stem
+            parent = path.parent
+            if first != second:
+                dst = parent / f"{stem}{second}"
+            else:
+                dst = path
+            self._move(path, dst, count)
 
     #
     # private
@@ -102,8 +116,9 @@ class Sren:
                 c += 1
 
     def _move(self, src, dst, count) -> None:
-        if src == dst:
-            print(f"{src} - name is not new, not moving")
+        if str(src) == str(dst):
+            # print(f"{count}: {src} - name is not new, not moving")
+            # print(f"{src} -> {dst}")
             return
         print(f"{count}: {src} -> {dst}")
         if self.act:

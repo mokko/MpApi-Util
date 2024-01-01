@@ -265,7 +265,7 @@ def sren():
     parser.add_argument(
         "cmd",
         help="string that will be added to end of every filename",
-        choices=("add", "replace"),
+        choices=("add", "replace", "rsuffix"),
     )
 
     parser.add_argument(
@@ -284,6 +284,8 @@ def sren():
             r.add(args.first)
         case "replace":
             r.replace(args.first, args.second)
+        case "rsuffix":
+            r.replace_suffix(args.first, args.second)
         case _:
             raise SyntaxError(f"Error: Unknown command {args.cmd}")
 

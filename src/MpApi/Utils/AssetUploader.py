@@ -281,7 +281,7 @@ class AssetUploader(BaseApp):
         chunk_size = self.limit - offset
         print(f"   chunk size: {chunk_size}")
         with tqdm(total=chunk_size + len(attached_cache), unit=" files") as pbar:
-            for p in src_dir.glob(f"**/{self.filemask}"):
+            for p in src_dir.glob(self.filemask):
                 if (
                     p.name.startswith(".")
                     or p.name.startswith("debug")
@@ -320,7 +320,7 @@ class AssetUploader(BaseApp):
         print("Only setting Standardbild")
         self._check_scandir()
         hits = 0
-        for c, rno in self.xls.loop(sheet=self.ws, limit=sheet):
+        for c, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
             # relative path; assume dir hasn't changed since scandir run
             # fn = c["filename"].value
 
@@ -339,8 +339,7 @@ class AssetUploader(BaseApp):
         Beware of --limit.
         """
         self._init_wbws()
-        self._wipe()
-        self.xls.save()
+        self.xls.wipe(sheet=self.ws)
 
     #
     # private
@@ -702,7 +701,7 @@ class AssetUploader(BaseApp):
                     if r is not None and r.status_code == 204:
                         self.xls.set_change()
                         # print(f"xxx {r.status_code}")
-                        print("   setting column N to done")
+                        # print("   setting column N to done")
                         c["standardbild"].value = "done"
                     else:
                         print("   NOT setting column N to done")
