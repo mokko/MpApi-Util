@@ -280,7 +280,7 @@ class AssetUploader(BaseApp):
         chunk_size = self.limit - offset
         print(f"   chunk size: {chunk_size}")
         with tqdm(total=chunk_size + len(attached_cache), unit=" files") as pbar:
-            for p in src_dir.glob(self.filemask):
+            for p in Path().glob(self.filemask):
                 if (
                     p.name.startswith(".")
                     or p.name.startswith("debug")
@@ -404,12 +404,17 @@ class AssetUploader(BaseApp):
         """
         # check if excel exists, has the expected shape and is writable
         self._init_wbws()
-        self.xls.raise_if_no_content(sheet=self.ws)
+        # self.xls.raise_if_no_content(sheet=self.ws)
+        required = {
+            "B5": "No filemask!",
+            "B8": "No identNr parser provided!",
+        }
+        self.xls.raise_if_conf_value_missing(required)
 
         self.orgUnit = self.xls.get_conf(cell="B3")  # can be None
         self.filemask = self.xls.get_conf(cell="B5", default="*")
         self.ignore_suspicious = self.xls.get_conf_true(cell="B7")
-        self.parser = self.xls.get_conf_true(cell="B8")
+        self.parser = self.xls.get_conf(cell="B8")
 
     def _create_from_template(
         self, *, fn: str, objId: int, templateM: Module, creatorID: Optional[int] = None

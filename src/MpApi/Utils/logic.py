@@ -1,5 +1,5 @@
 """
-Operations (functions) on filenames that typically have to do with IdentNr.
+Functions on filenames that typically have to do with IdentNr.
 
 e.g.
 - extract IdentNr from filename
@@ -15,72 +15,19 @@ Module or a set ?
 from pathlib import Path
 import re
 from typing import Any
+from MpApi.Utils.Xls import ConfigError
 
 
-def extractIdentNr(*, path: Path) -> str | None:
+def extractIdentNr(*, path: Path, parser: str) -> str | None:
     """
     extracts IdentNr (=identifier, Signatur) from filename (as Pathlib path). Developed
     specifically for cataogue cards and not widely tested beyond.
     """
-    # stem as determined by path is everything before the last .suffix.
-    stem = path.stem
-
-    # step 1: collapse all underlines into space
-    stem2 = re.sub("_", " ", stem)
-    # step 2: all allowed chars
-    m = re.search(r"([()\w\d +.,<>-]+)", stem2)
-    if m:
-        astr = m.group(1).strip()
-        # step 3: cut the tail
-        astr = re.sub(r" -KK[ \w]*| -\w+", "", astr)
-        # print(f"{astr=}")
-
-        # restrict to max length of elements
-        alist = astr.split(" ")
-        if "<" in astr:
-            new = " ".join(alist[0:5])
-        else:
-            new = " ".join(alist[0:4])
-
-        # special cases
-        if astr.startswith("I MV"):
-            # adding a magic slash.
-            # It's magic because it's not there in the filename
-            # some have different length I/MV 0950 a
-            new = re.sub("I MV", "I/MV", new)
-            m = re.search(r"(I/MV \d+) (\d)", new)
-            # add spitze klammern
-            if m:
-                new = f"{m.group(1)} <{m.group(2)}>"
-        elif astr.startswith("Verz BGAEU"):
-            # new = " ".join(alist[0:3])
-            # add a magic dot
-            new = re.sub("Verz BGAEU", "Verz. BGAEU", new)
-        elif astr.startswith("EJ ") or astr.startswith("Inv "):
-            # not catching __0001 correctly...
-            new = " ".join(alist[0:2])
-        elif astr.startswith("Adr (EJ)"):
-            new = " ".join(alist[0:3])
-        elif astr.startswith("VIII "):
-            new = " ".join(alist[0:3])
-        elif astr.startswith("I C "):
-            new = astr.split(" mit ")[0]
-        # print (f"{new=}")
-
-        # remove certain trails
-        new2 = re.sub(r"   |-[A-Z]+", "", new).strip()
-        # if there is a trailing + oder -, delete that
-        new3 = re.sub(r"[\+-] *$| -3D|_ct", "", new2).strip()
-        # print (f"{new3=}")
-
-        # only allow patterns that have one space separated number
-        if re.search(r"\w+ \d+|", new3):
-            # print(f"XXXXXXXXXXXXXXXXXXX{new3}")
-            return new3
-        elif re.search(r"\d+", stem2):
-            # number can be sole item e.g. if objId is used as identNr
-            return stem2
-    return None  # make mypy happy
+    match parser:
+        case "EM":
+            return parse_EM(path)
+        case _:
+            raise ConfigError(f"Unknown identNr parser: {parser}!")
 
 
 def has_parts(identNr: str) -> bool:
@@ -162,6 +109,97 @@ def not_suspicious(identNr: str) -> bool:
         return False
     else:
         return True
+
+
+def parse_EM(path: Path) -> str | None:
+    # stem as determined by path is everything before the last .suffix.
+    stem = path.stem
+
+    # step 1: collapse all underlines into space
+    stem2 = re.sub("_", " ", stem)
+
+    # step 2: all allowed chars
+    m = re.search(r"([()\w\d +.,<>-]+)", stem2)
+    if m:
+        astr = m.group(1).strip()
+        # step 3: cut the tail
+        astr = re.sub(r" -KK[ \w]*| -\w+", "", astr)
+        # print(f"{astr=}")
+
+        # restrict to max length of elements 5 or 4 elements
+        alist = astr.split(" ")
+        if "<" in astr:
+            new = " ".join(alist[0:5])
+        else:
+            new = " ".join(alist[0:4])
+
+        # special cases
+        if astr.startswith("I MV"):
+            # adding a magic slash.
+            # It's magic because it's not there in the filename
+            # some have different length I/MV 0950 a
+            new = re.sub("I MV", "I/MV", new)
+            m = re.search(r"(I/MV \d+) (\d)", new)
+            # add spitze klammern
+            if m:
+                new = f"{m.group(1)} <{m.group(2)}>"
+        elif astr.startswith("Verz BGAEU"):
+            # new = " ".join(alist[0:3])
+            # add a magic dot
+            new = re.sub("Verz BGAEU", "Verz. BGAEU", new)
+        elif astr.startswith("EJ ") or astr.startswith("Inv "):
+            # not catching __0001 correctly...
+            new = " ".join(alist[0:2])
+        elif astr.startswith("Adr (EJ)"):
+            new = " ".join(alist[0:3])
+        elif astr.startswith("VIII "):
+            # VIII Fotos
+            if re.fullmatch(r"\d+", alist[1]):
+                print(f"Old short VIII number without letter {astr}")
+                new = " ".join(alist[0:2])
+            elif re.fullmatch(r"\w{1,2}", alist[3]):
+                print(f"Long VIII number with part info {astr}")
+                new = " ".join(alist[0:4])
+            else:
+                # default VIII NA 1234
+                new = " ".join(alist[0:3])
+        elif astr.startswith("I C "):
+            new = astr.split(" mit ")[0]
+        # print (f"{new=}")
+
+        # remove certain trails
+        new2 = re.sub(r"   |-[A-Z]+", "", new).strip()
+        # if there is a trailing + oder -, delete that
+        new3 = re.sub(r"[\+-] *$| -3D|_ct", "", new2).strip()
+        # print (f"{new3=}")
+
+        # only allow patterns that have one space separated number
+        if re.search(r"\w+ \d+|", new3):
+            # print(f"XXXXXXXXXXXXXXXXXXX{new3}")
+            return new3
+        elif re.search(r"\d+", stem2):
+            # number can be sole item e.g. if objId is used as identNr
+            return stem2
+    return None  # make mypy happy
+
+
+def parse_old(*, path: Path) -> str | None:
+    """
+    Attempts to extract the full identifier (identNr) from a filename.
+    Multiple file extensions are ignored, only the real_stem is processed.
+    "-KK" is a required part of the stem.
+
+    TODO: We will need multiple identNr parsers so we have to find a way to
+    configure that. Probably a plugin architecure
+    """
+    stem = str(path).split(".")[0]
+    # stem = path.stem # assuming there is only one suffix
+    # print (stem)
+    m = re.search(r"([\w ,.-]+)\w*-KK", stem)
+    # print (m)
+    if m:
+        return m.group(1)
+    return None  # make mypy happy
 
 
 def whole_for_parts(identNr: str) -> str:

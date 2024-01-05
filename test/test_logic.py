@@ -24,6 +24,8 @@ def test_extractIdent():
         "I_MV_0404_3__0051.jpg": "I/MV 0404 <3>",
         "P 11766.tif": "P 11766",
         "VIII C 20274 (P 10054).tif": "VIII C 20274",
+        "VIII 126 -A.tif": "VIII 126",
+        "VIII NA 13 b___-A.tif": "VIII NA 13 b",
         "I C 8266 mit I C 8265, I C 8300.tif": "I C 8266",
         "VI 35989 -KK RS.jpg": "VI 35989",
         "VI 35989 -KK.jpg": "VI 35989",
@@ -32,7 +34,7 @@ def test_extractIdent():
     }
     for case in cases:
         case = Path(case)
-        identNr = extractIdentNr(path=case)
+        identNr = extractIdentNr(path=case, parser="EM")
         print(f"{case} -> {identNr}")
         assert cases[str(case)] == identNr
 
