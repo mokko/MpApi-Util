@@ -10,6 +10,9 @@ Should emulate the hotfolder eventually. That is we
 
 We no longer move successfully uploaded files; instead we record of state in the 
 Excel file.
+NEW: I changed my mind again. We do move successful uploads again to easily see
+what problems remain. This time to static directory. I wonder if that should be
+configurable.
 """
 
 import copy
@@ -262,11 +265,7 @@ class AssetUploader(BaseApp):
         """
         self._check_scandir()
         # looping thru files (usually pwd)
-        if Dir is None:
-            src_dir = Path(".")
-        else:
-            src_dir = Path(Dir)
-        print(f"Scanning {src_dir}/{self.filemask}")
+        print(f"Scanning {self.filemask}")
         # fast-forward cache: jump over all the files that have
         # already been attached according to Excel
         attached_cache = self._attached_cache()
@@ -405,24 +404,12 @@ class AssetUploader(BaseApp):
         """
         # check if excel exists, has the expected shape and is writable
         self._init_wbws()
+        self.xls.raise_if_no_content(sheet=self.ws)
 
-        if self.ws.max_row < 2:
-            raise ConfigError(
-                f"ERROR: Scandir needs an initialized Excel sheet! {self.ws.max_row}"
-            )
-
-        ws2 = self.wb["Conf"]
         self.orgUnit = self.xls.get_conf(cell="B3")  # can be None
-
-        if ws2["B5"].value is None:
-            self.filemask: str = "*"
-        else:
-            self.filemask = ws2["B5"].value
-
-        if ws2["B7"].value.lower() == "true":
-            self.ignore_suspicious = True
-        else:
-            self.ignore_suspicious = False
+        self.filemask = self.xls.get_conf(cell="B5", default="*")
+        self.ignore_suspicious = self.xls.get_conf_true(cell="B7")
+        self.parser = self.xls.get_conf_true(cell="B8")
 
     def _create_from_template(
         self, *, fn: str, objId: int, templateM: Module, creatorID: Optional[int] = None
@@ -616,28 +603,28 @@ class AssetUploader(BaseApp):
     def _make_conf(self) -> None:
         conf = {
             "A1": "templateID",
-            "B1": "orgUnit",
             "C1": "nur Asset ID , Hendryks default jpg 6697400",
             "A2": "verlinktes Modul",
             "B2": "Objekte",
             "C2": "noch nicht implementiert",
             "A3": "OrgUnit (optional)",
-            "B3": "",
             "C3": """OrgUnits sind RIA-Bereiche in interner Schreibweise (ohne Leerzeichen). 
         Die Suche der existierenden Assets wird auf den angegebenen Bereich eingeschränkt. 
         Wenn kein Bereich angegenen, wird die Suche auch nicht eingeschränkt. Gültige 
         orgUnits sind z.B. EMArchiv, EMMusikethnologie, EMMedienarchiv, EMPhonogrammArchiv, EMSudseeAustralien""",
-            "A4": "",  # was Zielverzeichnis
-            "B4": "",
-            "C4": """Verzeichnis für hochgeladene Dateien. UNC-Pfade brauchen zweifachen 
-        Backslash. Wenn Feld leer. wird Datei nicht bewegt.""",
+            "A4": "Move?",  # was Zielverzeichnis
+            "C4": """Wenn True werden hochgeladene Dateien in das Unterverzeichnis up bewegt; wenn False passiert nichts.""",
             "A5": "Filemask",
             "B5": "**/*.jpg",  # temporary new default
-            "C5": "Filemask für rekursive Suche, default ist *",
+            "C5": "Filemask für rekursive Suche",
             "A6": "Erstellungsdatum",
             "B6": datetime.today().strftime("%Y-%m-%d"),
             "A7": "Ignore suspicious?",
             "B7": "True",
+            "C7": "Wenn der Wert True ist, werden verdächtige Dateinamen ignoriert und nicht weiter untersucht.",
+            "A8": "IdentParser",
+            "B8": "EM",
+            "C8": "Algorithmus um Ident.Nr aus Dateiname zu extrahieren.",
         }
         self.xls.make_conf(conf)
 
@@ -672,8 +659,24 @@ class AssetUploader(BaseApp):
             if self._attach_asset(path=fn, mulId=ID):
                 self.xls.set_change()
                 cells["attached"].value = "x"
+                self._move(fn)
         else:
             print("   asset already attached")
+
+    def _move(self, fn: str) -> None:
+        """
+        Move file at location fn to subdir up
+        """
+        src = Path(fn)
+        new_dir = src.parent / "up"
+        new_dir.mkdir(exist_ok=T)
+        dst = new_dir / src.name
+        if not src.exists():
+            raise FileNotFoundError("Source file does not exist (anymore)")
+        if not dst.exists():
+            shutil.move(src, dst)
+        else:
+            print("Warning: dst exists already")
 
     def _set_Standardbild(self, c) -> Optional[int]:
         """
@@ -722,7 +725,9 @@ class AssetUploader(BaseApp):
 
     def _write_identNr(self, cells: dict, path: Path) -> None:
         if cells["identNr"].value is None:
-            identNr = extractIdentNr(path=path)  # returns Python's None on failure
+            identNr = extractIdentNr(
+                path=path, parser=self.parser
+            )  # returns Python's None on failure
             if self.ignore_suspicious and is_suspicious(identNr=identNr):
                 return
             # currently only accepting identNrs that dont look suspicious

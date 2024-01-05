@@ -103,6 +103,12 @@ class Xls:
             value = default
         return value
 
+    def get_conf_true(self, *, cell: str) -> bool:
+        if self.get_conf(cell=cell).lower() == "true":
+            return True
+        else:
+            return False
+
     def get_sheet(self, *, title: str) -> Worksheet:
         try:
             ws = self.wb[title]
