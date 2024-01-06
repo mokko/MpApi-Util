@@ -273,6 +273,18 @@ class Xls:
             raise NoContentError(f"ERROR: Excel contains {sheet.max_row} rows!")
         return False
 
+    def raise_if_file(self) -> bool:
+        """
+        Raise if file exists already; returns False if file does NOT exist.
+        """
+        if self.path.exists():
+            raise Exception(f"ERROR: {self.path} exists already!")
+        return False
+
+    def raise_if_not_initialized(self, sheet: Worksheet) -> None:
+        if sheet.max_row < 2:
+            raise ConfigError("ERROR: Excel file not initialized!")
+
     def raise_if_no_content(self, sheet: Worksheet) -> bool:
         """
         Assuming that after init excel has to have more than 2 lines.
@@ -283,14 +295,6 @@ class Xls:
             raise NoContentError(
                 f"ERROR: no data found; excel contains {sheet.max_row} rows!"
             )
-        return False
-
-    def raise_if_file(self) -> bool:
-        """
-        Raise if file exists already; returns False if file does NOT exist.
-        """
-        if self.path.exists():
-            raise Exception(f"ERROR: {self.path} exists already!")
         return False
 
     def raise_if_no_file(self) -> bool:

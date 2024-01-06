@@ -404,7 +404,7 @@ class AssetUploader(BaseApp):
         """
         # check if excel exists, has the expected shape and is writable
         self._init_wbws()
-        # self.xls.raise_if_no_content(sheet=self.ws)
+        self.xls.raise_if_not_initialized(sheet=self.ws)
         required = {
             "B5": "No filemask!",
             "B8": "No identNr parser provided!",
@@ -617,11 +617,12 @@ class AssetUploader(BaseApp):
         Die Suche der existierenden Assets wird auf den angegebenen Bereich eingeschränkt. 
         Wenn kein Bereich angegenen, wird die Suche auch nicht eingeschränkt. Gültige 
         orgUnits sind z.B. EMArchiv, EMMusikethnologie, EMMedienarchiv, EMPhonogrammArchiv, EMSudseeAustralien""",
-            "A4": "Move?",  # was Zielverzeichnis
+            "A4": "Move?",
+            "B4": "False",
             "C4": """Wenn True werden hochgeladene Dateien in das Unterverzeichnis up bewegt; wenn False passiert nichts.""",
             "A5": "Filemask",
-            "B5": "**/*.jpg",  # temporary new default
-            "C5": "Filemask für rekursive Suche",
+            "B5": "**/*.tif",
+            "C5": "Filemask für rekursive Suche. Vorsicht *.tif ist nicht gleich *.tiff!",
             "A6": "Erstellungsdatum",
             "B6": datetime.today().strftime("%Y-%m-%d"),
             "A7": "Ignore suspicious?",

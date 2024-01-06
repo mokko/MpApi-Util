@@ -114,9 +114,7 @@ class PrepareUpload(BaseApp):
             print(f"* About to make new Excel '{self.xls.path}'")
 
         self.wb = self.xls.get_or_create_wb()
-        self.ws = self.xls.get_or_create_sheet(title="prepareUpload")
-        self.filemask = self.xls.get_conf(cell="B3")
-        print(f"Using filemask {self.filemask}")
+        self.ws = self.xls.get_or_create_sheet(title="Prepare")
 
     #
     # public
@@ -129,8 +127,8 @@ class PrepareUpload(BaseApp):
         (b) figure out the objId for the identNr
         (c) based on this information, fill in the candidate cell
         """
-        self.xls._raise_if_no_content()
-        for cells, rno in self._loop_table2(sheet=self.ws):
+        self.xls.raise_if_no_content(sheet=self.ws)
+        for cells, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
             if cells["assetUploaded"] is not None and cells["identNr"] is not None:
                 self.mode = "ff"
             else:
@@ -144,8 +142,8 @@ class PrepareUpload(BaseApp):
                 # dont save when in fast forward mode
                 # if not self.mode == "ff":
                 # self._save_excel(path=self.excel_fn)
-                self.xls.save()
-        self.xls.save()  # _save_excel(path=self.excel_fn)
+                self.xls.save_if_change()
+        self.xls.save_if_change()  # _save_excel(path=self.excel_fn)
 
     def create_objects(self) -> None:
         """
@@ -156,20 +154,6 @@ class PrepareUpload(BaseApp):
         Write the objId(s) of the newly created records in candidate column.
         """
 
-        def _create_object(*, identNrs: str, template) -> str:
-            identL = identNrs.split(";")
-            objIds = set()  # unique list of objIds from Excel
-            for ident in identL:
-                identNr = ident.strip()
-                # print(f"***trying to create new object '{identNr}' from template")
-                new_id = self.client.create_from_template(
-                    template=template, identNr=identNr
-                )
-                # logging.info(f"new record created: object {new_id} with {identNr} from template")
-                objIds.add(new_id)
-            objIds_str = "; ".join(str(objId) for objId in objIds)
-            return objIds_str
-
         self._check_create_objects()
         temp_str = self.xls.get_conf(cell="B1")
         ttype, tid = temp_str.split()
@@ -178,10 +162,8 @@ class PrepareUpload(BaseApp):
         print(f"***template: {ttype} {tid}")
 
         self.xls.raise_if_no_content(sheet=self.ws)
-        # we want the same template for all records
 
         templateM = self.client.get_template(ID=tid, mtype=ttype)
-        # print ("Got template")
         # templateM.toFile(path="debug.template.xml")
 
         for c, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
@@ -194,17 +176,16 @@ class PrepareUpload(BaseApp):
             if c["candidate"].value is not None:
                 cand_str = c["candidate"].value.strip().lower()
                 if cand_str == "x":
-                    objIds_str = _create_object(
+                    objIds_str = self._create_object(
                         identNrs=c["identNr"].value, template=templateM
                     )
                     c["objIds"].value = objIds_str
                     c["candidate"].value = None
+                    self.xls.set_change()
                     if rno is not None and rno % 5 == 0:
                         # save almost immediately since likely to die
-                        # self._save_excel(path=self.excel_fn)
-                        self.xls.save()
-        # self._save_excel(path=self.excel_fn)
-        self.xls.save()
+                        self.xls.save_if_change()
+        self.xls.save_if_change()
 
     def desc(self) -> dict:
         desc = {
@@ -314,52 +295,7 @@ class PrepareUpload(BaseApp):
         Filenames with suspicious characters (e.g. '-' or ';') are flagged by coloring
         them red.
         """
-
-        def _per_row(*, c: int, path: Path, known_idents: set) -> None:
-            """
-            c: row count
-            specific to this scandisk task of prepare command
-
-            writes to self.ws
-            """
-            identNr = extractIdentNr(path=path)
-            identNrF = IdentNrFactory()
-            print(f"   {path.name} -> {identNr}")
-            self.ws[f"A{c}"] = path.name
-            self.ws[f"B{c}"] = str(identNr)
-            self.ws[f"H{c}"] = str(path.absolute())
-            if identNr is not None:
-                schema = identNrF._extract_schema(text=identNr)
-            else:
-                schema = "None"
-            self.ws[f"I{c}"] = schema
-
-            try:
-                schemaId = self.schemas[schema]["schemaId"]
-                self.ws[f"J{c}"] = schemaId
-            except:
-                self.ws[f"J{c}"] = "None"
-                self.ws[f"J{c}"].font = red
-
-            if self._suspicious_characters(identNr=identNr):
-                for x in "ABCDEF":
-                    self.ws[f"{x}{c}"].font = red
-                print(
-                    f"WARNING: identNr is suspicious - file correctly named? {identNr}"
-                )
-            # If the original files are misnamed, perhaps best to correct them instead of
-            # adapting the parser to errors.
-
-            if identNr in known_idents:
-                self.ws[f"B{c}"].font = red
-                self.ws[f"K{c}"] = "Duplikat"
-                # print(f"Duplikat {identNr}")
-            known_idents.add(identNr)
-
         self._check_scandir()
-        src_dir = Path()  # Path(self.conf["src_dir"])
-        print(f"* Scanning source dir: {src_dir}")
-
         c = 3  # start writing in 3rd line
         print(f"FILEMASK {self.filemask}, starting scan...")
         ignore_names = (
@@ -370,28 +306,33 @@ class PrepareUpload(BaseApp):
             "prepare.xlsx",
         )
         file_list = list()
-        for file in src_dir.glob(self.filemask):
+        src_dir = Path()  # Path(self.conf["src_dir"])
+        print(f"* Scanning source dir: {src_dir}")
+        for path in src_dir.glob(self.filemask):
             if path.is_dir():
                 continue
             if path.name.startswith("."):
                 continue
             if path.name.lower().strip() in ignore_names:
                 continue
-            file_list.append(file)
+            if self.xls.path_exists(path=path.absolute(), cno=7, sheet=self.ws):
+                # if absolute path is already in Excel ignore it
+                continue
+            file_list.append(path)
             c += 1
             if c == self.limit:
                 print("* Limit reached")
                 break
-        print(f"len(file_list) files found")
+        print(f"* {len(file_list)} new files found")
         known_idents: set[str] = set()  # mark duplicates
+
+        c = self.xls.real_max_row(sheet=self.ws) + 1
         for path in sorted(file_list):
-            _per_row(c=c, path=path, known_idents=known_idents)
-            print(f"sd {c} of {len(file_list)}")  # DDD{filemask2}
+            self._scan_per_row(c=c, path=path, known_idents=known_idents)
+            print(f"sd {c} of {len(file_list)}")
             if c % 500 == 0:
-                # self._save_excel(path=self.excel_fn)
                 self.xls.save()
             c += 1
-        # self._save_excel(path=self.excel_fn)
         self.xls.save()
 
     #
@@ -424,29 +365,43 @@ class PrepareUpload(BaseApp):
         ws2 = self.wb["Conf"]
         orgUnit = self.xls.get_conf(cell="B2")  # can return None
         if c["assetUploaded"].value == None:
+            self.xls.set_change()
             idL = self.client.fn_to_mulId(fn=c["filename"].value, orgUnit=orgUnit)
             if len(idL) == 0:
                 c["assetUploaded"].value = "None"
             else:
                 c["assetUploaded"].value = "; ".join(idL)
 
+    def _create_object(self, *, identNrs: str, template) -> str:
+        identL = identNrs.split(";")
+        objIds = set()  # unique list of objIds from Excel
+        for ident in identL:
+            identNr = ident.strip()
+            # print(f"***trying to create new object '{identNr}' from template")
+            new_id = self.client.create_from_template(
+                template=template, identNr=identNr
+            )
+            # logging.info(f"new record created: object {new_id} with {identNr} from template")
+            objIds.add(new_id)
+        objIds_str = "; ".join(str(objId) for objId in objIds)
+        return objIds_str
+
     def _check_create_objects(self) -> None:
         self.xls.save()
         required = {"B1": "Template config missing!"}
         self.xls.raise_if_conf_value_missing(required)
+        self.filemask = self.xls.get_conf(cell="B3")
+        print(f"Using filemask {self.filemask}")
 
     def _check_scandir(self) -> None:
-        # let's not overwrite or modify file information in Excel if already written
-        # 2 lines are getting written by initialization
-        # if self.ws.max_row > 2:
-        #    raise Exception("Error: Scan dir info already filled in")
-
-        identNrF = IdentNrFactory()
-        self.schemas = identNrF.get_schemas()
-        # if writable it's not open
-        # self._save_excel(path=self.excel_fn)
+        self.xls.raise_if_not_initialized(sheet=self.ws)
         self.xls.save()
         self.xls.raise_if_conf_value_missing({"B3": "Filemask"})
+        self.filemask = self.xls.get_conf(cell="B3")
+        print(f"Using filemask {self.filemask}")
+        self.parser = self.xls.get_conf(cell="B4")
+        identNrF = IdentNrFactory()
+        self.schemas = identNrF.get_schemas()
 
     def _checkria_messages(self, c, rno) -> None:
         print(
@@ -514,9 +469,12 @@ class PrepareUpload(BaseApp):
             "A1": "template ID",
             "C1": "Format: Object 1234567",
             "A2": "orgUnit",
-            "C2": """Um die ID Suche auf eine orgUnit (Bereich) einzuschränken. Optional. z.B. EMSudseeAustralien""",
+            "C2": """Schränke die ID Suche auf eine orgUnit (Bereich) ein. Optional. z.B. EMSudseeAustralien""",
             "A3": "Filemask",
-            "C3": """Um scandir Prozess auf eine Muster zu reduzieren, z.B. '**/*' oder '**/*.jpg'.""",
+            "C3": """Steuere scandir Prozess mit einem Muster, z.B. '**/*' oder '*.jpg'.""",
+            "A4": "IdentNr Parser",
+            "B4": "EM",
+            "C4": "Welchen Logarithmus um Dateinamen in identNr zu parsen, soll verwendet werden? (EM, Std)",
         }
         self.xls.make_conf(conf)
 
@@ -539,16 +497,60 @@ class PrepareUpload(BaseApp):
             c["objIds"].value = self._get_objIds(
                 identNr=c["identNr"].value, strict=True
             )
+            self.xls.set_change()
 
         # used to check if c["objIds"].value == "None"
         if c["partsObjIds"].value is None:
             # print ("Looking for parts")
             objIdL = self._get_objIds_for_whole_or_parts(identNr=c["identNr"].value)
+            self.xls.set_change()
+
             if objIdL:
                 c["partsObjIds"].value = "; ".join(objIdL)
             else:
                 c["partsObjIds"].value = "None"
             c["partsObjIds"].alignment = Alignment(wrap_text=True)
+
+    def _scan_per_row(self, *, c: int, path: Path, known_idents: set) -> None:
+        """
+        c: row count
+        specific to this scandisk task of prepare command
+
+        writes to self.ws
+        """
+        identNr = extractIdentNr(path=path, parser=self.parser)
+        identNrF = IdentNrFactory()
+        print(f"   {path.name} -> {identNr}")
+        self.ws[f"A{c}"] = path.name
+        self.ws[f"B{c}"] = str(identNr)
+        self.ws[f"H{c}"] = str(path.absolute())
+        self.xls.set_change()
+
+        if identNr is not None:
+            schema = identNrF._extract_schema(text=identNr)
+        else:
+            schema = "None"
+        self.ws[f"I{c}"] = schema
+
+        try:
+            schemaId = self.schemas[schema]["schemaId"]
+            self.ws[f"J{c}"] = schemaId
+        except:
+            self.ws[f"J{c}"] = "None"
+            self.ws[f"J{c}"].font = red
+
+        if self._suspicious_characters(identNr=identNr):
+            for x in "ABCDEF":
+                self.ws[f"{x}{c}"].font = red
+            print(f"WARNING: identNr is suspicious - file correctly named? {identNr}")
+        # If the original files are misnamed, perhaps best to correct them instead of
+        # adapting the parser to errors.
+
+        if identNr in known_idents:
+            self.ws[f"B{c}"].font = red
+            self.ws[f"K{c}"] = "Duplikat"
+            # print(f"Duplikat {identNr}")
+        known_idents.add(identNr)
 
     def _suspicious_characters(self, *, identNr: str | None) -> bool:
         # print (f"***suspicious? {identNr}")
