@@ -112,37 +112,124 @@ def not_suspicious(identNr: str) -> bool:
 
 
 def parse_EM(path: Path) -> str | None:
-    # stem as determined by path is everything before the last .suffix.
-    stem = path.stem
+    """
+    receive a path and extract the identNr. If it extraction fails return None.
 
-    # step 1: collapse all underlines into space
+    (1) We have a preprocessor where we basically replace underline with space
+    (2) Middle: split all elements, investigate them and join them back together
+    (3) We may have a postprocessor where we cut off unwanted tails that still remain
+    (4) There will be always special cases to include chars that are included in identNr,
+        but not allowed in filesystem.
+
+    """
+    stem = path.stem  # everything before the _last_ .suffix.
+
+    # STEP 1: collapse underlines into space
     stem2 = re.sub("_", " ", stem)
 
-    # step 2: all allowed chars
+    # STEP 2: allowed characters
     m = re.search(r"([()\w\d +.,<>-]+)", stem2)
+
+    # What is maximum number of elements in EM?
+    # VII ME 01234 a-c <1>: category, unit, number, part, disamb:
+    # 4 elements counting 0-based
+
     if m:
         astr = m.group(1).strip()
-        # step 3: cut the tail
-        astr = re.sub(r" -KK[ \w]*| -\w+", "", astr)
-        # print(f"{astr=}")
 
-        # restrict to max length of elements 5 or 4 elements
+        # has to have a number
+        if not re.search(r"\d+", astr):
+            # number can be sole item e.g. if objId is used as identNr
+            return None
+
+        # try to restrict to max length of elements 5 or 4 elements
+
+        # STEP 3: cut off obvious tails
+        astr = re.split(r"-[A-Z]+", astr)[0].strip()  # -KK -A ... -ZZ
+
+        print(f"***hyphen {astr}")
+
+        m = re.search(r"([()\w\d +.,<>-]+) *_+", astr)  # ___-A
+        if m:
+            astr = m.group(1).strip()
+        m = re.search(r"([()\w\d +.,<>-]+)  ", astr)  # double space
+        if m:
+            astr = m.group(1).strip()
+        # there are 5k+ records with brackets in IdentNr
+        # although I dont know what that means
+        # e.g. IV Ca 3159 (17)
+        # m = re.search(r"([\w\d +.,<>-]+)\(\w+\)", astr) # brackets
+        # if m:
+        #    astr = m.group(1).strip()
+
+        print(f"***with tail cut '{astr}'")
         alist = astr.split(" ")
-        if "<" in astr:
-            new = " ".join(alist[0:5])
+        pos_number = _fortlaufende_Nummer(alist)
+        print(f"***{pos_number=} {alist}")
+        if len(alist) >= pos_number + 2:
+            if re.search(r"[a-z1-9,-,+]+", alist[pos_number + 1]):
+                print(f"***part recognized '{alist[pos_number+1]}'")
+                new = " ".join(alist[0 : pos_number + 2])
+            else:
+                new = " ".join(alist[0 : pos_number + 1])
         else:
-            new = " ".join(alist[0:4])
+            new = " ".join(alist)
 
-        # special cases
+        # if len(alist) == 1: # wasn't split, has no space, it has only one element
+        # should I check if it is a number? I think I am already checking that
+        # if not re.fullmatch(r"\d+",alist[0]):
+        #   raise SyntaxError("Single element needs to be numerical")
+        # new = astr
+        # else: #more than one element
+        # if re.fullmatch(r"\d+", alist[1]):
+        # print(f"***Old short form e.g. VI 1234 (without letter/category) '{astr}'")
+        # else:
+        # print(f"***New long form, e.g. VIII ME 1233 (with unit) '{astr}'")
+
+        # We assume that first elem is Roman numeral
+        # two elments, e.g. VI 1234
+        # new = " ".join(alist)
+        # elif len(alist) == 3:
+        # VI 1234 a, VI 123 <1>, VII c 123
+        # <> are not allowed chars in Windows filesystem
+        # if re.search(r"[a-z]{1-2}|\d+|",alist[2]):
+        # new = " ".join(alist[0:3])
+        # elif len(alist) == 4:
+        # VII ME 123 a-c
+        # if re.search(r"[a-zA-Z]{1-2}",alist[1]) and re.search(r"\d+", alist[2]) and re.search(r"[a-z-,]+", alist[3]):
+        # new = " ".join(alist[0:4])
+        # elif len(alist) == 5:
+        # VII ME 123 a-c <1>
+        # new = " ".join(alist[0:5])
+
+        # if re.search(r"\d+", alist[1]):
+        # print ("Old form without letter")
+        # STEP 4: special cases
         if astr.startswith("I MV"):
+            print(f"**Special case Akten '{astr}'")
             # adding a magic slash.
-            # It's magic because it's not there in the filename
+            # It's magic because we're adding a char does not exist in the origin
             # some have different length I/MV 0950 a
-            new = re.sub("I MV", "I/MV", new)
-            m = re.search(r"(I/MV \d+) (\d)", new)
-            # add spitze klammern
-            if m:
-                new = f"{m.group(1)} <{m.group(2)}>"
+            alist[0] = "I/MV"
+            alist.pop(1)
+            print(f"***{alist} len:{len(alist)}")
+            if len(alist) == 2:
+                print("astr has only two parts")
+                return " ".join(alist)
+            elif len(alist) > 2:
+                if re.search(r"[a-zA-Z]+", alist[2]):
+                    print(f"***valid part")
+                    new = " ".join(alist[0:3])
+                elif re.search(r"\d+", alist[2]):
+                    print("***digit for disamb")
+                    # we allow diaamb only when no part
+                    alist[2] = f"<{alist[2]}>"
+                    new = " ".join(alist[0:3])
+                else:
+                    new = " ".join(alist[0:2])
+            else:  # if alist has 0 items
+                # raise Exception("Should not be here!")
+                return None
         elif astr.startswith("Verz BGAEU"):
             # new = " ".join(alist[0:3])
             # add a magic dot
@@ -152,35 +239,15 @@ def parse_EM(path: Path) -> str | None:
             new = " ".join(alist[0:2])
         elif astr.startswith("Adr (EJ)"):
             new = " ".join(alist[0:3])
-        elif astr.startswith("VIII "):
-            # VIII Fotos
-            if re.fullmatch(r"\d+", alist[1]):
-                print(f"Old short VIII number without letter {astr}")
-                new = " ".join(alist[0:2])
-            elif re.fullmatch(r"\w{1,2}", alist[3]):
-                print(f"Long VIII number with part info {astr}")
-                new = " ".join(alist[0:4])
-            else:
-                # default VIII NA 1234
-                new = " ".join(alist[0:3])
+        # elif astr.startswith("VIII "):
+        #    new = _parse_EM_photo(astr)
         elif astr.startswith("I C "):
             new = astr.split(" mit ")[0]
         # print (f"{new=}")
 
-        # remove certain trails
-        new2 = re.sub(r"   |-[A-Z]+", "", new).strip()
-        # if there is a trailing + oder -, delete that
-        new3 = re.sub(r"[\+-] *$| -3D|_ct", "", new2).strip()
-        # print (f"{new3=}")
-
-        # only allow patterns that have one space separated number
-        if re.search(r"\w+ \d+|", new3):
-            # print(f"XXXXXXXXXXXXXXXXXXX{new3}")
-            return new3
-        elif re.search(r"\d+", stem2):
-            # number can be sole item e.g. if objId is used as identNr
-            return stem2
-    return None  # make mypy happy
+        return new
+    else:  # if not m
+        return None
 
 
 def parse_old(*, path: Path) -> str | None:
@@ -218,3 +285,50 @@ def whole_for_parts(identNr: str) -> str:
         return whole_ident
     else:
         return identNr
+
+
+#
+# more private
+#
+
+
+def _fortlaufende_Nummer(alist) -> int:
+    """
+    Return the position of the fortlaufende Nummer
+    """
+    c = 0
+    for elem in alist:
+        if re.fullmatch(r"\d+", alist[c]):
+            return c
+        c += 1
+
+
+def _parse_EM_photo(astr: str) -> str | None:
+    """
+    receives a version of a filename as str and returns identNr or None. The filename
+    has already been transformed.
+    """
+    alist = astr.split(" ")
+    print(f"VIII Parser! {astr} {len(alist)}")
+
+    if len(alist) < 2:
+        raise SyntaxError("ERROR: VIII Signaturen need to have at least 2 elements")
+        return None  # ?
+    if re.fullmatch(r"\d+", alist[1]):
+        # at this point we dont allow VIII 123 a
+        print(f"***Old short VIII form without letter {astr}")
+        new = " ".join(alist[0:2])
+    else:
+        # long form: VIII NA 123 (2nd element is not a number)
+        if len(alist) == 2:
+            new = " ".join(alist[0:2])
+        # VIII NA 123 a
+        # at this point we dont allow: VIII NA 123 a <1>
+        if re.fullmatch(r"[a-zA-Z]{1,2}", alist[3]):
+            print(f"***Long VIII form with part info '{astr}'")
+            new = " ".join(alist[0:4])
+        else:
+            print("***default -- allow 3 elements")
+            # default VIII NA 1234
+            new = " ".join(alist[0:3])
+    return new
