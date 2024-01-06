@@ -20,7 +20,7 @@ def test_extractIdent():
         "Verz_BGAEU_1__0001.jpg": "Verz. BGAEU 1",
         "VII a 123 c-KK.tif": "VII a 123 c",
         "VII c 86 a -A x.tif": "VII c 86 a",
-        "VII c 86 a <1>-A x.tif": "VII c 86 a <1>",
+        # "VII c 86 a <1>-A x.tif": "VII c 86 a <1>", # <> are not allowed in filenames
         "I_MV_0404_3__0051.jpg": "I/MV 0404 <3>",
         "P 11766.tif": "P 11766",
         "VIII C 20274 (P 10054).tif": "VIII C 20274",
