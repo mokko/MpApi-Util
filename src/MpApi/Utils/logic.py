@@ -76,6 +76,13 @@ def is_suspicious(identNr: str) -> bool:
         # print(f"'{identNr}' not any number")
         return True
 
+    # if no Roman numeral
+    alist = identNr.split(" ")
+    if len(alist) > 1:
+        if not re.fullmatch(r"[VI]+", alist[0]):
+            print("no Roman numeral")
+            return True
+
     # may not have >2 consecutive spaces
     if re.search(r"\s{2,}", identNr):
         # print(f"'{identNr}' 2+ white space")
@@ -147,8 +154,7 @@ def parse_EM(path: Path) -> str | None:
         # STEP 3: cut off obvious tails
         astr = re.split(r"-[A-Z]+", astr)[0].strip()  # -KK -A ... -ZZ
 
-        print(f"***hyphen {astr}")
-
+        # print(f"***hyphen {astr}")
         m = re.search(r"([()\w\d +.,<>-]+) *_+", astr)  # ___-A
         if m:
             astr = m.group(1).strip()
@@ -167,48 +173,25 @@ def parse_EM(path: Path) -> str | None:
         pos_number = _fortlaufende_Nummer(alist)
         print(f"***{pos_number=} {alist}")
         if len(alist) >= pos_number + 2:
-            if re.search(r"[a-z1-9,-,+]+", alist[pos_number + 1]):
-                print(f"***part recognized '{alist[pos_number+1]}'")
-                new = " ".join(alist[0 : pos_number + 2])
+            plus_one = alist[pos_number + 1]
+            if re.search(r"[a-z1-9,-,+]", plus_one):
+                if len(plus_one) < 5:
+                    print(f"***part recognized '{plus_one}'")
+                    new = " ".join(alist[0 : pos_number + 2])
+                else:
+                    print(f"***part NOT recognized '{plus_one}'")
+                    new = " ".join(alist[0 : pos_number + 1])
             else:
+                print(f"***part NOT recognized '{plus_one}'")
                 new = " ".join(alist[0 : pos_number + 1])
         else:
             new = " ".join(alist)
 
-        # if len(alist) == 1: # wasn't split, has no space, it has only one element
-        # should I check if it is a number? I think I am already checking that
-        # if not re.fullmatch(r"\d+",alist[0]):
-        #   raise SyntaxError("Single element needs to be numerical")
-        # new = astr
-        # else: #more than one element
-        # if re.fullmatch(r"\d+", alist[1]):
-        # print(f"***Old short form e.g. VI 1234 (without letter/category) '{astr}'")
-        # else:
-        # print(f"***New long form, e.g. VIII ME 1233 (with unit) '{astr}'")
-
-        # We assume that first elem is Roman numeral
-        # two elments, e.g. VI 1234
-        # new = " ".join(alist)
-        # elif len(alist) == 3:
-        # VI 1234 a, VI 123 <1>, VII c 123
-        # <> are not allowed chars in Windows filesystem
-        # if re.search(r"[a-z]{1-2}|\d+|",alist[2]):
-        # new = " ".join(alist[0:3])
-        # elif len(alist) == 4:
-        # VII ME 123 a-c
-        # if re.search(r"[a-zA-Z]{1-2}",alist[1]) and re.search(r"\d+", alist[2]) and re.search(r"[a-z-,]+", alist[3]):
-        # new = " ".join(alist[0:4])
-        # elif len(alist) == 5:
-        # VII ME 123 a-c <1>
-        # new = " ".join(alist[0:5])
-
-        # if re.search(r"\d+", alist[1]):
-        # print ("Old form without letter")
         # STEP 4: special cases
         if astr.startswith("I MV"):
             print(f"**Special case Akten '{astr}'")
             # adding a magic slash.
-            # It's magic because we're adding a char does not exist in the origin
+            # It's magic because we're adding a char that doesn't exist in origin
             # some have different length I/MV 0950 a
             alist[0] = "I/MV"
             alist.pop(1)
@@ -231,7 +214,6 @@ def parse_EM(path: Path) -> str | None:
                 # raise Exception("Should not be here!")
                 return None
         elif astr.startswith("Verz BGAEU"):
-            # new = " ".join(alist[0:3])
             # add a magic dot
             new = re.sub("Verz BGAEU", "Verz. BGAEU", new)
         elif astr.startswith("EJ ") or astr.startswith("Inv "):
@@ -294,13 +276,14 @@ def whole_for_parts(identNr: str) -> str:
 
 def _fortlaufende_Nummer(alist) -> int:
     """
-    Return the position of the fortlaufende Nummer
+    Return the position of the fortlaufende Nummer. Return 0 if no number found.
     """
     c = 0
     for elem in alist:
         if re.fullmatch(r"\d+", alist[c]):
             return c
         c += 1
+    return 0
 
 
 def _parse_EM_photo(astr: str) -> str | None:

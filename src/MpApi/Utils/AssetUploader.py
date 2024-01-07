@@ -43,6 +43,7 @@ bak_fn = Path("upload14.xlsx.bak")  # should go away
 parser = etree.XMLParser(remove_blank_text=True)
 red = Font(color="FF0000")
 teal = Font(color="008080")
+green = Font(color="00FF00")
 
 IGNORE_NAMES = (
     "checksum.md5",
@@ -136,12 +137,12 @@ class AssetUploader(BaseApp):
                 "col": "K",  # 10
                 "width": 90,
             },
-            "targetpath": {  # not used at the moment
-                "label": "nach Bewegen der Datei",
-                "desc": "wenn Upload erfolgreich",
-                "col": "L",  # 11
-                "width": 30,
-            },
+            # "targetpath": {
+            # "label": "nach Bewegen der Datei",
+            # "desc": "wenn Upload erfolgreich",
+            # "col": "L",  # 11
+            # "width": 30,
+            # },
             "attached": {
                 "label": "Asset hochgeladen?",
                 "desc": "wenn Upload erfolgreich",
@@ -735,13 +736,11 @@ class AssetUploader(BaseApp):
                 path=path, parser=self.parser
             )  # returns Python's None on failure
             if self.ignore_suspicious and is_suspicious(identNr=identNr):
+                cells["identNr"].font = red
                 return
             # currently only accepting identNrs that dont look suspicious
             # print(f"***{identNr=}")
             cells["identNr"].value = identNr
-
-            if is_suspicious(identNr=identNr):
-                cells["identNr"].font = red
 
     def _write_parts(self, cells):
         if cells["parts_objIds"].value is None:
@@ -799,13 +798,31 @@ class AssetUploader(BaseApp):
     def _write_ref(self, cells):
         """
         if asset_fn exists we assume that asset has already been uploaded
-        if no single objId has been identified, we will not create asset
+        We take the objId for a whole, and the first part objId if any.
         """
-        if cells["ref"].value is None:
+        if cells["ref"].value is None and cells["asset_fn_exists"].value == "None":
             objIds = cells["objIds"].value
+            whole = cells["whole_objIds"].value
+            fuzzy = cells["parts_objIds"].value
+
             if objIds != "None" and ";" not in str(objIds):
                 print("   taking ref from objIds...")
                 cells["ref"].value = int(objIds)
                 cells["ref"].font = teal
-            # there used to be a thing that decided which objId to take
-            # from part or whole. that seemed not to work
+            elif whole != "None":
+                wholeID = whole.split(":")[1].strip()
+                # print(f"{wholeID=}")
+                try:
+                    cells["ref"].value = int(wholeID)
+                except:
+                    pass
+                else:
+                    cells["ref"].font = green
+
+            elif fuzzy != "None":
+                if not ";" in fuzzy:
+                    cells["ref"].value = int(fuzzy.strip())
+                else:
+                    fuzzy = fuzzy.split(";")[0].strip()
+                    cells["ref"].value = int(fuzzy.strip())
+                    cells["ref"].font = red

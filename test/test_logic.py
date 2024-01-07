@@ -31,6 +31,7 @@ def test_extractIdent():
         "VI 35989 -KK.jpg": "VI 35989",
         "I C 972 a-h -KK -B.jpg": "I C 972 a-h",
         "V A 142 a,b___-KK-A.tif": "V A 142 a,b",
+        "VIII NA 1650 Rückseite.tif": "VIII NA 1650",
     }
     for case in cases:
         case = Path(case)
@@ -80,6 +81,8 @@ def test_is_suspicious():
         " ": True,
         "III Nls(Sanduhrtrommel 2)": True,
         "III Nls)Sanduhrtrommel 2": True,
+        "0123456789": False,
+        "P 21847, P 21848 Rückseite": True,
     }
 
     for identNr in cases:
