@@ -171,15 +171,15 @@ def parse_EM(path: Path) -> str | None:
         print(f"***with tail cut '{astr}'")
         alist = astr.split(" ")
         pos_number = _fortlaufende_Nummer(alist)
-        print(f"***{pos_number=} {alist}")
+        # print(f"***{pos_number=} {alist}")
         if len(alist) >= pos_number + 2:
             plus_one = alist[pos_number + 1]
             if re.search(r"[a-z1-9,-,+]", plus_one):
                 if len(plus_one) < 5:
-                    print(f"***part recognized '{plus_one}'")
+                    # print(f"***part recognized '{plus_one}'")
                     new = " ".join(alist[0 : pos_number + 2])
                 else:
-                    print(f"***part NOT recognized '{plus_one}'")
+                    # print(f"***part NOT recognized '{plus_one}'")
                     new = " ".join(alist[0 : pos_number + 1])
             else:
                 print(f"***part NOT recognized '{plus_one}'")
@@ -277,6 +277,7 @@ def whole_for_parts(identNr: str) -> str:
 def _fortlaufende_Nummer(alist) -> int:
     """
     Return the position of the fortlaufende Nummer. Return 0 if no number found.
+    Expects a list of elements that together make up an identNr.
     """
     c = 0
     for elem in alist:
@@ -290,6 +291,8 @@ def _parse_EM_photo(astr: str) -> str | None:
     """
     receives a version of a filename as str and returns identNr or None. The filename
     has already been transformed.
+
+    NOT USED ATM!
     """
     alist = astr.split(" ")
     print(f"VIII Parser! {astr} {len(alist)}")

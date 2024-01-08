@@ -174,13 +174,7 @@ class AssetUploader(BaseApp):
         """
 
         self._check_go()  # raise on error
-
-        ws2 = self.wb["Conf"]
-        if ws2["B4"].value is not None:
-            u_dir = Path(ws2["B4"].value)
-            if not u_dir.exists():
-                print(f"Making new dir '{u_dir}'")
-                u_dir.mkdir()
+        self.move = self.xls.get_conf_true(cell="B4")
 
         # breaks at limit, but doesn't save on its own
         hits = 0
@@ -674,16 +668,17 @@ class AssetUploader(BaseApp):
         """
         Move file at location fn to subdir up
         """
-        src = Path(fn)
-        new_dir = src.parent / "up"
-        new_dir.mkdir(exist_ok=T)
-        dst = new_dir / src.name
-        if not src.exists():
-            raise FileNotFoundError("Source file does not exist (anymore)")
-        if not dst.exists():
-            shutil.move(src, dst)
-        else:
-            print("Warning: dst exists already")
+        if self.move:
+            src = Path(fn)
+            new_dir = src.parent / "up"
+            new_dir.mkdir(exist_ok=True)
+            dst = new_dir / src.name
+            if not src.exists():
+                raise FileNotFoundError("Source file does not exist (anymore)")
+            if not dst.exists():
+                shutil.move(src, dst)
+            else:
+                print("Warning: dst exists already")
 
     def _set_Standardbild(self, c) -> Optional[int]:
         """
