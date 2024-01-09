@@ -104,6 +104,8 @@ class Xls:
         return value
 
     def get_conf_true(self, *, cell: str) -> bool:
+        if self.get_conf(cell=cell) is None:
+            return False
         if self.get_conf(cell=cell).lower() == "true":
             return True
         else:
