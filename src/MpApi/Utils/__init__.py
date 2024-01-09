@@ -336,7 +336,7 @@ def upload():
                 offset = (c - 1) * csize + ioffset
                 print(f"Setting {offset=} and {limit=} ")
                 u = AssetUploader(limit=limit, offset=offset)
-                u.backup_excel()
+                # u.xls.backup_excel()
                 u.scandir(offset=offset)
                 u.go()
                 c += 1
