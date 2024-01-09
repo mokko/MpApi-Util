@@ -104,9 +104,10 @@ class Xls:
         return value
 
     def get_conf_true(self, *, cell: str) -> bool:
-        if self.get_conf(cell=cell) is None:
+        cell = self.get_conf(cell=cell)
+        if cell is None or cell.isspace() or cell == "":
             return False
-        if self.get_conf(cell=cell).lower() == "true":
+        if cell.lower() == "true":
             return True
         else:
             return False

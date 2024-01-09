@@ -174,7 +174,6 @@ class AssetUploader(BaseApp):
         """
 
         self._check_go()  # raise on error
-        self.move = self.xls.get_conf_true(cell="B4")
 
         # breaks at limit, but doesn't save on its own
         hits = 0
@@ -388,10 +387,7 @@ class AssetUploader(BaseApp):
             # B4 is now optional
         }
         self.xls.raise_if_conf_value_missing(required)
-
-        if not Path(self.ws["A3"].value).exists():
-            # got here after I manually uploaded one file somehow
-            print("WARNING: File doesn't exist (anymore). Already uploaded?")
+        self.move = self.xls.get_conf_true(cell="B4")
 
     def _check_scandir(self) -> None:
         """
