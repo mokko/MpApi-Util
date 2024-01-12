@@ -79,7 +79,7 @@ def is_suspicious(identNr: str) -> bool:
     # if no Roman numeral
     alist = identNr.split(" ")
     if len(alist) > 1:
-        if not re.fullmatch(r"[VI]+", alist[0]):
+        if not re.fullmatch(r"[IVXM/]+", alist[0]):
             print("no Roman numeral")
             return True
 

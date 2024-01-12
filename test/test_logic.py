@@ -71,6 +71,7 @@ def test_is_suspicious():
     cases = {
         "Oboe oNr": True,
         "Schalenhalslaute oNr": True,
+        "I/MV 0404 <3>": False,
         "III C 22851 (HK": True,
         "VII a 123 a-c <1>": False,
         "VII a 123 a-c": False,
