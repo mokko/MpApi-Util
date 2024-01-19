@@ -50,7 +50,7 @@ class Sren:
         Should we optionally prevent adding a string that is already present at the end
         of the filename? This is the recursiveblock.
         """
-        for p, c in self._loop(limit=self.limit):
+        for p, c in self._loop():
             suffix = p.suffix
             stem = p.stem
             parent = p.parent
@@ -68,7 +68,7 @@ class Sren:
         """
         replace a string in the filename (before suffix) - not path.
         """
-        for p, c in self._loop(limit=self.limit):
+        for p, c in self._loop():
             suffix = p.suffix
             stem = p.stem
             parent = p.parent
@@ -88,7 +88,7 @@ class Sren:
         """
         Replace working on suffix
         """
-        for path, count in self._loop(limit=self.limit):
+        for path, count in self._loop():
             suffix = path.suffix
             stem = path.stem
             parent = path.parent
@@ -106,7 +106,7 @@ class Sren:
         if DEBUG:
             print(msg)
 
-    def _loop(self, limit) -> Iterator:
+    def _loop(self) -> Iterator:
         """
         Returns every file and counts the files returned. Dirs are not returned and not
         counted. Filemask can trigger recursive search (**/). See Python's pathlib for
