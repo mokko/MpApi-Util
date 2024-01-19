@@ -73,7 +73,7 @@ class RIA:
         if identNr is None:
             raise TypeError("Ident can't be None")
 
-        print(f"+++{identNr=}")
+        # print(f"+++{identNr=}")
 
         if identNr.isspace():
             raise TypeError("Ident cant only consist of space: {identNr}")
@@ -128,7 +128,7 @@ class RIA:
             numberGrpN.getparent().replace(numberGrpN, new_numberGrpN)
 
         # new_item.toFile(path="DDrewritten.xml")
-        print(f"About to create record {identNr}")
+        print(f"About to create record '{identNr}'")
         objId = self.mpapi.createItem3(data=new_item)
         return objId
 

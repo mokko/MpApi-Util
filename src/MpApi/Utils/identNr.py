@@ -132,7 +132,7 @@ class IdentNrFactory:
         the end.
         """
         m = re.match(
-            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\,\-<> ]*)", iNr.text
+            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\,\-<>() ]*)", iNr.text
         )
         if m is None:
             raise SyntaxError("ERROR: Not recognized!")
