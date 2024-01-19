@@ -24,13 +24,16 @@ DEBUG = True
 
 
 class Sren:
-    def __init__(self, *, act=False, filemask=None, rblock=True) -> None:
+    def __init__(
+        self, *, act=False, filemask=None, rblock=True, limit: int = -1
+    ) -> None:
         """
         rblock blocks recursively adding a string that already exists in stem. By
         default, we switch that on.
         """
         self.act = act
         self.rblock = rblock
+        self.limit = int(limit)
         if filemask is None:
             self.filemask = "*"  # default
         else:
@@ -47,7 +50,7 @@ class Sren:
         Should we optionally prevent adding a string that is already present at the end
         of the filename? This is the recursiveblock.
         """
-        for p, c in self._loop():
+        for p, c in self._loop(limit=self.limit):
             suffix = p.suffix
             stem = p.stem
             parent = p.parent
@@ -65,7 +68,7 @@ class Sren:
         """
         replace a string in the filename (before suffix) - not path.
         """
-        for p, c in self._loop():
+        for p, c in self._loop(limit=self.limit):
             suffix = p.suffix
             stem = p.stem
             parent = p.parent
@@ -85,7 +88,7 @@ class Sren:
         """
         Replace working on suffix
         """
-        for path, count in self._loop():
+        for path, count in self._loop(limit=self.limit):
             suffix = path.suffix
             stem = path.stem
             parent = path.parent
@@ -103,7 +106,7 @@ class Sren:
         if DEBUG:
             print(msg)
 
-    def _loop(self) -> Iterator:
+    def _loop(self, limit) -> Iterator:
         """
         Returns every file and counts the files returned. Dirs are not returned and not
         counted. Filemask can trigger recursive search (**/). See Python's pathlib for
@@ -113,7 +116,11 @@ class Sren:
         for f in sorted(Path().glob(self.filemask)):
             if not f.is_dir():
                 yield f, c
+                if self.limit == c:
+                    print("Limit reached")
+                    break
                 c += 1
+            # print (f"{c=} {self.limit=}")
 
     def _move(self, src, dst, count) -> None:
         if str(src) == str(dst):

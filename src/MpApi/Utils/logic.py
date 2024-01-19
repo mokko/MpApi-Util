@@ -80,7 +80,7 @@ def is_suspicious(identNr: str) -> bool:
     alist = identNr.split(" ")
     if len(alist) > 1:
         if not re.fullmatch(r"[IVXM/]+", alist[0]):
-            print("no Roman numeral")
+            print("no Roman numeral")  # exception for I/MV
             return True
 
     # may not have >2 consecutive spaces

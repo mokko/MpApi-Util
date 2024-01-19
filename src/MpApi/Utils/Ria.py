@@ -73,6 +73,8 @@ class RIA:
         if identNr is None:
             raise TypeError("Ident can't be None")
 
+        print(f"+++{identNr=}")
+
         if identNr.isspace():
             raise TypeError("Ident cant only consist of space: {identNr}")
 
@@ -120,7 +122,7 @@ class RIA:
         except:
             # if no OBjObjectNumberGrp
             mItemN = new_item.xpath("//m:moduleItem")[0]
-            etree.append(mItemN, new_numberGrpN)
+            mItemN.append(new_numberGrpN)
         else:
             # if there is one already replace it
             numberGrpN.getparent().replace(numberGrpN, new_numberGrpN)

@@ -259,6 +259,7 @@ def sren():
         "--filemask",
         help="supply filemask for pathlib",
     )
+    parser.add_argument("-l", "--limit", help="stop after limit", default=-1)
     parser.add_argument(
         "-v", "--version", help="display version information", action="store_true"
     )
@@ -278,7 +279,7 @@ def sren():
     args = parser.parse_args()
     _version(args)
 
-    r = Sren(act=args.act, filemask=args.filemask)
+    r = Sren(act=args.act, filemask=args.filemask, limit=args.limit)
     match args.cmd:
         case "add":
             r.add(args.first)
