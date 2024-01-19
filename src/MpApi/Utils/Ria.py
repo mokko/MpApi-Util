@@ -383,7 +383,9 @@ class RIA:
         self, *, nr: str, orgUnit: str | None = None, strict: bool = True
     ) -> list[tuple[int, str]]:
         """
-        Returns a list of tuples containing objIds and identNr
+        Returns a list of tuples containing objIds and identNr.
+
+        What happens if no item found. We return an empty list.
 
         Who wants such a complicated return value?
         """
@@ -413,8 +415,9 @@ class RIA:
         # m.toFile(path="debug.xml")
         for itemN in m.iter(module="Object"):
             objId = int(itemN.xpath("@id")[0])
+            # print(f"+*+{objId}")
             identNrL = itemN.xpath(
-                "m:dataField[@name = 'ObjObjectNumberTxt']/m:value", namespaces=NSMAP
+                "m:virtualField[@name = 'ObjObjectNumberVrt']/m:value", namespaces=NSMAP
             )
             results.append((objId, identNrL[0].text))
         return results

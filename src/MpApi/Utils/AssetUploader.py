@@ -738,9 +738,13 @@ class AssetUploader(BaseApp):
             # print("\t_write_parts")
             # we want to use the new get_objIds_beginswith which returns a dict,
             # but it doesn't work yet
+
+            identNr = cells["identNr"].value
+            # print(f"+++{identNr}")
+
             IDs = self.client.get_objIds2(
                 # no orgUnit. Should that remain that way?
-                identNr=cells["identNr"].value,
+                identNr=identNr,
                 strict=False,
             )
             if IDs:
