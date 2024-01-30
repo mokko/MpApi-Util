@@ -25,8 +25,9 @@ class Attacher2:
         print(f"Logging in as {user} {baseURL}")
         self.client = MpApi(user=user, baseURL=baseURL, pw=pw)
         self.client2 = RIA(user=user, baseURL=baseURL, pw=pw)
-
         self.limit = -1
+        print(f"Using limit {self.limit}")
+        print(f"Using excel '{excel_fn}'")
         self.xls = Xls(path=excel_fn, description=self.desc())
         self.xls.save()
         self.act = act
@@ -125,26 +126,25 @@ class Attacher2:
         self.ws = self.xls.get_or_create_sheet(title="Missing Attachments")
         self.xls.raise_if_no_content(sheet=self.ws)
 
-        rno = 3
-        for row in self.ws.iter_cols(min_row=3, min_col=4, max_col=4):
-            for cell in row:
-                matches = cell.value
-                if matches is None:
-                    continue
-                mulId = self.ws[f"A{rno}"].value
-                # print(f"***{mulId}")
+        rno = 3  # one-based
+        for row in self.ws.iter_rows(min_row=3):  # iter_rows one-based
+            matches = row[3].value
+            if matches is not None:
+                mulId = row[0].value  # row is zero-based
+                print(f"*** {rno}:{mulId}")
                 if mulId is None:
                     raise Exception("ERROR: mulId missing!")
+                # print(f"***{mulId}")
                 matchesL = matches.split("; ")
                 for match in matchesL:
                     print(f"{mulId} {match}")
-                    if self.ws[f"E{rno}"].value == "x":
-                        print("WARNING: Already uploaded according to Excel")
+                    if row[4].value == "x":
+                        print(f"WARNING: Already uploaded according to Excel row {rno}")
                     else:
                         self._upload_attachment(path=match, mulId=mulId)
-                        self.ws[f"E{rno}"] = "x"
-                    self.xls.save()  # after every upload
-                rno += 1
+                        row[4].value = "x"
+                        self.xls.save()  # after every upload
+            rno += 1
 
     #
     # private
@@ -183,9 +183,9 @@ class Attacher2:
             for cell in row:
                 if cell.value is None:
                     continue
-                excel_fn = cell.value
-                if excel_fn not in filenames_from_excel:
-                    filenames_from_excel.append(excel_fn)
+                fn = cell.value
+                if fn not in filenames_from_excel:
+                    filenames_from_excel.append(fn)
             rno += 1
         print(f"Filenames in Excel {filenames_from_excel}")
         return filenames_from_excel
