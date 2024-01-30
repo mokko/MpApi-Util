@@ -9,6 +9,7 @@ from mpapi.constants import get_credentials
 from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.BaseApp import BaseApp  # , NoContentError
 from MpApi.Utils.Attacher import Attacher
+from MpApi.Utils.attach2 import Attacher2
 from MpApi.Utils.identNr import IdentNrFactory, IdentNr
 from MpApi.Utils.count import counter
 from MpApi.Utils.mover import Mover
@@ -64,6 +65,38 @@ def attacher():
             a.down(ID=args.ID)
         case _:
             print(f"Unknown command '{args.cmd}'")
+
+
+def attacher2():
+    parser = argparse.ArgumentParser(
+        description="for assets without attachment, try to locate missing files and attach them."
+    )
+    parser.add_argument(
+        "cmd",
+        choices=["ria", "scandir", "up"],
+        help="",
+    )
+    parser.add_argument(
+        "-c",
+        "--cache",
+        action="store_true",
+        help="run a new search (False) or use file cache with results (True)",
+        default=False,
+    )
+    parser.add_argument(
+        "-v", "--version", help="display version information", action="store_true"
+    )
+    args = parser.parse_args()
+    _version(args)
+
+    a = Attacher2(cache=args.cache)
+    match args.cmd:
+        case "ria":
+            a.ria()
+        case "scandir":
+            a.scandir()
+        case "up":
+            a.up()
 
 
 def count():
