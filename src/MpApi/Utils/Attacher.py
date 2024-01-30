@@ -6,18 +6,20 @@ DESIGN CHOICES
 - This MpApi.Util is so little it is not even using Excel, yet it stays in MpApi.Utils.
 """
 
+from mpapi.constants import get_credentials, NSMAP
+from mpapi.module import Module
 from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.Xls import ConfigError
 from MpApi.Utils.Ria import RIA
-from mpapi.module import Module
 from MpApi.Record import Record  # tested?
 from pathlib import Path
 
 
 class Attacher(BaseApp):
     def __init__(self):
-        creds = self._read_credentials()
-        self.client = RIA(baseURL=creds["baseURL"], user=creds["user"], pw=creds["pw"])
+        user, pw, baseURL = get_credentials()
+        self.client = RIA(baseURL=baseURL, user=user, pw=pw)
+        print(f"Logging in as {user} {baseURL}")
 
     def up(self, *, ID: int, file: str):
         p = Path(file)

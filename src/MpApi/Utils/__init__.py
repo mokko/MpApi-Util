@@ -77,6 +77,13 @@ def attacher2():
         help="",
     )
     parser.add_argument(
+        "-a",
+        "--act",
+        help="Should we really upload or only show what to upload?",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "-c",
         "--cache",
         action="store_true",
@@ -89,7 +96,7 @@ def attacher2():
     args = parser.parse_args()
     _version(args)
 
-    a = Attacher2(cache=args.cache)
+    a = Attacher2(cache=args.cache, act=args.act)
     match args.cmd:
         case "ria":
             a.ria()

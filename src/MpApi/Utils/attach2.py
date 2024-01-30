@@ -6,6 +6,8 @@ from mpapi.client import MpApi
 from mpapi.module import Module
 from mpapi.search import Search
 from mpapi.constants import get_credentials, NSMAP
+from MpApi.Record import Record  # tested?
+from MpApi.Utils.Ria import RIA
 from MpApi.Utils.Xls import Xls
 from openpyxl import Workbook  # load_workbook
 from openpyxl.styles import Alignment, Font
@@ -15,16 +17,20 @@ from lxml import etree
 
 class Attacher2:
     def __init__(
-        self, *, cache: bool = False, excel_fn: Path = Path("attach.xlsx")
+        self, *, cache: bool = False, excel_fn: Path = Path("attach.xlsx"), act=False
     ) -> None:
         self.cache = cache
         print(f"Using cache? {self.cache}")
         user, pw, baseURL = get_credentials()
         print(f"Logging in as {user} {baseURL}")
         self.client = MpApi(user=user, baseURL=baseURL, pw=pw)
+        self.client2 = RIA(user=user, baseURL=baseURL, pw=pw)
+
         self.limit = -1
         self.xls = Xls(path=excel_fn, description=self.desc())
         self.xls.save()
+        self.act = act
+        print(f"act? {self.act}")
 
     def desc(self) -> dict:
         desc = {
@@ -47,10 +53,16 @@ class Attacher2:
                 "width": 80,
             },
             "matches": {
-                "label": "passende Pfad",
+                "label": "passender Pfad",
                 "desc": "von Disk",
                 "col": "D",  # 0
                 "width": 80,
+            },
+            "uploaded": {
+                "label": "schon hochgeladen?",
+                "desc": "",
+                "col": "E",  # 0
+                "width": 10,
             },
         }
         return desc
@@ -100,6 +112,39 @@ class Attacher2:
                 self.xls.save()
             c += 1
         self.xls.save()
+
+    def up(self) -> None:
+        """
+        Attach the located files to the Multimedia recods in RIA.
+
+        Loop through Excel and look in column "matches" (column D) which should contain
+        absolute paths to the attachments, possibly multiple ones. Take the first one and
+        attach that file to the asset record specified in column A.
+        """
+        self.xls.raise_if_no_file()
+        self.ws = self.xls.get_or_create_sheet(title="Missing Attachments")
+        self.xls.raise_if_no_content(sheet=self.ws)
+
+        rno = 3
+        for row in self.ws.iter_cols(min_row=3, min_col=4, max_col=4):
+            for cell in row:
+                matches = cell.value
+                if matches is None:
+                    continue
+                mulId = self.ws[f"A{rno}"].value
+                # print(f"***{mulId}")
+                if mulId is None:
+                    raise Exception("ERROR: mulId missing!")
+                matchesL = matches.split("; ")
+                for match in matchesL:
+                    print(f"{mulId} {match}")
+                    if self.ws[f"E{rno}"].value == "x":
+                        print("WARNING: Already uploaded according to Excel")
+                    else:
+                        self._upload_attachment(path=match, mulId=mulId)
+                        self.ws[f"E{rno}"] = "x"
+                    self.xls.save()  # after every upload
+                rno += 1
 
     #
     # private
@@ -153,6 +198,31 @@ class Attacher2:
         )
         q.addCriterion(operator="contains", field="MulOriginalFileTxt", value="pdf")
         return q
+
+    def _upload_attachment(self, path: str, mulId: int) -> None:
+        p = Path(path)
+        if not p.exists():
+            raise FileNotFoundError(f"ERROR: File {file} not found!")
+        mulId = int(mulId)
+
+        if not self.act:
+            return
+
+        m = self.client.getItem2(mtype="Multimedia", ID=mulId)
+        if m:
+            # print(f"asset ID {ID} exists in RIA")
+            m.toFile(path=f"multimedia{mulId}.xml")  # debug not necessary
+            ret = self.client2.upload_attachment(file=path, ID=mulId)
+            print(f"return value after uploading attachment: {ret}")
+            r = Record(m)
+            # r.set_filename(path=file)
+            # r.set_dateexif(path=file)
+            r.set_size(path=path)
+            m = r.toModule()
+            r = self.client.updateItem4(data=m)
+            print(f"updateItem4 multimedia-{mulId} return: {r}")
+        else:
+            raise Exception(f"multimedia ID not found online {mulid}")
 
     def _write_xlsx(self, data: Module) -> None:
         wb = self.xls.get_or_create_wb()
