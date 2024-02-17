@@ -210,6 +210,10 @@ class Xls:
             rno += 1
 
     def make_conf(self, conf: dict[str, str]) -> None:
+        """
+        Create a sheet named Conf if it doesn't exist yet and fill it with values from
+        the dict conf. Also do some formatting (first row bold etc.).
+        """
         conf_ws = self.get_or_create_sheet(title="Conf")
         max_row = 0
         for cell_label in conf:

@@ -306,6 +306,18 @@ class AssetUploader(BaseApp):
             self.xls.save_bak_shutdown(rno=rno, save=500, bak=500)
         self.xls.save()
 
+    def set_standardbild(self) -> None:
+        """
+        Set all items in the list as standardbild in the Excel file
+        """
+        self._check_scandir()
+        print("Setting Standardbild for all entries")
+        for c, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
+            c["standardbild"].value = "x"
+            # print(f"{rno} {c['standardbild'].value}")
+        self.xls.save()
+        # raise SyntaxError
+
     def standardbild(self) -> None:
         """
         Loop thru Excel and only set standardbild if requested

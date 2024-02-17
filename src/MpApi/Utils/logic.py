@@ -168,7 +168,7 @@ def parse_EM(path: Path) -> str | None:
         # if m:
         #    astr = m.group(1).strip()
 
-        print(f"***with tail cut '{astr}'")
+        # print(f"***with tail cut '{astr}'")
         alist = astr.split(" ")
         pos_number = _fortlaufende_Nummer(alist)
         # print(f"***{pos_number=} {alist}")
