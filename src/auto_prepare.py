@@ -6,6 +6,11 @@ Let's try to further automate the Koloß import.
 (3) make a prepare.xlsx with objID from template record 
 (4) copy upload-empty.xlsx
 (5) move -As before -Bs
+
+New:
+-start specifies the first dir to work one
+-limit dirs counts from start onwards
+
 """
 
 from mpapi.constants import get_credentials
@@ -35,7 +40,7 @@ def copy_upload(p: Path) -> None:
     #    print("   Upload.xlsx exists already")
 
 
-def main(limit: int = -1):
+def main(limit: int = -1, start: int = 0):
     p = Path(
         r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS-Bildmaterial\FINAL_EM_Afrika_Dia Smlg_Koloß"
     )
@@ -46,7 +51,7 @@ def main(limit: int = -1):
         except:
             no = 0
         print(f"{no=}")
-        if pp.is_dir():
+        if pp.is_dir() and no > start:
             print(f"{c}:{pp}\n")
             # prepare_init(pp)
             # copy_upload(pp)
@@ -56,13 +61,12 @@ def main(limit: int = -1):
                 # prepare_checkria(pp)
                 # prepare_createobjects(pp)
                 upload_assets(pp)
-            if no == 22528:
-                print("Highest no reached!")
+            if 1 == 100:
+                upload_jpgs(pp)
+            if c == limit:
+                print("Limit reached!")
                 break
-        if c == limit:
-            print("Limit reached!")
-            break
-        c += 1
+            c += 1
 
 
 def prepare_checkria(p: Path) -> None:
@@ -111,6 +115,18 @@ def upload_assets(p: Path) -> None:
     os.chdir("..")
 
 
+def upload_jpgs(p: Path) -> None:
+    """
+    Create an Asset (multimedia) record by copying a template and then attach two jpgs
+    """
+    for fn in Path(p).glob("*.jpgs"):
+        filmM = _query_film_record(p.name)
+        objId = filmM.extract_first_id()
+        templateM = client.getItem2(mtype="Multimedia", ID=1234)  # fill in todo
+        uploader = AssetUploader()
+        uploader._create_from_template(fn=fn, objId=objId, templateM=templateM)
+
+
 #
 # private
 #
@@ -155,11 +171,14 @@ def _mv_As_before_Bs(p: Path):
 
 def _query_film_record(identNr: str) -> Module:
     """
-    Receive the identNr of a film record and return that record
+    Receive the identNr of a film record and return that record. The film record is also
+    known as the Konvolut-Record.
     """
     q = Search(module="Object")
     print(f"query {identNr}")
+    q.AND()
     q.addCriterion(operator="equalsField", field="ObjObjectNumberVrt", value=identNr)
+    q.addCriterion(operator="contains", field="ObjTechnicalTermClb", value="Konvolut")
     q.validate(mode="search")
     m = client.search2(query=q)
     if len(m) > 1:
@@ -171,7 +190,16 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Automation for Heike")
-    parser.add_argument("-l", "--limit", help="Stop after limit steps", default=-1)
+    parser.add_argument(
+        "-l", "--limit", help="Stop after so many steps", default=-1, type=int
+    )
+    parser.add_argument(
+        "-s",
+        "--start",
+        help="Only start at given number (VIII A no)",
+        default=0,
+        type=int,
+    )
     args = parser.parse_args()
 
-    main(limit=int(args.limit))
+    main(limit=args.limit, start=args.start)

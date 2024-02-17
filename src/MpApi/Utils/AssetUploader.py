@@ -420,7 +420,12 @@ class AssetUploader(BaseApp):
         self.parser = self.xls.get_conf(cell="B8")
 
     def _create_from_template(
-        self, *, fn: str, objId: int, templateM: Module, creatorID: Optional[int] = None
+        self,
+        *,
+        fn: str | Path,
+        objId: int,
+        templateM: Module,
+        creatorID: Optional[int] = None,
     ) -> Optional[int]:
         """
         Creates a new asset record in RIA by copying the template. Also fill in

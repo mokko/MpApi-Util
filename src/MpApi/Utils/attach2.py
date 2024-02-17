@@ -94,7 +94,7 @@ class Attacher2:
         self._write_xlsx(new)
 
     def scandir(self) -> None:
-        start_dir = Path("M:\MuseumPlus\Produktiv\Multimedia\EM\PLM-Dubletten\AmArch")
+        start_dir = Path(r"M:\MuseumPlus\Produktiv\Multimedia\EM\PLM-Dubletten\AmArch")
 
         self.xls.raise_if_no_file()
         self.ws = self.xls.get_or_create_sheet(title="Missing Attachments")
