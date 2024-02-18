@@ -103,7 +103,29 @@ class Xls:
             value = default
         return value
 
+    def get_conf2(self, *, cell: str, default: Any = None) -> str:
+        """
+        Like get_conf, but returns empty string instead of None.
+        """
+        ret = self.get_conf(cell=cell, default=default)
+        if ret is None:
+            return ""
+        return ret
+
+    def get_conf3(self, *, cell: str, default: Any = None) -> str:
+        """
+        Like get_conf, but raises if return value is None.
+        """
+        ret = self.get_conf(cell=cell, default=default)
+        if ret is None:
+            raise ConfigError(f"ERROR: Config value {cell} missing")
+        return ret
+
     def get_conf_true(self, *, cell: str) -> bool:
+        """
+        Version of get_conf that returns True if Excel cell has str "true" (case
+        insensitive) or False if something ele.
+        """
         cell = self.get_conf(cell=cell)
         if cell is None or cell.isspace() or cell == "":
             return False

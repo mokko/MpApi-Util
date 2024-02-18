@@ -49,11 +49,14 @@ def has_parts(identNr: str) -> bool:
     return False
 
 
-def is_suspicious(identNr: str) -> bool:
+def is_suspicious(identNr: str | None) -> bool:
     """
     Checks whether identNr looks suspicious or like a valid identNr.
     Returns True if it looks suspicious, False if it looks good.
     """
+    if identNr is None:
+        return True
+
     # print(f"***{identNr}")
     if not isinstance(identNr, str):
         return True

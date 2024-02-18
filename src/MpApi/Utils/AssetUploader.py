@@ -415,9 +415,11 @@ class AssetUploader(BaseApp):
         self.xls.raise_if_conf_value_missing(required)
 
         self.orgUnit = self.xls.get_conf(cell="B3")  # can be None
-        self.filemask = self.xls.get_conf(cell="B5", default="*")
+        self.filemask: str = self.xls.get_conf3(cell="B5", default="*")
         self.ignore_suspicious = self.xls.get_conf_true(cell="B7")
-        self.parser = self.xls.get_conf(cell="B8")
+        self.parser = self.xls.get_conf3(cell="B8")
+        if self.parser == "":
+            raise ConfigError("Need identNr parser!")
 
     def _create_from_template(
         self,

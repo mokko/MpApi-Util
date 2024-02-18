@@ -36,11 +36,9 @@ def copy_upload(p: Path) -> None:
     if not upload_fn.exists():
         print("   Copying upload14.xlsx")
         shutil.copy(upload_src, upload_fn)
-    # else:
-    #    print("   Upload.xlsx exists already")
 
 
-def main(limit: int = -1, start: int = 0):
+def main(limit: int = -1, start: int = 0, stop: int = 0):
     p = Path(
         r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS-Bildmaterial\FINAL_EM_Afrika_Dia Smlg_Koloß"
     )
@@ -51,36 +49,20 @@ def main(limit: int = -1, start: int = 0):
         except:
             no = 0
         print(f"{no=}")
-        if pp.is_dir() and no > start:
+        if pp.is_dir() and no >= start:
             print(f"{c}:{pp}\n")
-            # prepare_init(pp)
             # copy_upload(pp)
-            # if no >= 22511:
-            #    prepare_scandir(pp)
-            if no >= 22512 and no < 22528:  # 22528:
-                # prepare_checkria(pp)
-                # prepare_createobjects(pp)
-                upload_assets(pp)
-            if 1 == 100:
-                upload_jpgs(pp)
-            if c == limit:
+            # prepare_init(pp)
+            # ONLY DO SCANDIR after we corrected orientation
+            # how do we know if did the handwork already?
+            # there is no simple test...
+            prepare_scancheckcreate(pp)
+            upload_assets(pp)
+            upload_jpgs(pp)
+            if c == limit or no >= stop:
                 print("Limit reached!")
                 break
             c += 1
-
-
-def prepare_checkria(p: Path) -> None:
-    os.chdir(p)
-    prep = PrepareUpload()
-    prep.checkria()
-    os.chdir("..")
-
-
-def prepare_createobjects(p: Path) -> None:
-    os.chdir(p)
-    prep = PrepareUpload()
-    prep.create_objects()
-    os.chdir("..")
 
 
 def prepare_init(p: Path) -> None:
@@ -98,14 +80,24 @@ def prepare_init(p: Path) -> None:
     #    print(f"{prepare_fn} exists already")
 
 
-def prepare_scandir(p: Path) -> None:
+def prepare_scancheckcreate(p: Path) -> None:
+    """
+    Does not check if steps have been executed before, but doesn't do anything bad
+    if executed again.
+    """
     os.chdir(p)
     prep = PrepareUpload()
     prep.scan_disk()
+    prep.checkria()
+    prep.create_objects()
     os.chdir("..")
 
 
 def upload_assets(p: Path) -> None:
+    """
+    Does not check if steps have been executed before, but doesn't do anything bad
+    if executed again.
+    """
     _mv_As_before_Bs(p)
     os.chdir(p)
     uploader = AssetUploader()
@@ -118,11 +110,26 @@ def upload_assets(p: Path) -> None:
 def upload_jpgs(p: Path) -> None:
     """
     Create an Asset (multimedia) record by copying a template and then attach two jpgs
+
+    How can we test if jpgs are already uploaded?
     """
+    filmM = _query_film_record(p.name)
+
+    assetL = filmM.xpath(
+        """/m:application/m:modules/m:module[
+        @name='Object']
+    /m:moduleItem/m:moduleReference[
+        @name = 'ObjMultimediaRef']/m:moduleReferenceItem"""
+    )
+    if len(assetL) > 0:
+        print("overview jpgs seem to be already attached, not doing that again")
+        return
+
+    objId = filmM.extract_first_id()
+    templateM = client.getItem2(
+        mtype="Multimedia", ID=7306612
+    )  # 7306612 new template without attachment
     for fn in Path(p).glob("*.jpgs"):
-        filmM = _query_film_record(p.name)
-        objId = filmM.extract_first_id()
-        templateM = client.getItem2(mtype="Multimedia", ID=1234)  # fill in todo
         uploader = AssetUploader()
         uploader._create_from_template(fn=fn, objId=objId, templateM=templateM)
 
@@ -197,6 +204,13 @@ if __name__ == "__main__":
         "-s",
         "--start",
         help="Only start at given number (VIII A no)",
+        default=0,
+        type=int,
+    )
+    parser.add_argument(
+        "-o",
+        "--stop",
+        help="Stop at given number (VIII A no)",
         default=0,
         type=int,
     )
