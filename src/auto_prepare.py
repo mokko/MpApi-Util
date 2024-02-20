@@ -72,8 +72,8 @@ def prepare_init(p: Path) -> None:
     prepare_fn = p / "prepare.xlsx"
     if not prepare_fn.exists():
         print("   Creating prepare...")
-        m = _query_film_record(p.name)
-        template_id = _copy_film(m)
+        m = _query_film(p.name)
+        template_id = _copy_item(m)
         conf = {"B1": f"Object {templateId}", "B3": "*.tif", "B2": "EMAfrika1"}
         # prepare_fn.unlink() overwrite
         os.chdir(p)
@@ -115,7 +115,7 @@ def upload_jpgs(p: Path) -> None:
 
     How can we test if jpgs are already uploaded?
     """
-    filmM = _query_film_record(p.name)
+    filmM = _query_film(p.name)
 
     assetL = filmM.xpath(
         """/m:application/m:modules/m:module[
@@ -141,7 +141,7 @@ def upload_jpgs(p: Path) -> None:
 #
 
 
-def _copy_film(data: Module) -> int:
+def _copy_item(data: Module) -> int:
     """
     Receive a record and copy that to be used a template. Return the objId of the newly
     created record.
@@ -168,15 +168,34 @@ def _mv_As_before_Bs(p: Path):
             # raise Exception("Wait")
 
 
-def _query_film_record(identNr: str) -> Module:
+def _query_film(identNr: str) -> Module:
     """
-    Receive the identNr of a film record and return that record. The film record is also
-    known as the Konvolut-Record.
+    Expect the identNr of a film record ("VIII A 22510") and return that record (or item).
+    The film record is also known as the Konvolut Record. It is distinct from the
+    template.
     """
     q = Search(module="Object")
     print(f"query {identNr}")
     q.AND()
     q.addCriterion(operator="equalsField", field="ObjObjectNumberVrt", value=identNr)
+    q.addCriterion(operator="contains", field="ObjTechnicalTermClb", value="Konvolut")
+    q.validate(mode="search")
+    m = client.search2(query=q)
+    if len(m) > 1:
+        raise TypeError("ERROR: More than one!")
+    return m
+
+
+def _query_template(identNr: str) -> Module:
+    """
+    Expect the identNr of a film record (e.g. "VIII A 22510") and return that template record.
+    N.B. Untested!
+    """
+    q = Search(module="Object")
+    print(f"query {identNr}")
+    q.AND()
+    q.addCriterion(operator="equalsField", field="ObjObjectNumberVrt", value=identNr)
+    q.NOT()
     q.addCriterion(operator="contains", field="ObjTechnicalTermClb", value="Konvolut")
     q.validate(mode="search")
     m = client.search2(query=q)
