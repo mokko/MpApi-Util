@@ -42,27 +42,27 @@ def main(limit: int = -1, start: int = 0, stop: int = 0):
     p = Path(
         r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS-Bildmaterial\FINAL_EM_Afrika_Dia Smlg_Koloß"
     )
-    c = 1
-    for pp in sorted(p.iterdir()):
-        try:
-            no = int(pp.name.split()[-1])
-        except:
-            no = 0
-        print(f"{no=}")
-        if pp.is_dir() and no >= start:
-            print(f"{c}:{pp}\n")
-            # copy_upload(pp)
-            # prepare_init(pp)
-            # ONLY DO SCANDIR after we corrected orientation
-            # how do we know if did the handwork already?
-            # there is no simple test...
-            prepare_scancheckcreate(pp)
-            upload_assets(pp)
-            upload_jpgs(pp)
-            if c == limit or no >= stop:
-                print("Limit reached!")
-                break
-            c += 1
+    for idx, pp in enumerate(sorted(p.iterdir())):
+        if pp.is_dir():
+            last_item = pp.name.split()[-1]
+            try:
+                no = int(last_item)
+            except:
+                no = int(last_item[:-1])
+            print(f"{idx}:{no=} {start=} {stop=}")
+            if no >= start and no <= stop:
+                print(f"   {pp}\n")
+                # copy_upload(pp)
+                # prepare_init(pp)
+                # ONLY DO SCANDIR after we corrected orientation
+                # how do we know if did the handwork already?
+                # there is no simple test...
+                # prepare_scancheckcreate(pp)
+                # upload_assets(pp)
+                # upload_jpgs(pp)
+        if idx == limit:
+            print("Limit reached!")
+            break
 
 
 def prepare_init(p: Path) -> None:
@@ -74,10 +74,12 @@ def prepare_init(p: Path) -> None:
         print("   Creating prepare...")
         m = _query_film_record(p.name)
         template_id = _copy_film(m)
+        conf = {"B1": f"Object {templateId}", "B3": "*.tif", "B2": "EMAfrika1"}
         # prepare_fn.unlink() overwrite
-        _init_prepare(p, template_id)
-    # else:
-    #    print(f"{prepare_fn} exists already")
+        os.chdir(p)
+        prep = PrepareUpload()
+        prep.init(conf)
+        os.chdir("..")
 
 
 def prepare_scancheckcreate(p: Path) -> None:
@@ -148,16 +150,6 @@ def _copy_film(data: Module) -> int:
     return objId
 
 
-def _init_prepare(p: Path, objId: int):
-    """
-    Execute init prepare -s objId
-    """
-    os.chdir(p)
-    prep = PrepareUpload()
-    prep.init(objId)
-    os.chdir("..")
-
-
 def _mv_As_before_Bs(p: Path):
     print("mv As before Bs")
     for pp in Path(p).glob("**/* -B.tif"):
@@ -216,4 +208,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(limit=args.limit, start=args.start)
+    main(limit=args.limit, start=args.start, stop=args.stop)

@@ -255,12 +255,12 @@ class PrepareUpload(BaseApp):
         }
         return desc
 
-    def init(self, templateId: int = None) -> None:
+    def init(self, conf: dict = None) -> None:
         self.xls.raise_if_file()
         wb = self.xls.get_or_create_wb()
         ws = self.xls.get_or_create_sheet(title="Prepare")
         self.xls.write_header(sheet=ws)
-        self._make_conf(templateId)
+        self._make_conf(conf)
         self.xls.save()
 
     def mv_dupes(self) -> None:
@@ -464,8 +464,8 @@ class PrepareUpload(BaseApp):
             return "; ".join(real_parts)
         return "None"
 
-    def _make_conf(self, templateId: int | None = None) -> None:
-        conf = {
+    def _make_conf(self, conf: dict | None = None) -> None:
+        default = {
             "A1": "template ID",
             "C1": "Format: Object 1234567",
             "A2": "orgUnit",
@@ -477,10 +477,9 @@ class PrepareUpload(BaseApp):
             "C4": "Welchen Logarithmus um Dateinamen in identNr zu parsen, soll verwendet werden? (EM, Std)",
         }
 
-        if templateId is not None:
-            conf["B1"] = f"Object {templateId}"
-        conf["B3"] = "*.tif"
-        conf["B2"] = "EMAfrika1"
+        if conf is None:
+            conf = default
+
         self.xls.make_conf(conf)
 
     def _objId_for_ident(self, c) -> None:
