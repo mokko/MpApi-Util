@@ -112,7 +112,7 @@ class Xls:
             return ""
         return ret
 
-    def get_conf3(self, *, cell: str, default: Any = None) -> str:
+    def get_conf_required(self, *, cell: str, default: Any = None) -> str:
         """
         Like get_conf, but raises if return value is None.
         """

@@ -155,15 +155,15 @@ class PrepareUpload(BaseApp):
         """
 
         self._check_create_objects()
-        temp_str = self.xls.get_conf(cell="B1")
+        temp_str = self.xls.get_conf_required(cell="B1")
         ttype, tid = temp_str.split()
         ttype = ttype.strip()  # do i need to strip?
-        tid = int(tid.strip())
+        tid_int = int(tid.strip())
         print(f"***template: {ttype} {tid}")
 
         self.xls.raise_if_no_content(sheet=self.ws)
 
-        templateM = self.client.get_template(ID=tid, mtype=ttype)
+        templateM = self.client.get_template(ID=tid_int, mtype=ttype)
         # templateM.toFile(path="debug.template.xml")
 
         for c, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
@@ -255,37 +255,13 @@ class PrepareUpload(BaseApp):
         }
         return desc
 
-    def init(self, conf: dict = None) -> None:
+    def init(self, conf: dict | None = None) -> None:
         self.xls.raise_if_file()
         wb = self.xls.get_or_create_wb()
         ws = self.xls.get_or_create_sheet(title="Prepare")
         self.xls.write_header(sheet=ws)
-        self._make_conf(conf)
+        self._make_conf(conf)  # write conf sheet
         self.xls.save()
-
-    def mv_dupes(self) -> None:
-        def mk_dupes_dir():
-            dupes_dir = Path(self.conf["mv_dupes"])
-            if not dupes_dir.exists():
-                print("Making dupes dir {dupes_dir}")
-                dupes_dir.mkdir()
-
-        if "mv_dupes" not in self.conf:
-            raise ConfigError("config value 'mv_dupes' missing")
-
-        self.xls._raise_if_no_content()
-        mk_dupes_dir()
-        for row, c in self._loop_table():  # start at 3rd row
-            src_cell = row[6]
-            filename_cell = row[0]
-            dest_dir = Path(self.conf["mv_dupes"])
-            dest_fn = dest_dir / filename_cell.value
-            print(f"***{src_cell}")
-            if dest_fn.exists():
-                print(f"WARN: Dupe exists already {dest_fn}, no overwrite")
-            else:
-                print(f"* Moving Dupe to {dest_fn}")
-                shutil.move(src_cell.value, dest_dir)
 
     def scan_disk(self) -> None:
         """
@@ -372,6 +348,29 @@ class PrepareUpload(BaseApp):
             else:
                 c["assetUploaded"].value = "; ".join(idL)
 
+    def _checkria_messages(self, c, rno) -> None:
+        print(
+            f"cr {c['filename'].value} -> {c['identNr'].value} {c['candidate'].value}"
+        )
+        print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
+
+    def _check_create_objects(self) -> None:
+        self.xls.save()
+        required = {"B1": "Template config missing!"}
+        self.xls.raise_if_conf_value_missing(required)
+        self.filemask = self.xls.get_conf_required(cell="B3")
+        print(f"Using filemask {self.filemask}")
+
+    def _check_scandir(self) -> None:
+        self.xls.raise_if_not_initialized(sheet=self.ws)
+        self.xls.save()
+        self.xls.raise_if_conf_value_missing({"B3": "Filemask"})
+        self.filemask = self.xls.get_conf_required(cell="B3")
+        print(f"Using filemask {self.filemask}")
+        self.parser = self.xls.get_conf_required(cell="B4")
+        identNrF = IdentNrFactory()
+        self.schemas = identNrF.get_schemas()
+
     def _create_object(self, *, identNrs: str, template) -> str:
         identL = identNrs.split(";")
         objIds = set()  # unique list of objIds from Excel
@@ -385,29 +384,6 @@ class PrepareUpload(BaseApp):
             objIds.add(new_id)
         objIds_str = "; ".join(str(objId) for objId in objIds)
         return objIds_str
-
-    def _check_create_objects(self) -> None:
-        self.xls.save()
-        required = {"B1": "Template config missing!"}
-        self.xls.raise_if_conf_value_missing(required)
-        self.filemask = self.xls.get_conf(cell="B3")
-        print(f"Using filemask {self.filemask}")
-
-    def _check_scandir(self) -> None:
-        self.xls.raise_if_not_initialized(sheet=self.ws)
-        self.xls.save()
-        self.xls.raise_if_conf_value_missing({"B3": "Filemask"})
-        self.filemask = self.xls.get_conf(cell="B3")
-        print(f"Using filemask {self.filemask}")
-        self.parser = self.xls.get_conf(cell="B4")
-        identNrF = IdentNrFactory()
-        self.schemas = identNrF.get_schemas()
-
-    def _checkria_messages(self, c, rno) -> None:
-        print(
-            f"cr {c['filename'].value} -> {c['identNr'].value} {c['candidate'].value}"
-        )
-        print(f"{rno} of {self.ws.max_row}", end="\r", flush=True)
 
     def _fill_in_candidate(self, c) -> None:
         if c["schemaId"].value is None or c["schemaId"].value == "None":
@@ -465,6 +441,9 @@ class PrepareUpload(BaseApp):
         return "None"
 
     def _make_conf(self, conf: dict | None = None) -> None:
+        """
+        Makes a conf sheet with default and used-supplied values.
+        """
         default = {
             "A1": "template ID",
             "C1": "Format: Object 1234567",
@@ -474,11 +453,13 @@ class PrepareUpload(BaseApp):
             "C3": """Steuere scandir Prozess mit einem Muster, z.B. '**/*' oder '*.jpg'.""",
             "A4": "IdentNr Parser",
             "B4": "EM",
-            "C4": "Welchen Logarithmus um Dateinamen in identNr zu parsen, soll verwendet werden? (EM, Std)",
+            "C4": "Welcher Logarithmus zum Parsen von Dateinamen in identNrn soll verwendet werden? (EM, Std)",
         }
 
-        if conf is None:
-            conf = default
+        if conf is not None:
+            conf = default | conf  # mix defaults and user-defined conf
+        else:
+            conf = default  # use only defaults
 
         self.xls.make_conf(conf)
 
@@ -510,7 +491,9 @@ class PrepareUpload(BaseApp):
             self.xls.set_change()
 
             if objIdL:
-                c["partsObjIds"].value = "; ".join(objIdL)
+                c["partsObjIds"].value = "; ".join(
+                    [str(x) for x in objIdL]
+                )  # to make mypy happy
             else:
                 c["partsObjIds"].value = "None"
             c["partsObjIds"].alignment = Alignment(wrap_text=True)

@@ -143,8 +143,8 @@ def upload_jpgs(p: Path) -> None:
 
 def _copy_item(data: Module) -> int:
     """
-    Receive a record and copy that to be used a template. Return the objId of the newly
-    created record.
+    Receive a record as template and create a new record by copying the template to the
+    new record. Return the objId of the newly created record.
     """
     objId = client.createItem3(data=data)
     return objId
