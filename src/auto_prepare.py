@@ -72,9 +72,9 @@ def prepare_init(p: Path) -> None:
     prepare_fn = p / "prepare.xlsx"
     if not prepare_fn.exists():
         print("   Creating prepare...")
-        m = _query_film(p.name)
+        m = _get_film(identNr=p.name)
         template_id = _copy_item(m)
-        conf = {"B1": f"Object {templateId}", "B3": "*.tif", "B2": "EMAfrika1"}
+        conf = {"B1": f"Object {template_id}", "B3": "*.tif", "B2": "EMAfrika1"}
         # prepare_fn.unlink() overwrite
         os.chdir(p)
         prep = PrepareUpload()
@@ -115,7 +115,7 @@ def upload_jpgs(p: Path) -> None:
 
     How can we test if jpgs are already uploaded?
     """
-    filmM = _query_film(p.name)
+    filmM = _get_film(identNr=p.name)
 
     assetL = filmM.xpath(
         """/m:application/m:modules/m:module[
@@ -168,7 +168,7 @@ def _mv_As_before_Bs(p: Path):
             # raise Exception("Wait")
 
 
-def _query_film(identNr: str) -> Module:
+def _get_film(*, identNr: str) -> Module:
     """
     Expect the identNr of a film record ("VIII A 22510") and return that record (or item).
     The film record is also known as the Konvolut Record. It is distinct from the
@@ -186,7 +186,7 @@ def _query_film(identNr: str) -> Module:
     return m
 
 
-def _query_template(identNr: str) -> Module:
+def _get_template(*, identNr: str) -> Module:
     """
     Expect the identNr of a film record (e.g. "VIII A 22510") and return that template record.
     N.B. Untested!
