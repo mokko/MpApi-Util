@@ -349,10 +349,9 @@ class AssetUploader(BaseApp):
     #
     # private
     #
-    def _attach_asset(self, *, path: str, mulId: int) -> bool:
+    def _attach_asset(self, *, path: str | Path, mulId: int) -> bool:
         """
-        attach an asset file (at path) and, if successful, move the asset file to new
-        location (target_path).
+        Attach an asset file (at path).
         """
 
         # if the file doesn't exist (anymore) it indicates major issues!
@@ -415,9 +414,9 @@ class AssetUploader(BaseApp):
         self.xls.raise_if_conf_value_missing(required)
 
         self.orgUnit = self.xls.get_conf(cell="B3")  # can be None
-        self.filemask: str = self.xls.get_conf3(cell="B5", default="*")
+        self.filemask = self.xls.get_conf_required(cell="B5", default="*")
         self.ignore_suspicious = self.xls.get_conf_true(cell="B7")
-        self.parser = self.xls.get_conf3(cell="B8")
+        self.parser = self.xls.get_conf_required(cell="B8")
         if self.parser == "":
             raise ConfigError("Need identNr parser!")
 
@@ -430,7 +429,8 @@ class AssetUploader(BaseApp):
         creatorID: Optional[int] = None,
     ) -> Optional[int]:
         """
-        Creates a new asset record in RIA by copying the template. Also fill in
+        Creates a new asset (Mulimedia) record in RIA by copying the template.
+        Also fill in
         - object reference
         - filename
         - size

@@ -4,13 +4,11 @@ Let's try to further automate the Koloß import.
 (1) Loop through film dirs
 (2) copy Konvolut-DS and to create template record (objId)
 (3) make a prepare.xlsx with objID from template record 
-(4) copy upload-empty.xlsx
-(5) move -As before -Bs
-
-New:
--start specifies the first dir to work one
--limit dirs counts from start onwards
-
+(4) move -As before -Bs
+(5) trigger prepare scandir,checkria and createobjects
+(6) trigger upload scandir, go
+(7) upload of jpgs
+(8) TODO: delete template 
 """
 
 from mpapi.constants import get_credentials
@@ -19,12 +17,14 @@ from mpapi.module import Module
 from mpapi.search import Search
 from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.prepareUpload import PrepareUpload
+from MpApi.Utils.Ria import RIA
 import os
 from pathlib import Path
 import shutil
 
 user, pw, baseURL = get_credentials()
 client = MpApi(baseURL=baseURL, pw=pw, user=user)
+ria = RIA(baseURL=baseURL, user=user, pw=pw)
 upload_src = r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS-Bildmaterial\FINAL_EM_Afrika_Dia Smlg_Koloß\upload14-empty.xlsx"
 
 
@@ -38,7 +38,7 @@ def copy_upload(p: Path) -> None:
         shutil.copy(upload_src, upload_fn)
 
 
-def main(limit: int = -1, start: int = 0, stop: int = 0):
+def main(limit: int = -1, start: int = 0, stop: int = 23_088):
     p = Path(
         r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS-Bildmaterial\FINAL_EM_Afrika_Dia Smlg_Koloß"
     )
@@ -49,17 +49,23 @@ def main(limit: int = -1, start: int = 0, stop: int = 0):
                 no = int(last_item)
             except:
                 no = int(last_item[:-1])
+            if no < start:
+                continue
             print(f"{idx}:{no=} {start=} {stop=}")
-            if no >= start and no <= stop:
-                print(f"   {pp}\n")
-                # copy_upload(pp)
-                # prepare_init(pp)
-                # ONLY DO SCANDIR after we corrected orientation
-                # how do we know if did the handwork already?
-                # there is no simple test...
-                # prepare_scancheckcreate(pp)
-                # upload_assets(pp)
-                # upload_jpgs(pp)
+            print(f"   {pp}\n")
+            copy_upload(pp)
+            prepare_init(pp)
+            upload_jpgs(pp)  # Übersicht. Breaks if two records with konvolut
+            _mv_As_before_Bs(pp)
+
+            # ONLY DO SCANDIR after we corrected orientation
+            # how do we know if did that already?
+            # there is no simple test...    
+            prepare_scancheckcreate(pp)
+            upload_assets(pp)
+            if no >= stop:
+                print("Stop reached!")
+                break
         if idx == limit:
             print("Limit reached!")
             break
@@ -85,7 +91,9 @@ def prepare_init(p: Path) -> None:
 def prepare_scancheckcreate(p: Path) -> None:
     """
     Does not check if steps have been executed before, but doesn't do anything bad
-    if executed again.
+    if executed repeatedly. However, we could check if individual photo records have
+    already been created. For example, we could check if film record has photos as parts
+    (Objektref.).
     """
     os.chdir(p)
     prep = PrepareUpload()
@@ -98,9 +106,9 @@ def prepare_scancheckcreate(p: Path) -> None:
 def upload_assets(p: Path) -> None:
     """
     Does not check if steps have been executed before, but doesn't do anything bad
-    if executed again.
+    if executed repeatedly.
+    However, we could check if individual photo assets have already been created.
     """
-    _mv_As_before_Bs(p)
     os.chdir(p)
     uploader = AssetUploader()
     uploader.scandir()
@@ -126,14 +134,20 @@ def upload_jpgs(p: Path) -> None:
     if len(assetL) > 0:
         print("overview jpgs seem to be already attached, not doing that again")
         return
+    print("jpgs not yet attached, let me try...")
 
     objId = filmM.extract_first_id()
     templateM = client.getItem2(
-        mtype="Multimedia", ID=7306612
+        mtype="Multimedia", ID=7325555  # new asset record on 24.2.2024
     )  # 7306612 new template without attachment
-    for fn in Path(p).glob("*.jpgs"):
+    for idx, fn in enumerate(Path(p).glob("*.jpg")):
         uploader = AssetUploader()
-        uploader._create_from_template(fn=fn, objId=objId, templateM=templateM)
+        mulId = uploader._create_from_template(fn=fn, objId=objId, templateM=templateM)
+        ret = uploader._attach_asset(path=fn, mulId=mulId)
+        print(f"{mulId=} {ret=}")
+        if idx == 0:
+            print("Setting standardbild")
+            ria.mk_asset_standardbild2(objId=objId, mulId=mulId)
 
 
 #
@@ -182,7 +196,7 @@ def _get_film(*, identNr: str) -> Module:
     q.validate(mode="search")
     m = client.search2(query=q)
     if len(m) > 1:
-        raise TypeError("ERROR: More than one!")
+        raise TypeError("ERROR: More than one Konvolut record!")
     return m
 
 
@@ -205,6 +219,11 @@ def _get_template(*, identNr: str) -> Module:
 
 
 if __name__ == "__main__":
+    # as long as this script is only used on a single upload project (i.e. Koloß slides)
+    # we don't need to make it a proper script that installs properly thru Flit. If we
+    # ever generalize this script to work on a other projects as well, this decision
+    # needs to be revisited.
+
     import argparse
 
     parser = argparse.ArgumentParser(description="Automation for Heike")
@@ -222,7 +241,7 @@ if __name__ == "__main__":
         "-o",
         "--stop",
         help="Stop at given number (VIII A no)",
-        default=0,
+        default=100_000,
         type=int,
     )
     args = parser.parse_args()
