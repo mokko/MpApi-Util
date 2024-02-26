@@ -56,13 +56,17 @@ def main(limit: int = -1, start: int = 0, stop: int = 23_088):
             copy_upload(pp)
             prepare_init(pp)
             upload_jpgs(pp)  # Übersicht. Breaks if two records with konvolut
-            _mv_As_before_Bs(pp)
+            _mv_As_before_Bs(pp)  # before prepare_scancheckcreate
 
             # ONLY DO SCANDIR after we corrected orientation
             # how do we know if did that already?
-            # there is no simple test...    
-            prepare_scancheckcreate(pp)
-            upload_assets(pp)
+            # there is no simple test...
+
+            # prepare_scancheckcreate(pp)
+            # upload_assets(pp)
+
+            # only after successful creation of the Object records
+            # rm_template(pp)
             if no >= stop:
                 print("Stop reached!")
                 break
@@ -79,7 +83,7 @@ def prepare_init(p: Path) -> None:
     if not prepare_fn.exists():
         print("   Creating prepare...")
         m = _get_film(identNr=p.name)
-        template_id = _copy_item(m)
+        template_id = client.createItem3(data=m)
         conf = {"B1": f"Object {template_id}", "B3": "*.tif", "B2": "EMAfrika1"}
         # prepare_fn.unlink() overwrite
         os.chdir(p)
@@ -101,6 +105,22 @@ def prepare_scancheckcreate(p: Path) -> None:
     prep.checkria()
     prep.create_objects()
     os.chdir("..")
+
+
+def rm_template(p: Path) -> None:
+    """
+    Let's delete the template record after we're done.
+
+    TODO: We should check if all assets have been uploaded or something like that
+    before deleting...
+    """
+    templateM = _get_template(identNr=p.name)
+    if not templateM:
+        print("Template doesn't exist anymore.")
+        return
+    objId = templateM.extract_first_id()
+    print(f"*** Removing template record with ID {objId}")
+    client.deleteItem2(mtype="Object", ID=objId)
 
 
 def upload_assets(p: Path) -> None:
@@ -143,6 +163,8 @@ def upload_jpgs(p: Path) -> None:
     for idx, fn in enumerate(Path(p).glob("*.jpg")):
         uploader = AssetUploader()
         mulId = uploader._create_from_template(fn=fn, objId=objId, templateM=templateM)
+        if mulId is None:
+            continue  # to make mypy happy
         ret = uploader._attach_asset(path=fn, mulId=mulId)
         print(f"{mulId=} {ret=}")
         if idx == 0:
@@ -153,15 +175,6 @@ def upload_jpgs(p: Path) -> None:
 #
 # private
 #
-
-
-def _copy_item(data: Module) -> int:
-    """
-    Receive a record as template and create a new record by copying the template to the
-    new record. Return the objId of the newly created record.
-    """
-    objId = client.createItem3(data=data)
-    return objId
 
 
 def _mv_As_before_Bs(p: Path):
@@ -214,7 +227,7 @@ def _get_template(*, identNr: str) -> Module:
     q.validate(mode="search")
     m = client.search2(query=q)
     if len(m) > 1:
-        raise TypeError("ERROR: More than one!")
+        raise TypeError("ERROR: More than one potential template!")
     return m
 
 
