@@ -186,23 +186,21 @@ class AssetUploader(BaseApp):
                 print(
                     "   object reference unknown, not creating assets nor attachments"
                 )
-                continue  # SEEMS NOT TO WORK, so we try with else!
+                continue
+
+            if cells["fullpath"].value is not None:
+                p = Path(cells["fullpath"].value)
             else:
-                if cells["fullpath"].value is not None:
-                    p = Path(cells["fullpath"].value)
-                if p and p.exists():
-                    #  print(f"   object reference known, continue {cells['ref'].value}")
-                    try:
-                        self._create_new_asset(
-                            cells
-                        )  # writes asset id to asset_fn_exists
-                        self._upload_file(cells, rno)
-                        self._set_Standardbild(cells)
-                    except KeyboardInterrupt:
-                        self.xls.request_shutdown()
-                else:
-                    cells["attached"].value = "File not found"
-                    print(f"WARN: {p} doesn't exist (anymore)")
+                print("Fullpath is missing")
+                continue
+
+            match cells["attached"].value:
+                case "x":
+                    print("File already uploaded")
+                case "File not found":
+                    print("File already marked as missing")
+                case _:
+                    self._go(cells=cells, rno=rno, p=p)
             self.xls.save_bak_shutdown(rno=rno, bak=10)
         # self.xls.save_if_change()
 
@@ -257,6 +255,7 @@ class AssetUploader(BaseApp):
         add new files, manually delete rows from Excel and
         to update the table by re-running scandir.
         """
+        self.filemask: str  # make mypy happy
         self._check_scandir()
         # looping thru files (usually pwd)
         print(f"Scanning {self.filemask}")
@@ -536,6 +535,7 @@ class AssetUploader(BaseApp):
 
         This is for the scandir step.
         """
+        print(f"file_to_list '{path}'")
         if rno is None:
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
         cells = self.xls._rno2dict(rno, sheet=self.ws)
@@ -560,8 +560,7 @@ class AssetUploader(BaseApp):
 
         if cells["objIds"].value == None:
             cells["objIds"].value = self._get_objIds(identNr=identNr)
-
-        self._write_parts(cells)
+        # self._write_parts(cells)
         self._write_whole(cells)
         self._write_ref(cells)
         ref = cells["ref"].value
@@ -569,6 +568,18 @@ class AssetUploader(BaseApp):
         self._write_photographer(cells, path)
         self._write_photoID(cells)
         return rno
+
+    def _go(self, *, cells: dict, rno: int, p: Path):
+        if p and p.exists():
+            try:
+                self._create_new_asset(cells)  # writes asset id to asset_fn_exists
+                self._upload_file(cells, rno)
+                self._set_Standardbild(cells)
+            except KeyboardInterrupt:
+                self.xls.request_shutdown()
+        else:
+            cells["attached"].value = "File not found"
+            print(f"WARN: {p} doesn't exist (anymore)")
 
     def _init_wbws(self):
         self.xls.raise_if_no_file()
@@ -753,6 +764,8 @@ class AssetUploader(BaseApp):
             cells["identNr"].value = identNr
 
     def _write_parts(self, cells):
+        print("* write parts")
+
         if cells["parts_objIds"].value is None:
             # print("\t_write_parts")
             # we want to use the new get_objIds_beginswith which returns a dict,
@@ -761,6 +774,7 @@ class AssetUploader(BaseApp):
             identNr = cells["identNr"].value
             # print(f"+++{identNr}")
 
+            print("   about to get objIds...")
             IDs = self.client.get_objIds2(
                 # no orgUnit. Should that remain that way?
                 identNr=identNr,
@@ -773,14 +787,15 @@ class AssetUploader(BaseApp):
                 cells["parts_objIds"].value = "None"
 
     def _write_whole(self, cells):
+        print("* write wholes")
+
         if cells["whole_objIds"].value is None:
             identNr = cells["identNr"].value
             ident_whole = whole_for_parts(identNr)
             # print(f"\t_write_whole {ident_whole}")
+            objIds = self._get_objIds(identNr=ident_whole)
             if identNr != ident_whole:
-                cells["whole_objIds"].value = f"{ident_whole}: " + self._get_objIds(
-                    identNr=ident_whole
-                )
+                cells["whole_objIds"].value = f"{ident_whole}: {objIds}"
             else:
                 cells["whole_objIds"].value = "None"
 
@@ -833,7 +848,7 @@ class AssetUploader(BaseApp):
                 else:
                     cells["ref"].font = green
 
-            elif fuzzy != "None":
+            elif fuzzy != "None" and fuzzy is not None:
                 if not ";" in fuzzy:
                     cells["ref"].value = int(fuzzy.strip())
                 else:

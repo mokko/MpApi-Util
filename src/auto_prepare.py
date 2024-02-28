@@ -158,7 +158,8 @@ def upload_jpgs(p: Path) -> None:
 
     objId = filmM.extract_first_id()
     templateM = client.getItem2(
-        mtype="Multimedia", ID=7325555  # new asset record on 24.2.2024
+        mtype="Multimedia",
+        ID=7325555,  # new asset record on 24.2.2024
     )  # 7306612 new template without attachment
     for idx, fn in enumerate(Path(p).glob("*.jpg")):
         uploader = AssetUploader()

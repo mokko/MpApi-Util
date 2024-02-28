@@ -642,7 +642,7 @@ class RIA:
                 etree.tostring(objMultimediaRefN, pretty_print=True, encoding="unicode")
             )
 
-    def upload_attachment(self, *, file: str, ID: int):
+    def upload_attachment(self, *, file: str | Path, ID: int):
         """
         Save attachment to asset/Multmedia record identified by id.
 
@@ -658,7 +658,7 @@ class RIA:
         if p.is_dir():
             raise TypeError(f"ERROR: Path '{file}' is a dir")
 
-        return self.mpapi.updateAttachment(module="Multimedia", path=file, id=ID)
+        return self.mpapi.updateAttachment(module="Multimedia", path=str(file), id=ID)
 
 
 if __name__ == "__main__":
