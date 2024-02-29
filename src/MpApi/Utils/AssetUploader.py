@@ -570,7 +570,7 @@ class AssetUploader(BaseApp):
         return rno
 
     def _go(self, *, cells: dict, rno: int, p: Path):
-        if p and p.exists():
+        if p.exists():
             try:
                 self._create_new_asset(cells)  # writes asset id to asset_fn_exists
                 self._upload_file(cells, rno)
