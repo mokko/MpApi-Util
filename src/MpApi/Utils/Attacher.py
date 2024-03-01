@@ -6,10 +6,8 @@ DESIGN CHOICES
 - This MpApi.Util is so little it is not even using Excel, yet it stays in MpApi.Utils.
 """
 
-from mpapi.constants import get_credentials, NSMAP
-from mpapi.module import Module
+from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp
-from MpApi.Utils.Xls import ConfigError
 from MpApi.Utils.Ria import RIA
 from MpApi.Record import Record  # tested?
 from pathlib import Path

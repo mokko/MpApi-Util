@@ -9,15 +9,14 @@ USAGE
     wb = xls.get_or_create_wb()
 """
 
-import openpyxl
 from openpyxl import Workbook, load_workbook  # worksheet
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Font
 from openpyxl.worksheet.worksheet import Worksheet
 from pathlib import Path
 import shutil
 import sys
 from tqdm import tqdm
-from typing import Any, Iterator, SupportsIndex
+from typing import Any, Iterator
 
 red = Font(color="FF0000")
 teal = Font(color="008080")
@@ -199,14 +198,14 @@ class Xls:
 
         For this to work, we need a description (self.description).
         """
-        rno = offset  # row number; used to report a different number
-        for row in sheet.iter_rows(min_row=offset):  # start at 3rd row
+        for rno, row in enumerate(
+            sheet.iter_rows(min_row=offset), start=offset
+        ):  # start at 3rd row
             cells = self._rno2dict(rno, sheet)
             yield cells, rno
             if limit == rno:
                 print("* Limit reached")
                 break
-            rno += 1
 
     def loop2(
         self,
@@ -223,13 +222,13 @@ class Xls:
                 print (f"row number {rno} {row[0]}")
         """
 
-        rno = offset  # row number; used to report a different number
-        for row in sheet.iter_rows(min_row=offset):  # start at 3rd row
+        for rno, row in enumerate(
+            sheet.iter_rows(min_row=offset), start=offset
+        ):  # start at 3rd row
             yield row, rno
             if limit == rno:
                 print("* Limit reached")
                 break
-            rno += 1
 
     def make_conf(self, conf: dict[str, str]) -> None:
         """
@@ -278,13 +277,12 @@ class Xls:
         What happens if filenames are not unique? Files on disk will not be
         uploaded listed in scandir and hence not uploaded and hence not moved.
         """
-        rno = 3
-        for row in sheet.iter_rows(min_row=3):  # start at 3rd row
+        for idx, row in enumerate(sheet.iter_rows(min_row=3), start=3):
+            # start at 3rd row
             fn = row[cno].value
             # print (f"_path_in_list: {fn=}{name=}")
             if fn == str(path):
-                return rno
-            rno += 1
+                return idx
         return None
 
     def raise_if_conf_value_missing(self, required: dict) -> None:

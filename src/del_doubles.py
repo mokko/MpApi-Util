@@ -6,9 +6,8 @@ Now we want to fix the mistake, but looping thru the Excel file and deleting the
 That is we scan the Excel table and look for assets.
 """
 
-from openpyxl import Workbook, load_workbook
+from openpyxl import load_workbook
 from mpapi.constants import get_credentials
-from mpapi.module import Module
 from mpapi.client import MpApi
 
 limit = -1

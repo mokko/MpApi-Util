@@ -8,9 +8,9 @@ The report is written in Excel (xlsx). It's basically a list of files with some 
 import datetime
 from MpApi.Utils.logic import extractIdentNr
 from MpApi.Utils.BaseApp import BaseApp
-from MpApi.Utils.Xls import Xls, ConfigError
-from openpyxl import load_workbook, Workbook, worksheet
-from openpyxl.styles import Alignment, Font
+from MpApi.Utils.Xls import Xls
+from openpyxl import worksheet
+from openpyxl.styles import Font
 from pathlib import Path
 
 # from Typing import Optional

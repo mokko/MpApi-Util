@@ -62,8 +62,8 @@ def main(limit: int = -1, start: int = 0, stop: int = 23_088):
             # how do we know if did that already?
             # there is no simple test...
 
-            # prepare_scancheckcreate(pp)
-            # upload_assets(pp)
+            prepare_scancheckcreate(pp)
+            upload_assets(pp)
 
             # only after successful creation of the Object records
             # rm_template(pp)

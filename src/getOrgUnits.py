@@ -10,10 +10,7 @@ TODO
 """
 # import argparse
 from mpapi.client import MpApi
-from mpapi.module import Module
 from mpapi.constants import get_credentials
-from pathlib import Path
-from MpApi.Utils.BaseApp import BaseApp, NoContentError
 
 
 if __name__ == "__main__":

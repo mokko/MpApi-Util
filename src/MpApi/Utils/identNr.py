@@ -28,7 +28,7 @@ from mpapi.constants import NSMAP, parser
 from mpapi.module import Module
 from pathlib import Path
 import re
-from typing import Any, Iterator, Self  # Self since 3.11
+from typing import Self  # Self since 3.11
 
 
 class UnknownSchemaException(Exception):

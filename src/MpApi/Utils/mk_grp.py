@@ -21,7 +21,7 @@ from mpapi.client import MpApi
 from mpapi.module import Module
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp
-from MpApi.Utils.Xls import Xls, ConfigError
+from MpApi.Utils.Xls import Xls
 from pathlib import Path
 
 header = """<application xmlns="http://www.zetcom.com/ria/ws/module">

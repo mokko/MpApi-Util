@@ -75,23 +75,15 @@ TODO
 - Make use of the log file
 """
 
-import configparser  # todo replace with toml in future
 import logging
-from lxml import etree
-from mpapi.module import Module
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.logic import extractIdentNr, not_suspicious
 from MpApi.Utils.Ria import RIA
-from MpApi.Utils.Xls import Xls, ConfigError, NoContentError
-from openpyxl import Workbook, load_workbook
+from MpApi.Utils.Xls import Xls
 from openpyxl.styles import Alignment, Font
-import openpyxl.cell.cell
 from pathlib import Path
-import re
-import shutil
-from typing import Any, Optional
 
 red = Font(color="FF0000")
 

@@ -7,10 +7,9 @@ from mpapi.client import MpApi
 from mpapi.search import Search
 from mpapi.constants import get_credentials
 from MpApi.Utils.AssetUploader import AssetUploader
-from MpApi.Utils.BaseApp import BaseApp  # , NoContentError
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.attach2 import Attacher2
-from MpApi.Utils.identNr import IdentNrFactory, IdentNr
+from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.count import counter
 from MpApi.Utils.mover import Mover
 from MpApi.Utils.prepareUpload import PrepareUpload

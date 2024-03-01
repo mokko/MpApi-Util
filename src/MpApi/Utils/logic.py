@@ -14,7 +14,6 @@ Module or a set ?
 
 from pathlib import Path
 import re
-from typing import Any
 from MpApi.Utils.Xls import ConfigError
 
 
@@ -204,7 +203,7 @@ def parse_EM(path: Path) -> str | None:
                 return " ".join(alist)
             elif len(alist) > 2:
                 if re.search(r"[a-zA-Z]+", alist[2]):
-                    print(f"***valid part")
+                    print("***valid part")
                     new = " ".join(alist[0:3])
                 elif re.search(r"\d+", alist[2]):
                     print("***digit for disamb")

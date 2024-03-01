@@ -1,4 +1,4 @@
-from openpyxl import Workbook, load_workbook
+from openpyxl import load_workbook
 from pathlib import Path
 import sys
 
@@ -18,7 +18,7 @@ while c < ws.max_row:
     if fn is not None:
         print(f"{c}:{fn}")
         if fn.startswith("I_MV_") and "__" not in fn:
-            print(f"   rm this row")
+            print("   rm this row")
             ws[f"C{c}"] = "x"
             ws.delete_rows(c)
             c -= 1

@@ -12,8 +12,7 @@ from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.Xls import Xls, ConfigError
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Font
 from pathlib import Path
 import re
 import shutil
@@ -293,7 +292,7 @@ class Mover(BaseApp):
             if to.exists():
                 # should not happen, as conflicts should be resolved earlier
                 self.ws[f"I{rno}"].font = red
-                self._warning(f"F{rno}", f"WARNING: target location exists")
+                self._warning(f"F{rno}", "WARNING: target location exists")
                 # raise Exception(f"file exists already: '{to}'")
             else:
                 if not to.parent.exists():
@@ -317,7 +316,7 @@ class Mover(BaseApp):
                     self.ws[f"I{rno}"].font = teal
                     c["moved"].value = "x"
         else:
-            self._warning(f"F{rno}", f"does not exist (anymore)")
+            self._warning(f"F{rno}", "does not exist (anymore)")
 
     def _scan_per_file(self, *, path: Path, count: int) -> None:
         """

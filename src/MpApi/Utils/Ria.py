@@ -39,7 +39,7 @@ from mpapi.constants import NSMAP
 from mpapi.client import MpApi
 from mpapi.module import Module
 from mpapi.search import Search
-from MpApi.Utils.identNr import IdentNrFactory, IdentNr
+from MpApi.Utils.identNr import IdentNrFactory
 from pathlib import Path
 import requests
 from typing import Optional

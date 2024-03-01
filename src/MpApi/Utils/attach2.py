@@ -9,10 +9,7 @@ from mpapi.constants import get_credentials, NSMAP
 from MpApi.Record import Record  # tested?
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.Xls import Xls
-from openpyxl import Workbook  # load_workbook
-from openpyxl.styles import Alignment, Font
 from pathlib import Path
-from lxml import etree
 
 
 class Attacher2:

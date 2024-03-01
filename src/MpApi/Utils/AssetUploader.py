@@ -15,26 +15,23 @@ what problems remain. This time to static directory. I wonder if that should be
 configurable.
 """
 
-import copy
 from datetime import datetime
 from lxml import etree
 from mpapi.constants import get_credentials
 from mpapi.module import Module
 from MpApi.Record import Record  # should be MpApi.Record.Multimedia
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
-from MpApi.Utils.logic import extractIdentNr, has_parts, is_suspicious, whole_for_parts
+from MpApi.Utils.logic import extractIdentNr, is_suspicious, whole_for_parts # has_parts, 
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.Xls import Xls
 
-from openpyxl import Workbook  # load_workbook
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Font
 from pathlib import Path
 from PIL import Image
 from PIL.ExifTags import Base as ExifBase
 
-import re
 import shutil
-from typing import Any, Optional
+from typing import Optional
 from tqdm import tqdm
 
 # adding number of fields to prevent accidental overwriting of old versions
@@ -176,7 +173,6 @@ class AssetUploader(BaseApp):
         self._check_go()  # raise on error
 
         # breaks at limit, but doesn't save on its own
-        hits = 0
         for cells, rno in self.xls.loop(
             sheet=self.ws, offset=self.offset, limit=self.limit
         ):
@@ -213,7 +209,7 @@ class AssetUploader(BaseApp):
         """
 
         self.xls.raise_if_file()
-        wb = self.xls.get_or_create_wb()
+        self.xls.get_or_create_wb()
         ws = self.xls.get_or_create_sheet(title="Assets")
         self.xls.write_header(sheet=ws)
         self._make_conf()
@@ -257,23 +253,20 @@ class AssetUploader(BaseApp):
         """
         self.filemask: str  # make mypy happy
         self._check_scandir()
-        # looping thru files (usually pwd)
         print(f"Scanning {self.filemask}")
         # fast-forward cache: jump over all the files that have
         # already been attached according to Excel
         attached_cache = self._attached_cache()
-        # rm excel rows if file no longer exists on disk
-        # self._drop_rows_if_file_gone(col="I", cont=len(attached_cache))
         print("   in case of substantial file changes, create new Excel sheet")
         self.xls.save()
 
-        c = 1  # counting files here, no offset for headlines
         print("Preparing file list...")
         file_list = list()  # set not necessary because every file only one time
         chunk_size = self.limit - offset
         print(f"   chunk size: {chunk_size}")
         with tqdm(total=chunk_size + len(attached_cache), unit=" files") as pbar:
-            for p in Path().glob(self.filemask):
+            for idx, p in enumerate(Path().glob(self.filemask), start=1):
+                # idx = counting files, no offset for headlines
                 if (
                     p.name.startswith(".")
                     or p.name.startswith("debug")
@@ -287,13 +280,12 @@ class AssetUploader(BaseApp):
                 # we dont need to ignore suffixes if we look for *.jpg etc.
                 elif self.filemask == "*" and p.suffix in IGNORE_SUFFIXES:
                     continue
-                if self.limit == c:
+                if self.limit == idx:
                     print("* Limit reached")
                     break
                 if str(p.absolute()) not in attached_cache:
                     file_list.append(p)
                     pbar.update()
-                c += 1  # attached files we want to count
 
         print(f"Scanning sorted file list... {len(file_list)}")
         for p in sorted(file_list):
@@ -323,16 +315,15 @@ class AssetUploader(BaseApp):
         """
         print("Only setting Standardbild")
         self._check_scandir()
-        hits = 0
-        for c, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
+        for cell, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
             # relative path; assume dir hasn't changed since scandir run
-            # fn = c["filename"].value
+            # fn = cell["filename"].value
 
-            print(f"{rno}: {c['identNr'].value}")
-            if c["ref"].value is None:
+            print(f"{rno}: {cell['identNr'].value}")
+            if cell["ref"].value is None:
                 print("   no object reference cannot set standardbild")
                 continue
-            self._set_Standardbild(c)
+            self._set_Standardbild(cell)
             self.xls.save_bak_shutdown(rno=rno, save=5, bak=10)
 
     def wipe(self) -> None:
@@ -522,7 +513,7 @@ class AssetUploader(BaseApp):
         try:
             return img_data[ExifBase.Artist.value]
             # old: img_data["Iptc.Application2.Byline"]
-        except:
+        except KeyError:
             print("\tExif:Didn't find photographer info")
             return None
         # else:
@@ -558,7 +549,7 @@ class AssetUploader(BaseApp):
             print(f"WARNING: identNr cell is empty!!!\n {path.name}")
             return
 
-        if cells["objIds"].value == None:
+        if cells["objIds"].value is None:
             cells["objIds"].value = self._get_objIds(identNr=identNr)
         # self._write_parts(cells)
         self._write_whole(cells)
@@ -808,7 +799,7 @@ class AssetUploader(BaseApp):
             # can be None, not "None". Since i may want to run 'upload foto' again after i have
             # added photographer to RIA's person module.
             if idL is None:
-                print(f"\tcreatorID not found")
+                print("\tcreatorID not found")
             else:
                 cells["creatorID"].value = "; ".join(idL)
                 # print(cells["creatorID"].value)
@@ -849,7 +840,7 @@ class AssetUploader(BaseApp):
                     cells["ref"].font = green
 
             elif fuzzy != "None" and fuzzy is not None:
-                if not ";" in fuzzy:
+                if ";" not in fuzzy:
                     cells["ref"].value = int(fuzzy.strip())
                 else:
                     fuzzy = fuzzy.split(";")[0].strip()
