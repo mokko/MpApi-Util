@@ -32,6 +32,9 @@ def test_extractIdent():
         "I C 972 a-h -KK -B.jpg": "I C 972 a-h",
         "V A 142 a,b___-KK-A.tif": "V A 142 a,b",
         "VIII NA 1650 Rückseite.tif": "VIII NA 1650",
+        "VIII A 23052 (1) -A.tif": "VIII A 23052 (1)",
+        "VIII A 23052 (21) -A.tif": "VIII A 23052 (21)",
+        "VIII A 23052 (126) -A.tif": "VIII A 23052 (126)",
     }
     for case in cases:
         case = Path(case)
@@ -91,6 +94,12 @@ def test_is_suspicious():
 
 
 def test_whole_for_parts():
+    """
+    Several parts make up a whole. Is this the same or distinct from Konvolut, i.e.
+    does a Konvolut have parts or does it consist of something else (items/objects)?
+
+    A Konvolut consists of objects, objects consist of parts.
+    """
     cases = {
         "220222": "220222",
         "Adr (EJ) 1": "Adr (EJ) 1",

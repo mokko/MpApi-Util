@@ -42,6 +42,7 @@ def main(limit: int = -1, start: int = 0, stop: int = 23_088):
     p = Path(
         r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS-Bildmaterial\FINAL_EM_Afrika_Dia Smlg_Koloß"
     )
+    print(f"Entering main {p}")
     for idx, pp in enumerate(sorted(p.iterdir())):
         if pp.is_dir():
             last_item = pp.name.split()[-1]

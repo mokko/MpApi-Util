@@ -21,7 +21,11 @@ from mpapi.constants import get_credentials
 from mpapi.module import Module
 from MpApi.Record import Record  # should be MpApi.Record.Multimedia
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
-from MpApi.Utils.logic import extractIdentNr, is_suspicious, whole_for_parts # has_parts, 
+from MpApi.Utils.logic import (
+    extractIdentNr,
+    is_suspicious,
+    whole_for_parts,
+)  # has_parts,
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.Xls import Xls
 

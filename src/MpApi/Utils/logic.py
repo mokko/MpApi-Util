@@ -160,7 +160,9 @@ def parse_EM(path: Path) -> str | None:
         m = re.search(r"([()\w\d +.,<>-]+) *_+", astr)  # ___-A
         if m:
             astr = m.group(1).strip()
-        m = re.search(r"([()\w\d +.,<>-]+)  ", astr)  # double space
+
+        # double space: why is this necessary? " *" should catch it already.
+        m = re.search(r"([()\w\d +.,<>-]+)  ", astr)
         if m:
             astr = m.group(1).strip()
         # there are 5k+ records with brackets in IdentNr
@@ -175,9 +177,14 @@ def parse_EM(path: Path) -> str | None:
         pos_number = _fortlaufende_Nummer(alist)
         # print(f"***{pos_number=} {alist}")
         if len(alist) >= pos_number + 2:
+            # 2+ items after fortlaufende Nr.
             plus_one = alist[pos_number + 1]
-            if re.search(r"[a-z1-9,-,+]", plus_one):
-                if len(plus_one) < 5:
+            # print("***LONG FORM")
+            # print(f"{plus_one=} {len(plus_one)}")
+            if re.search(r"[()a-z1-9,-,+]", plus_one):  # ()
+                if plus_one == "(P":  # falsche P-Nr
+                    new = " ".join(alist[0 : pos_number + 1])
+                elif len(plus_one) <= 5:
                     # print(f"***part recognized '{plus_one}'")
                     new = " ".join(alist[0 : pos_number + 2])
                 else:
@@ -187,6 +194,7 @@ def parse_EM(path: Path) -> str | None:
                 print(f"***part NOT recognized '{plus_one}'")
                 new = " ".join(alist[0 : pos_number + 1])
         else:
+            print("SHORT FORM")
             new = " ".join(alist)
 
         # STEP 4: special cases
@@ -276,16 +284,14 @@ def whole_for_parts(identNr: str) -> str:
 #
 
 
-def _fortlaufende_Nummer(alist) -> int:
+def _fortlaufende_Nummer(alist: list[str]) -> int:
     """
-    Return the position of the fortlaufende Nummer. Return 0 if no number found.
+    Return the position of the first "fortlaufende Nummer". Return 0 if no number found.
     Expects a list of elements that together make up an identNr.
     """
-    c = 0
-    for elem in alist:
+    for c, elem in enumerate(alist):
         if re.fullmatch(r"\d+", alist[c]):
             return c
-        c += 1
     return 0
 
 
