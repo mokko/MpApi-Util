@@ -14,14 +14,17 @@ from mpapi.module import Module
 from pathlib import Path
 
 
-def del_items_in_group(*, grpId: int, action: bool = False, limit: int = -1) -> None:
+def del_items_in_group(
+    *, grpId: int, action: bool = False, limit: int = -1, cache: bool = False
+) -> None:
     print(f"Querying for group {grpId}")
     user, pw, baseURL = get_credentials()
     client = MpApi(baseURL=baseURL, user=user, pw=pw)
+    print(f"Logging in as '{user}' at {baseURL}")
 
     out_fn = f"group-{grpId}.xml"
 
-    if Path(out_fn).exists():
+    if Path(out_fn).exists() and cache:
         # If you dont want the cache, delete it!
         print(f"Using cache '{out_fn}'")
         m = Module(file=out_fn)
@@ -54,8 +57,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("grpId", type=int)
+    parser.add_argument("--cache", "-c", action="store_true")
     parser.add_argument("--action", "-a", action="store_true")
     parser.add_argument("--limit", "-l", type=int, default=-1)
     args = parser.parse_args()
 
-    del_items_in_group(grpId=args.grpId, action=args.action, limit=args.limit)
+    del_items_in_group(
+        grpId=args.grpId, action=args.action, limit=args.limit, cache=args.cache
+    )
