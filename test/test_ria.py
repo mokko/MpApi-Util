@@ -68,3 +68,10 @@ def test_get_objIds_strict():
         identNr = cases[objId]["identNr"]
         assert objId in adict.keys()
         assert adict[objId] == identNr
+
+
+def test_fn_to_mulId():
+    """ """
+    resultS = c.fn_to_mulId(fn="I B 1895 a -B.jpg", orgUnit="EMIslamischerOrient")
+    print(f"{resultS=}")
+    # assert len(resultS) == 1

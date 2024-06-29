@@ -1,19 +1,19 @@
 """
 Simple renaming tool - rename files in current directory
 
-    add a string before suffix  
-        ren2 add ___-KK  
+    add a string before suffix
+        ren2 add ___-KK
             ./file.jpg --> ./file___-KK.jpg
 
     replace string A with another string B
         ren replace "-" "___-KK"
             ./file -KK.jpg  --> ./file ___-KK.jpg
 
-    Directories will not be renamed. 
-    
+    Directories will not be renamed.
+
     If you want recursive use add **/ at the beginning of your filemask.
-    
-    Files are always renamed in place, i.e. they stay in the dir they are in.    
+
+    Files are always renamed in place, i.e. they stay in the dir they are in.
 """
 
 from pathlib import Path

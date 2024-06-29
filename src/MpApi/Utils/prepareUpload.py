@@ -1,10 +1,10 @@
 """
 Prepare for assets for upload (e.g with regular Bildimport)
 
-At heart, this tool creates Object records for properly named asset files. New records 
+At heart, this tool creates Object records for properly named asset files. New records
 are copied from a template record and get the identNr from the file.
 
-With this tool we 
+With this tool we
 - recursively scan a directory
 - filter for specific files (e.g. with "-KK" or only *.jpg)
 - extract the identNr from filename
@@ -17,24 +17,24 @@ With this tool we
 - write the new identNr in the new record
 
 CONCEPT
-This tool is meant to be used by a person that we'll call the editor. The editor runs 
+This tool is meant to be used by a person that we'll call the editor. The editor runs
 the script multiple times in different phases. The script writes its output into an
-Excel file which we also use for configuration values. For each phase, the edior checks 
-the results typically in the Excel file and, if necessary, corrects something. 
+Excel file which we also use for configuration values. For each phase, the edior checks
+the results typically in the Excel file and, if necessary, corrects something.
 
 Prepare works on current working directory (aka pwd) and can work recursively, if so
 configured (using the filemask in Conf[iguration] sheet of the Excel file).
 
 There are now four phases
 (0) init
-(1) scandir 
+(1) scandir
 (2) checkria and
 (3) createobjects
 (4) movedupes (optional)
 
-   $ prepare scandir 
-   $ prepare checkria  
-   $ prepare createobjects    
+   $ prepare scandir
+   $ prepare checkria
+   $ prepare createobjects
 
 After running scandisk
 - check IdentNr have successfully been extracted
@@ -53,14 +53,14 @@ After running checkria
 After running createobjects
 - preserve Excel file for documentation; contains ids of newly created records
 
-Update 
+Update
 November 2023
 - new step init to make it more similar to upload
 April 2023
 - changes to cli frontend
-  (1) no more separate config file ('prepare.ini'), instead we use prepare.xlsx 
-  (2) We now scan current working directory 
-  (3) We get RIA credentials from $HOME/.RIA file  
+  (1) no more separate config file ('prepare.ini'), instead we use prepare.xlsx
+  (2) We now scan current working directory
+  (3) We get RIA credentials from $HOME/.RIA file
   (4) 'prepare scandir' (without -p for phase)
   (5) hardcoded "prepare.xlsx" file name
   (6) scandisk renamed to scandir with alias init to be more similar to mover and upload

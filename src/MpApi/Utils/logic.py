@@ -5,7 +5,7 @@ e.g.
 - extract IdentNr from filename
 - check if filename is suspicious
 
-Reoccuring logic that doesn't interface Excel and the RIA API. Reocurring Excel stuff goes 
+Reoccuring logic that doesn't interface Excel and the RIA API. Reocurring Excel stuff goes
 into BaseApp.py. Reoccuring API stuff goes into RIA.py. Perhaps I will find a better name
 for this package.
 

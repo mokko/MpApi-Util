@@ -17,7 +17,7 @@ Reusable methods that interface with the low-level mpapi client
 (3) Lookups (return one for another)
 
     if identNrExists(mtype="Object", orgUnit="EMMusikethnologie" nr="VII f 123"):
-        do_something() 
+        do_something()
 
     if identNrExists(mtype="Object", nr="VII f 123") > 1:
         currently, identExists returns number of moduleItems found
@@ -452,7 +452,10 @@ class RIA:
         For a given filename check if there is one or more assets with that same filename
         in RIA.
 
-        New: Return empty set if no records found! (Used to return None.)
+        New:
+        - Return empty set if no records found! Used to return None.
+        - This used to be a lax search, not we want a strict search that respect "special"
+          chars like hyphen.
         """
         # print (f"* Getting assets for filename '{fn}'")
         # print (f"----------{orgUnit}")
@@ -461,7 +464,8 @@ class RIA:
         q = Search(module="Multimedia")
         if orgUnit is not None:
             q.AND()
-        q.addCriterion(operator="equalsField", field="MulOriginalFileTxt", value=fn)
+        # used to be equalsField, will be equalsExact
+        q.addCriterion(operator="equalsExact", field="MulOriginalFileTxt", value=fn)
         if orgUnit is not None:
             q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
         q.addField(field="__id")

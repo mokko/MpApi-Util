@@ -1,25 +1,26 @@
 """
-    USAGE
-    f = IdentNrFactory(schemas_fn="schemas.json")
-    # default loc: src/data/schemas.json
-    identNr = f.new_identNr(text="VII a 123")
-    identNr = f.new_identNr(node=itemN)
+USAGE
+f = IdentNrFactory(schemas_fn="schemas.json")
+# default loc: src/data/schemas.json
+identNr = f.new_identNr(text="VII a 123")
+identNr = f.new_identNr(node=itemN)
 
-    identNr.text
-    identNr.schema
-    identNr.part1
-    identNr.part2
-    identNr.part3
-    identNr.schemaId
-    itemN = identNr.get_node() # this is always newly assembled, not the original
+identNr.text
+identNr.schema
+identNr.part1
+identNr.part2
+identNr.part3
+identNr.schemaId
+itemN = identNr.get_node() # this is always newly assembled, not the original
 
-    CLI USAGE
-    update_schemas -i "VII c 123 a-c" # looks identNr up online
-    update_schemas -f bla.xml         # looks thru a file
-    update_schemas -e excel.xlsx      # xlsx as written by prepare
-    update_schemas -v version
+CLI USAGE
+update_schemas -i "VII c 123 a-c" # looks identNr up online
+update_schemas -f bla.xml         # looks thru a file
+update_schemas -e excel.xlsx      # xlsx as written by prepare
+update_schemas -v version
 
 """
+
 from dataclasses import dataclass, field
 import json
 from lxml import etree

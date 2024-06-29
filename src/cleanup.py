@@ -1,5 +1,5 @@
 """
-Currently sorts files with the extension jpg, tif and zip into corresponding folders, 
+Currently sorts files with the extension jpg, tif and zip into corresponding folders,
 but keeping the rest of the path.
 """
 

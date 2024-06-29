@@ -1,6 +1,6 @@
 """
 
-In April 2023 we begin our 2nd app using this framework. First of all, we trying to 
+In April 2023 we begin our 2nd app using this framework. First of all, we trying to
 improve the credenials system. We want to provide a single credentials file and we
 also might restrict from all too curious eyes.
 

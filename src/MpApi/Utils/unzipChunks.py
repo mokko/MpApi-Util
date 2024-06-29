@@ -7,7 +7,7 @@ USAGE
         do_something()
     unzip
 CLI USAGE
-    unzipChunks -f [--first] path/to/chunk.zip 
+    unzipChunks -f [--first] path/to/chunk.zip
 
 """
 

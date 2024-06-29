@@ -3,12 +3,12 @@ Let's try to further automate the Koloß import.
 
 (1) Loop through film dirs
 (2) copy Konvolut-DS and to create template record (objId)
-(3) make a prepare.xlsx with objID from template record 
+(3) make a prepare.xlsx with objID from template record
 (4) move -As before -Bs
 (5) trigger prepare scandir,checkria and createobjects
 (6) trigger upload scandir, go
 (7) upload of jpgs
-(8) TODO: delete template 
+(8) TODO: delete template
 """
 
 from mpapi.constants import get_credentials
@@ -64,7 +64,7 @@ def main(limit: int = -1, start: int = 0, stop: int = 23_088):
             # there is no simple test...
 
             prepare_scancheckcreate(pp)
-            upload_assets(pp)
+            # upload_assets(pp)
 
             # only after successful creation of the Object records
             # rm_template(pp)

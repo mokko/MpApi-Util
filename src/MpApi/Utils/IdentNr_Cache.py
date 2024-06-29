@@ -32,6 +32,7 @@ Usage:
     beginswith_cache.get_begins_with(identNr="VII c 123 a")
 
 """
+
 from dataclass import dataclass, field
 
 

@@ -1,5 +1,5 @@
 """
-A little util to practice attaching (uploading) asset files to RIA and getting 
+A little util to practice attaching (uploading) asset files to RIA and getting
 (downloading) them again.
 
 DESIGN CHOICES

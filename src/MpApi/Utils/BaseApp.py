@@ -1,5 +1,5 @@
 """
-Let's make a base class that is inherited from by every MpApi.Utils app, so we share some 
+Let's make a base class that is inherited from by every MpApi.Utils app, so we share some
 behavior.
 
 We assume that those apps typically load config data, write data to Excel sheets.
@@ -13,9 +13,9 @@ class your_class(App):
     self.wb = self.init_excel(path=self.excel_fn)
 
     # relies on self.user, self.baseURL and self.pw being set
-    self.client = self._init_client() 
+    self.client = self._init_client()
 
-So far this is near pointless, but perhaps I can still find a way to re-use significant 
+So far this is near pointless, but perhaps I can still find a way to re-use significant
 parts of this class.
 
 Let's avoid print messages from here! Not really, let's write the usual print messages

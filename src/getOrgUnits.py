@@ -3,11 +3,12 @@
 
 CLI Usage
     getOrgUnits.py
-    
+
 TODO
-- in the future we could make the mtype pickable thru cli   
-    
+- in the future we could make the mtype pickable thru cli
+
 """
+
 # import argparse
 from mpapi.client import MpApi
 from mpapi.constants import get_credentials

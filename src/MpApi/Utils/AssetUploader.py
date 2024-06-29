@@ -1,5 +1,5 @@
 """
-Should emulate the hotfolder eventually. That is we 
+Should emulate the hotfolder eventually. That is we
 
 (a) read in a configuration from an Excel file
 (b) process an input directory (non recursively),
@@ -8,7 +8,7 @@ Should emulate the hotfolder eventually. That is we
 (e) create a reference (usually from object to multimedia record)
 (f) potentially set Standardbild
 
-We no longer move successfully uploaded files; instead we record of state in the 
+We no longer move successfully uploaded files; instead we record of state in the
 Excel file.
 NEW: I changed my mind again. We do move successful uploads again to easily see
 what problems remain. This time to static directory. I wonder if that should be
