@@ -73,5 +73,5 @@ def test_get_objIds_strict():
 def test_fn_to_mulId():
     """ """
     resultS = c.fn_to_mulId(fn="I B 1895 a -B.jpg", orgUnit="EMIslamischerOrient")
-    print(f"{resultS=}")
-    # assert len(resultS) == 1
+    # print(f"{resultS=}")
+    assert len(resultS) == 1 and "7648227" in resultS
