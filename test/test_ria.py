@@ -34,13 +34,15 @@ def test_get_objIds_startswith():
     """
     cases = {
         258381: {"identNr": "VII Nls 7", "orgUnit": "EMMusikethnologie"},
+        185159: {"identNr": "I B 11804", "orgUnit": "EMIslamischerOrient"},
     }
     for objId in cases:
         identNr = cases[objId]["identNr"]
         orgUnit = cases[objId]["orgUnit"]
-        adict = c.get_objIds_strict(identNr=identNr, orgUnit=orgUnit)
+        adict = c.get_objIds_startswith(identNr=identNr, orgUnit=orgUnit)
 
-        print(adict)
+        assert objId in adict.keys()
+        # print(adict)
         # identNr = cases[objId]["identNr"]
         # assert objId in adict.keys()
         # assert adict[objId] == identNr

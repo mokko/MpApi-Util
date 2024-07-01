@@ -190,15 +190,17 @@ class RIA:
         # we dont want to test them again
         return real_parts
 
-    def get_objIds_startswith(self, *, identNr: str, orgUnit: str | None = None):
+    def get_objIds_startswith(
+        self, *, identNr: str, orgUnit: str | None = None
+    ) -> dict[int, str]:
         """
         A lax search that finds all records that have an identNr which begins
-        with a given identNr.
+        with a given identNr string.
 
         Returns a dictionary which may be empty.
             dict = {
                 objId_int: "IdentNr",
-                objId_int: "IdentNr",
+                12345: "VII f 123 a,b",
             }
 
         We're using ObjObjectNumberVrt for the identNr returned in the hash
@@ -303,17 +305,6 @@ class RIA:
             self.photographer_cache[name] = IDs
             # print (f"   new photographer {IDs}")
             return IDs
-
-    def _get_photographerID(self, *, name) -> Optional[list]:
-        q = Search(module="Person")
-        q.addCriterion(operator="equalsField", field="PerNennformTxt", value=name)
-        q.addField(field="__id")
-        m = self.mpapi.search2(query=q)
-
-        if not m:
-            # print("No result")
-            return None
-        return m.get_ids(mtype="Person")
 
     def id_exists(self, *, mtype: str, ID: int) -> bool:
         """
@@ -663,6 +654,21 @@ class RIA:
             raise TypeError(f"ERROR: Path '{file}' is a dir")
 
         return self.mpapi.updateAttachment(module="Multimedia", path=str(file), id=ID)
+
+    #
+    # more private
+    #
+
+    def _get_photographerID(self, *, name) -> Optional[list]:
+        q = Search(module="Person")
+        q.addCriterion(operator="equalsField", field="PerNennformTxt", value=name)
+        q.addField(field="__id")
+        m = self.mpapi.search2(query=q)
+
+        if not m:
+            # print("No result")
+            return None
+        return m.get_ids(mtype="Person")
 
 
 if __name__ == "__main__":

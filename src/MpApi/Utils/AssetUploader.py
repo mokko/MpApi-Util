@@ -97,14 +97,14 @@ class AssetUploader(BaseApp):
                 "width": 15,
             },
             "parts_objIds": {
-                "label": "Teile objId",
+                "label": "Geschwister",
                 "desc": "für diese IdentNr",
                 "col": "E",  # 4
                 "width": 20,
             },
             "whole_objIds": {
                 "label": "Ganzes objId",
-                "desc": "für diese IdentNr",
+                "desc": "exact match für diese IdentNr",
                 "col": "F",  # 5
                 "width": 20,
             },
@@ -555,7 +555,7 @@ class AssetUploader(BaseApp):
 
         if cells["objIds"].value is None:
             cells["objIds"].value = self._get_objIds(identNr=identNr)
-        # self._write_parts(cells)
+        self._write_parts(cells)
         self._write_whole(cells)
         self._write_ref(cells)
         ref = cells["ref"].value
@@ -600,7 +600,7 @@ class AssetUploader(BaseApp):
             mulId = "; ".join(idL)
         return mulId
 
-    def _get_objIds(self, *, identNr: str):
+    def _get_objIds(self, *, identNr: str) -> str:
         """
         For a given identNr:str return the objId or objIds. If multiple objIds match,
         they are returned as a string that is joined by "; ". If there is no match,
@@ -609,7 +609,9 @@ class AssetUploader(BaseApp):
         The string is cached, so if you query the same identNr again the same run
         of the script, it doesn't need another TCP request.
 
-        This is an obsolete version.
+        New
+        - still in use for producing wholes (_write_wholes)
+        - I tried strict=False, but this is too lose.
         """
         if identNr in self.objIds_cache:
             return self.objIds_cache[identNr]
@@ -758,37 +760,50 @@ class AssetUploader(BaseApp):
             # print(f"***{identNr=}")
             cells["identNr"].value = identNr
 
-    def _write_parts(self, cells):
-        print("* write parts")
+    def _write_parts(self, cells) -> None:
+        """
+        we want to use the new get_objIds_startswith
+        should return dict [identNr]: 12345; 1234
+
+        dict = {
+            "VII c 1234": [1234, 12345, 123456]
+        }
+
+        but it doesn't work yet
+        """
 
         if cells["parts_objIds"].value is None:
-            # print("\t_write_parts")
-            # we want to use the new get_objIds_beginswith which returns a dict,
-            # but it doesn't work yet
+            # print(" _write_parts")
 
             identNr = cells["identNr"].value
+            ident_whole = whole_for_parts(identNr)
             # print(f"+++{identNr}")
 
-            print("   about to get objIds...")
-            IDs = self.client.get_objIds2(
-                # no orgUnit. Should that remain that way?
-                identNr=identNr,
-                strict=False,
+            IDs = self.client.get_objIds_startswith(
+                orgUnit=self.orgUnit,
+                identNr=ident_whole,
             )
-            if IDs:
-                IDs = [str(e) for e in IDs]
-                cells["parts_objIds"].value = "; ".join(IDs)
-            else:
+            parts_str = ""
+            for idx, objId in enumerate(IDs, start=1):
+                identNr = IDs[objId]
+                # IDs = [str(e) for e in IDs]
+                parts_str += f"{identNr}: {objId}"
+                if idx < len(IDs):
+                    parts_str += "; "
+
+            cells["parts_objIds"].value = parts_str
+            print(f" _write_parts: {parts_str}")
+            if len(IDs) == 0:
                 cells["parts_objIds"].value = "None"
 
     def _write_whole(self, cells):
-        print("* write wholes")
+        # print("* write wholes")
 
         if cells["whole_objIds"].value is None:
             identNr = cells["identNr"].value
             ident_whole = whole_for_parts(identNr)
             # print(f"\t_write_whole {ident_whole}")
-            objIds = self._get_objIds(identNr=ident_whole)
+            objIds = self._get_objIds(identNr=ident_whole)  # new: strict=False
             if identNr != ident_whole:
                 cells["whole_objIds"].value = f"{ident_whole}: {objIds}"
             else:
@@ -827,8 +842,9 @@ class AssetUploader(BaseApp):
         if cells["ref"].value is None and cells["asset_fn_exists"].value == "None":
             objIds = cells["objIds"].value
             whole = cells["whole_objIds"].value
-            fuzzy = cells["parts_objIds"].value
+            siblings = cells["parts_objIds"].value
 
+            print(f"+++{siblings=}")
             if objIds != "None" and ";" not in str(objIds):
                 print("   taking ref from objIds...")
                 cells["ref"].value = int(objIds)
@@ -842,11 +858,10 @@ class AssetUploader(BaseApp):
                     pass
                 else:
                     cells["ref"].font = green
-
-            elif fuzzy != "None" and fuzzy is not None:
-                if ";" not in fuzzy:
-                    cells["ref"].value = int(fuzzy.strip())
-                else:
-                    fuzzy = fuzzy.split(";")[0].strip()
-                    cells["ref"].value = int(fuzzy.strip())
-                    cells["ref"].font = red
+            if siblings != "None" and siblings is not None:
+                print(f"***{siblings=}")
+                if ";" not in siblings:
+                    objId = int(siblings.split(": ")[1])
+                    print(f"NEW Ref: {objId}")
+                    cells["ref"].value = objId
+            print(f" _write_ref: {cells['ref'].value} <-- {siblings}")
