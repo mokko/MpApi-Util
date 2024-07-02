@@ -792,7 +792,7 @@ class AssetUploader(BaseApp):
                     parts_str += "; "
 
             cells["parts_objIds"].value = parts_str
-            print(f" _write_parts: {parts_str}")
+            # print(f" _write_parts: {parts_str}")
             if len(IDs) == 0:
                 cells["parts_objIds"].value = "None"
 
@@ -859,9 +859,9 @@ class AssetUploader(BaseApp):
                 else:
                     cells["ref"].font = green
             if siblings != "None" and siblings is not None:
-                print(f"***{siblings=}")
+                # print(f"***{siblings=}")
                 if ";" not in siblings:
                     objId = int(siblings.split(": ")[1])
-                    print(f"NEW Ref: {objId}")
+                    # print(f"NEW Ref: {objId}")
                     cells["ref"].value = objId
             print(f" _write_ref: {cells['ref'].value} <-- {siblings}")

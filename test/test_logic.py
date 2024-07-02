@@ -1,4 +1,11 @@
-from MpApi.Utils.logic import extractIdentNr, is_suspicious, has_parts, whole_for_parts
+from MpApi.Utils.logic import (
+    extractIdentNr,
+    fortlaufende_Nummer,
+    fortlaufende_Nummer_pos,
+    is_suspicious,
+    has_parts,
+    whole_for_parts,
+)
 from pathlib import Path
 
 
@@ -122,3 +129,49 @@ def test_whole_for_parts():
         whole_ident = whole_for_parts(identNr)
         assert cases[identNr] == whole_ident
         print(f"whole_for_parts: {identNr} -> {whole_ident}")
+
+
+def test_fortlaufende_Nummer_pos():
+    cases = {
+        "220222": 0,
+        "Adr (EJ) 1": 2,
+        "VII a 123 a": 2,
+        "VII a 123 a,b": 2,
+        "VII a 123 a-c": 2,
+        "IV 124 a": 1,
+        "IV 124 a,b": 1,
+        "HK AmArch 1": 2,
+        "I/MV 0950 a": 1,
+        "VII c 86 p-zz": 2,
+        "P 11766": 1,
+        "I C 8266": 2,
+        "I C 972 a-h": 2,
+        "I C 8266 <1>": 2,
+        "I C 1577 a-g <2>": 2,
+        "I C 1577 A <2>": 2,
+        "VII 78 1234": 2,
+    }
+    for identNr in cases:
+        pos = fortlaufende_Nummer_pos(identNr)
+        assert pos == cases[identNr]
+
+
+def test_fortlaufende_Nummer():
+    cases = {
+        "220222": "220222",
+        "Adr (EJ) 1": "1",
+        "VII a 123 a": "123",
+        "VII a 123 a,b": "123",
+        "VII a 123 a-c": "123",
+        "IV 124 a": "124",
+        "IV 124 a,b": "124",
+        "HK AmArch 1": "1",
+        "I/MV 0950 a": "0950",
+        "VII c 86 p-zz": "86",
+        "P 11766": "11766",
+        "I C 8266": "8266",
+        "I C 972 a-h": "972",
+        "I C 8266 <1>": "8266",
+        "I C 1577 a-g <2>": "1577",
+        "I C 1577 A <2>": "1577",
+    }

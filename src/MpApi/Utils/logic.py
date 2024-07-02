@@ -1,15 +1,15 @@
 """
-Functions on filenames that typically have to do with IdentNr.
+Functions for dealing with identNrs originating from strings or paths.
+
+"logic" stands for string logic for identNr.
 
 e.g.
-- extract IdentNr from filename
-- check if filename is suspicious
+- extractIdentNr: extracts IdentNr from path/filename
+- is_suspicious: check if filename is suspicious or not
 
 Reoccuring logic that doesn't interface Excel and the RIA API. Reocurring Excel stuff goes
 into BaseApp.py. Reoccuring API stuff goes into RIA.py. Perhaps I will find a better name
 for this package.
-
-Module or a set ?
 """
 
 from pathlib import Path
@@ -17,16 +17,57 @@ import re
 from MpApi.Utils.Xls import ConfigError
 
 
-def extractIdentNr(*, path: Path, parser: str) -> str | None:
+class identNrParserError:
+    pass
+
+
+def extractIdentNr(*, path: Path, parser: str) -> str:
     """
     extracts IdentNr (=identifier, Signatur) from filename (as Pathlib path). Developed
     specifically for cataogue cards and not widely tested beyond.
+
+    New:
+    - raises error ConfigError or identNrParserError
     """
     match parser:
         case "EM":
             return parse_EM(path)
         case _:
             raise ConfigError(f"Unknown identNr parser: {parser}!")
+
+
+def fortlaufende_Nummer(identNr: str) -> str:
+    """
+    Return the actual fortlaufende Nummer as integer.
+    """
+    alist = identNr.split(" ")
+    pos = fortlaufende_Nummer_pos(identNr)
+    # we cant use int here because we want leading zeros 0123
+    return alist[pos]
+
+
+def fortlaufende_Nummer_pos(identNr: str) -> int:
+    """
+    Return the position of the first "fortlaufende Nummer".
+    Expects a identNr-like object as string. Counts zero-based.
+
+
+    New
+    - identNrParserError if no fortlaufende_Nummer not found
+    Todo:
+        - Do we want 1-based counting?
+        - Do we want to raise an error on failure?
+    """
+    if identNr.startswith("VII 78"):
+        # also works for VII 78/
+        #print("Schellack exception")
+        return 2
+
+    alist = identNr.split(" ")
+    for c, elem in enumerate(alist):
+        if re.fullmatch(r"\d+", alist[c]):
+            return c
+    raise identNrParserError("fortlaufende Nummer not found")
 
 
 def has_parts(identNr: str) -> bool:
@@ -114,15 +155,20 @@ def is_suspicious(identNr: str | None) -> bool:
 
 
 def not_suspicious(identNr: str) -> bool:
+    """
+    Do we really need not_suspicious if we have is_suspicious?
+    """
     if is_suspicious(identNr=identNr):
         return False
     else:
         return True
 
 
-def parse_EM(path: Path) -> str | None:
+def parse_EM(path: Path) -> str:
     """
-    receive a path and extract the identNr. If it extraction fails return None.
+    receive a path and extract the identNr.
+
+    Note: certain valid identNr characters cannot be included in paths such as /.
 
     (1) We have a preprocessor where we basically replace underline with space
     (2) Middle: split all elements, investigate them and join them back together
@@ -130,116 +176,107 @@ def parse_EM(path: Path) -> str | None:
     (4) There will be always special cases to include chars that are included in identNr,
         but not allowed in filesystem.
 
+    New:
+    - Used to return None on failure; now: raises error
+
+    TODO:
+    - should we raise error on failure instead of returning None?
+
     """
-    stem = path.stem  # everything before the _last_ .suffix.
 
-    # STEP 1: collapse underlines into space
-    stem2 = re.sub("_", " ", stem)
+    std_form = standardform(path=path)
 
-    # STEP 2: allowed characters
-    m = re.search(r"([()\w\d +.,<>-]+)", stem2)
+    # has to have a number
+    if not re.search(r"\d+", std_form):
+        # number can be sole item e.g. if objId is used as identNr
+        return None
 
-    # What is maximum number of elements in EM?
-    # VII ME 01234 a-c <1>: category, unit, number, part, disamb:
-    # 4 elements counting 0-based
+    # try to restrict to max length of elements 5 or 4 elements
 
+    # STEP 3: cut off obvious tails
+    astr = re.split(r"-[A-Z]+", std_form)[0].strip()  # -KK -A ... -ZZ
+
+    # print(f"***hyphen {astr}")
+    m = re.search(r"([()\w\d +.,<>-]+) *_+", astr)  # ___-A
     if m:
         astr = m.group(1).strip()
 
-        # has to have a number
-        if not re.search(r"\d+", astr):
-            # number can be sole item e.g. if objId is used as identNr
-            return None
+    # double space: why is this necessary? " *" should catch it already.
+    m = re.search(r"([()\w\d +.,<>-]+)  ", astr)
+    if m:
+        astr = m.group(1).strip()
+    # there are 5k+ records with brackets in IdentNr
+    # although I dont know what that means
+    # e.g. IV Ca 3159 (17)
+    # m = re.search(r"([\w\d +.,<>-]+)\(\w+\)", astr) # brackets
+    # if m:
+    #    astr = m.group(1).strip()
 
-        # try to restrict to max length of elements 5 or 4 elements
-
-        # STEP 3: cut off obvious tails
-        astr = re.split(r"-[A-Z]+", astr)[0].strip()  # -KK -A ... -ZZ
-
-        # print(f"***hyphen {astr}")
-        m = re.search(r"([()\w\d +.,<>-]+) *_+", astr)  # ___-A
-        if m:
-            astr = m.group(1).strip()
-
-        # double space: why is this necessary? " *" should catch it already.
-        m = re.search(r"([()\w\d +.,<>-]+)  ", astr)
-        if m:
-            astr = m.group(1).strip()
-        # there are 5k+ records with brackets in IdentNr
-        # although I dont know what that means
-        # e.g. IV Ca 3159 (17)
-        # m = re.search(r"([\w\d +.,<>-]+)\(\w+\)", astr) # brackets
-        # if m:
-        #    astr = m.group(1).strip()
-
-        # print(f"***with tail cut '{astr}'")
-        alist = astr.split(" ")
-        pos_number = _fortlaufende_Nummer(alist)
-        # print(f"***{pos_number=} {alist}")
-        if len(alist) >= pos_number + 2:
-            # 2+ items after fortlaufende Nr.
-            plus_one = alist[pos_number + 1]
-            # print("***LONG FORM")
-            # print(f"{plus_one=} {len(plus_one)}")
-            if re.search(r"[()a-z1-9,-,+]", plus_one):  # ()
-                if plus_one == "(P":  # falsche P-Nr
-                    new = " ".join(alist[0 : pos_number + 1])
-                elif len(plus_one) <= 5:
-                    # print(f"***part recognized '{plus_one}'")
-                    new = " ".join(alist[0 : pos_number + 2])
-                else:
-                    # print(f"***part NOT recognized '{plus_one}'")
-                    new = " ".join(alist[0 : pos_number + 1])
+    # print(f"***with tail cut '{astr}'")
+    alist = astr.split(" ")
+    pos = fortlaufende_Nummer_pos(astr)
+    # print(f"***{pos=} {alist}")
+    if len(alist) >= pos + 2:
+        # 2+ items after fortlaufende Nr.
+        plus_one = alist[pos + 1]
+        # print("***LONG FORM")
+        # print(f"{plus_one=} {len(plus_one)}")
+        if re.search(r"[()a-z1-9,-,+]", plus_one):  # ()
+            if plus_one == "(P":  # falsche P-Nr
+                new = " ".join(alist[0 : pos + 1])
+            elif len(plus_one) <= 5:
+                # print(f"***part recognized '{plus_one}'")
+                new = " ".join(alist[0 : pos + 2])
             else:
-                print(f"***part NOT recognized '{plus_one}'")
-                new = " ".join(alist[0 : pos_number + 1])
+                # print(f"***part NOT recognized '{plus_one}'")
+                new = " ".join(alist[0 : pos + 1])
         else:
-            print("SHORT FORM")
-            new = " ".join(alist)
+            print(f"***part NOT recognized '{plus_one}'")
+            new = " ".join(alist[0 : pos + 1])
+    else:
+        print("SHORT FORM")
+        new = " ".join(alist)
 
-        # STEP 4: special cases
-        if astr.startswith("I MV"):
-            print(f"**Special case Akten '{astr}'")
-            # adding a magic slash.
-            # It's magic because we're adding a char that doesn't exist in origin
-            # some have different length I/MV 0950 a
-            alist[0] = "I/MV"
-            alist.pop(1)
-            print(f"***{alist} len:{len(alist)}")
-            if len(alist) == 2:
-                print("astr has only two parts")
-                return " ".join(alist)
-            elif len(alist) > 2:
-                if re.search(r"[a-zA-Z]+", alist[2]):
-                    print("***valid part")
-                    new = " ".join(alist[0:3])
-                elif re.search(r"\d+", alist[2]):
-                    print("***digit for disamb")
-                    # we allow diaamb only when no part
-                    alist[2] = f"<{alist[2]}>"
-                    new = " ".join(alist[0:3])
-                else:
-                    new = " ".join(alist[0:2])
-            else:  # if alist has 0 items
-                # raise Exception("Should not be here!")
-                return None
-        elif astr.startswith("Verz BGAEU"):
-            # add a magic dot
-            new = re.sub("Verz BGAEU", "Verz. BGAEU", new)
-        elif astr.startswith("EJ ") or astr.startswith("Inv "):
-            # not catching __0001 correctly...
-            new = " ".join(alist[0:2])
-        elif astr.startswith("Adr (EJ)"):
-            new = " ".join(alist[0:3])
-        # elif astr.startswith("VIII "):
-        #    new = _parse_EM_photo(astr)
-        elif astr.startswith("I C "):
-            new = astr.split(" mit ")[0]
-        # print (f"{new=}")
+    # STEP 4: special cases
+    if astr.startswith("I MV"):
+        print(f"**Special case Akten '{astr}'")
+        # adding a magic slash.
+        # It's magic because we're adding a char that doesn't exist in origin
+        # some have different length I/MV 0950 a
+        alist[0] = "I/MV"
+        alist.pop(1)
+        print(f"***{alist} len:{len(alist)}")
+        if len(alist) == 2:
+            print("astr has only two parts")
+            return " ".join(alist)
+        elif len(alist) > 2:
+            if re.search(r"[a-zA-Z]+", alist[2]):
+                print("***valid part")
+                new = " ".join(alist[0:3])
+            elif re.search(r"\d+", alist[2]):
+                print("***digit for disamb")
+                # we allow diaamb only when no part
+                alist[2] = f"<{alist[2]}>"
+                new = " ".join(alist[0:3])
+            else:
+                new = " ".join(alist[0:2])
+        else:  # if alist has 0 items
+            raise identNrParserError(f"Unusual number of items {len(alist)}")
+    elif astr.startswith("Verz BGAEU"):
+        # add a magic dot
+        new = re.sub("Verz BGAEU", "Verz. BGAEU", new)
+    elif astr.startswith("EJ ") or astr.startswith("Inv "):
+        # not catching __0001 correctly...
+        new = " ".join(alist[0:2])
+    elif astr.startswith("Adr (EJ)"):
+        new = " ".join(alist[0:3])
+    # elif astr.startswith("VIII "):
+    #    new = _parse_EM_photo(astr)
+    elif astr.startswith("I C "):
+        new = astr.split(" mit ")[0]
+    # print (f"{new=}")
 
-        return new
-    else:  # if not m
-        return None
+    return new
 
 
 def parse_old(*, path: Path) -> str | None:
@@ -259,6 +296,32 @@ def parse_old(*, path: Path) -> str | None:
     if m:
         return m.group(1)
     return None  # make mypy happy
+
+
+def standardform(path: Path) -> str:
+    """
+    - We expect a path as input, but we use only stem (name before last suffix)
+    - We replace _ with single space
+    - We expect only certain characters (\w\d +.,<>-)
+    returns identNrParserError in case of failure
+    """
+
+    stem = path.stem  # everything before the _last_ .suffix.
+
+    # STEP 1: collapse underlines into space
+    stem2 = re.sub("_", " ", stem)
+
+    # STEP 2: allowed characters
+    m = re.search(r"([()\w\d +.,<>-]+)", stem2)
+
+    # What is maximum number of elements in EM?
+    # VII ME 01234 a-c <1>: category, unit, number, part, disamb:
+    # 4 elements counting 0-based
+
+    if not m:
+        raise identNrParserError("Standardform failed")
+
+    return m.group(1).strip()
 
 
 def whole_for_parts(identNr: str) -> str:
@@ -282,17 +345,6 @@ def whole_for_parts(identNr: str) -> str:
 #
 # more private
 #
-
-
-def _fortlaufende_Nummer(alist: list[str]) -> int:
-    """
-    Return the position of the first "fortlaufende Nummer". Return 0 if no number found.
-    Expects a list of elements that together make up an identNr.
-    """
-    for c, elem in enumerate(alist):
-        if re.fullmatch(r"\d+", alist[c]):
-            return c
-    return 0
 
 
 def _parse_EM_photo(astr: str) -> str | None:
