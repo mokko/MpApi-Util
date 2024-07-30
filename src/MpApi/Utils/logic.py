@@ -39,8 +39,8 @@ def extractIdentNr(*, path: Path, parser: str) -> str:
 def fortlaufende_Nummer(identNr: str) -> str:
     """
     Return the actual fortlaufende Nummer as integer.
-    
-    N.B. fortlaufende Nummer is the number(actually: string) that defines the 
+
+    Definition "fortlaufende Nummer" is the number(actually: string) that defines the
     main object:
     - VII c 1234 a-c: 1234
     - VII 78/0123: 0123
@@ -65,7 +65,7 @@ def fortlaufende_Nummer_pos(identNr: str) -> int:
     """
     if identNr.startswith("VII 78"):
         # also works for VII 78/
-        #print("Schellack exception")
+        # print("Schellack exception")
         return 2
 
     alist = identNr.split(" ")

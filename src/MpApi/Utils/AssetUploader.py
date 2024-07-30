@@ -762,7 +762,14 @@ class AssetUploader(BaseApp):
 
     def _write_parts(self, cells) -> None:
         """
+        This is now used for siblings, not parts anymore. "Returns" values by writing
+        to cells["parts_objIds"].
+
+        We recently switched to to get_objIds_startswith internally. Now we have the
+        problem that I B 100 a-k also finds I B 1009, so false siblings.
+
         we want to use the new get_objIds_startswith
+
         should return dict [identNr]: 12345; 1234
 
         dict = {
@@ -772,28 +779,36 @@ class AssetUploader(BaseApp):
         but it doesn't work yet
         """
 
-        if cells["parts_objIds"].value is None:
+        if cells["parts_objIds"].value is None and cells["objIds"].value == "None":
             # print(" _write_parts")
 
             identNr = cells["identNr"].value
             ident_whole = whole_for_parts(identNr)
             # print(f"+++{identNr}")
 
+            # new version that adds a space after identNr
             IDs = self.client.get_objIds_startswith(
                 orgUnit=self.orgUnit,
                 identNr=ident_whole,
             )
-            parts_str = ""
-            for idx, objId in enumerate(IDs, start=1):
+            IDs2 = {}
+            for objId in IDs:
                 identNr = IDs[objId]
-                # IDs = [str(e) for e in IDs]
+                if identNr.startswith(f"{ident_whole} "):
+                    IDs2[objId] = identNr
+
+
+            # format as string
+            parts_str = ""
+            for idx, objId in enumerate(IDs2, start=1):
+                identNr = IDs2[objId]
                 parts_str += f"{identNr}: {objId}"
-                if idx < len(IDs):
+                if idx < len(IDs2):
                     parts_str += "; "
 
             cells["parts_objIds"].value = parts_str
             # print(f" _write_parts: {parts_str}")
-            if len(IDs) == 0:
+            if len(IDs2) == 0:
                 cells["parts_objIds"].value = "None"
 
     def _write_whole(self, cells):
@@ -858,8 +873,8 @@ class AssetUploader(BaseApp):
                     pass
                 else:
                     cells["ref"].font = green
-            if siblings != "None" and siblings is not None:
-                # print(f"***{siblings=}")
+            if siblings != "None" and siblings is not None and siblings != "":
+                print(f"***{siblings=}")
                 if ";" not in siblings:
                     objId = int(siblings.split(": ")[1])
                     # print(f"NEW Ref: {objId}")
