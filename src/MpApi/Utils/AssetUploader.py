@@ -797,7 +797,6 @@ class AssetUploader(BaseApp):
                 if identNr.startswith(f"{ident_whole} "):
                     IDs2[objId] = identNr
 
-
             # format as string
             parts_str = ""
             for idx, objId in enumerate(IDs2, start=1):
@@ -859,9 +858,9 @@ class AssetUploader(BaseApp):
             whole = cells["whole_objIds"].value
             siblings = cells["parts_objIds"].value
 
-            print(f"+++{siblings=}")
+            # print(f"+++{siblings=}")
             if objIds != "None" and ";" not in str(objIds):
-                print("   taking ref from objIds...")
+                # print("   taking ref from objIds...")
                 cells["ref"].value = int(objIds)
                 cells["ref"].font = teal
             elif whole != "None":
@@ -879,4 +878,4 @@ class AssetUploader(BaseApp):
                     objId = int(siblings.split(": ")[1])
                     # print(f"NEW Ref: {objId}")
                     cells["ref"].value = objId
-            print(f" _write_ref: {cells['ref'].value} <-- {siblings}")
+            # print(f" _write_ref: {cells['ref'].value} <-- {siblings}")

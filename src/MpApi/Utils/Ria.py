@@ -242,7 +242,6 @@ class RIA:
                 objIds[objId] = objNumberL[0].text
         return objIds
 
-
     def get_objIds_strict(self, *, identNr: str, orgUnit: str | None = None) -> dict:
         """
         Another version of the get_objIds that uses Zetcom's new exact search which

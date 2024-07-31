@@ -17,8 +17,12 @@ import re
 from MpApi.Utils.Xls import ConfigError
 
 
-class identNrParserError:
-    pass
+class identNrParserError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return f"{self.message}"
 
 
 def extractIdentNr(*, path: Path, parser: str) -> str:
@@ -239,7 +243,7 @@ def parse_EM(path: Path) -> str:
             print(f"***part NOT recognized '{plus_one}'")
             new = " ".join(alist[0 : pos + 1])
     else:
-        print("SHORT FORM")
+        # print("SHORT FORM")
         new = " ".join(alist)
 
     # STEP 4: special cases
