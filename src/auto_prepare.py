@@ -40,7 +40,7 @@ def copy_upload(p: Path) -> None:
 
 def main(limit: int = -1, start: int = 0, stop: int = 23_088):
     p = Path(
-        r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS-Bildmaterial\FINAL_EM_Afrika_Dia Smlg_Koloß"
+        r"\\pk.de\smb\Mediadaten\Projekte\AKU\MDVOS-Bildmaterial\FINAL_EM_Afrika_Dia Smlg_Koloß\Pack 2"
     )
     print(f"Entering main {p}")
     for idx, pp in enumerate(sorted(p.iterdir())):
@@ -54,20 +54,20 @@ def main(limit: int = -1, start: int = 0, stop: int = 23_088):
                 continue
             print(f"{idx}:{no=} {start=} {stop=}")
             print(f"   {pp}\n")
-            copy_upload(pp)
-            prepare_init(pp)
-            upload_jpgs(pp)  # Übersicht. Breaks if two records with konvolut
-            _mv_As_before_Bs(pp)  # before prepare_scancheckcreate
+            #copy_upload(pp)
+            #prepare_init(pp)
+            #upload_jpgs(pp)  # Übersicht. Breaks if two records with konvolut
+            #_mv_As_before_Bs(pp)  # before prepare_scancheckcreate
 
             # ONLY DO SCANDIR after we corrected orientation
             # how do we know if did that already?
             # there is no simple test...
 
-            prepare_scancheckcreate(pp)
+            # prepare_scancheckcreate(pp)
             # upload_assets(pp)
 
             # only after successful creation of the Object records
-            # rm_template(pp)
+            rm_template(pp)
             if no >= stop:
                 print("Stop reached!")
                 break
@@ -121,7 +121,7 @@ def rm_template(p: Path) -> None:
         return
     objId = templateM.extract_first_id()
     print(f"*** Removing template record with ID {objId}")
-    client.deleteItem2(mtype="Object", ID=objId)
+    #client.deleteItem2(mtype="Object", ID=objId)
 
 
 def upload_assets(p: Path) -> None:

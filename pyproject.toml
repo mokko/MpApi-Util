@@ -45,4 +45,4 @@ reportx = 'MpApi.Utils:reportX'
 restart = 'MpApi.Utils:restart'
 sren = 'MpApi.Utils:sren'
 update_schemas = 'MpApi.Utils:update_schemas'
-upload = 'MpApi.Utils:upload' # asset uploader
+up = 'MpApi.Utils:upload' # asset uploader

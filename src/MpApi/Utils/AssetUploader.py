@@ -284,21 +284,21 @@ class AssetUploader(BaseApp):
                 # we dont need to ignore suffixes if we look for *.jpg etc.
                 elif self.filemask == "*" and p.suffix in IGNORE_SUFFIXES:
                     continue
-                if self.limit == idx:
-                    print("* Limit reached")
-                    break
                 if str(p.absolute()) not in attached_cache:
                     file_list.append(p)
                     pbar.update()
 
         print(f"Scanning sorted file list... {len(file_list)}")
-        for p in sorted(file_list):
+        for idx, p in enumerate(sorted(file_list), start=1):
             print(f"scandir: {p}")
             rno = self.xls.path_exists(path=p.name, cno=0, sheet=self.ws)
             # rno is the row number in Assets sheet
             # rno is None if file not in list
             rno = self._file_to_list(path=p, rno=rno)
-            self.xls.save_bak_shutdown(rno=rno, save=500, bak=500)
+            self.xls.save_bak_shutdown(rno=idx, save=500, bak=1_000)
+            if self.limit == idx:
+                print("* Limit reached")
+                break
         self.xls.save()
 
     def set_standardbild(self) -> None:
@@ -750,9 +750,13 @@ class AssetUploader(BaseApp):
 
     def _write_identNr(self, cells: dict, path: Path) -> None:
         if cells["identNr"].value is None:
-            identNr = extractIdentNr(
-                path=path, parser=self.parser
-            )  # returns Python's None on failure
+            try:
+                identNr = extractIdentNr(
+                    path=path, parser=self.parser
+                )  # returns Python's None on failure
+            except MpApi.Utils.logic.identNrParserError:
+                cells["identNr"].font = red
+                identNr = ""
             if self.ignore_suspicious and is_suspicious(identNr=identNr):
                 cells["identNr"].font = red
                 return
