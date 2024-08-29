@@ -54,10 +54,10 @@ def main(limit: int = -1, start: int = 0, stop: int = 23_088):
                 continue
             print(f"{idx}:{no=} {start=} {stop=}")
             print(f"   {pp}\n")
-            #copy_upload(pp)
-            #prepare_init(pp)
-            #upload_jpgs(pp)  # Übersicht. Breaks if two records with konvolut
-            #_mv_As_before_Bs(pp)  # before prepare_scancheckcreate
+            # copy_upload(pp)
+            # prepare_init(pp)
+            # upload_jpgs(pp)  # Übersicht. Breaks if two records with konvolut
+            # _mv_As_before_Bs(pp)  # before prepare_scancheckcreate
 
             # ONLY DO SCANDIR after we corrected orientation
             # how do we know if did that already?
@@ -121,7 +121,7 @@ def rm_template(p: Path) -> None:
         return
     objId = templateM.extract_first_id()
     print(f"*** Removing template record with ID {objId}")
-    #client.deleteItem2(mtype="Object", ID=objId)
+    # client.deleteItem2(mtype="Object", ID=objId)
 
 
 def upload_assets(p: Path) -> None:
