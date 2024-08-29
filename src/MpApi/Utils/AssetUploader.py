@@ -23,6 +23,7 @@ from MpApi.Record import Record  # should be MpApi.Record.Multimedia
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.logic import (
     extractIdentNr,
+    identNrParserError,
     is_suspicious,
     whole_for_parts,
 )  # has_parts,
@@ -754,7 +755,7 @@ class AssetUploader(BaseApp):
                 identNr = extractIdentNr(
                     path=path, parser=self.parser
                 )  # returns Python's None on failure
-            except MpApi.Utils.logic.identNrParserError:
+            except identNrParserError:
                 cells["identNr"].font = red
                 identNr = ""
             if self.ignore_suspicious and is_suspicious(identNr=identNr):
