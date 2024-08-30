@@ -230,9 +230,12 @@ def parse_EM(path: Path) -> str:
         plus_one = alist[pos + 1]
         # print("***LONG FORM")
         # print(f"{plus_one=} {len(plus_one)}")
-        if re.search(r"[()a-z1-9,-,+]", plus_one):  # ()
+        if re.search(r"[()a-zA-Z1-9,-,+]", plus_one):  # ()
             if plus_one == "(P":  # falsche P-Nr
                 new = " ".join(alist[0 : pos + 1])
+            elif plus_one in ("A", "B", "C"):
+                new = " ".join(alist[0 : pos + 3])
+                # print(f"******************{alist=}")
             elif len(plus_one) <= 5:
                 # print(f"***part recognized '{plus_one}'")
                 new = " ".join(alist[0 : pos + 2])
@@ -311,7 +314,7 @@ def standardform(path: Path) -> str:
     """
     - We expect a path as input, but we use only stem (name before last suffix)
     - We replace _ with single space
-    - We expect only certain characters (\w\d +.,<>-)
+    - We expect only certain characters (\\w\\d +.,<>-)
     returns identNrParserError in case of failure
     """
 

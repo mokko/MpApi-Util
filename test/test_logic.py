@@ -42,6 +42,7 @@ def test_extractIdent():
         "VIII A 23052 (1) -A.tif": "VIII A 23052 (1)",
         "VIII A 23052 (21) -A.tif": "VIII A 23052 (21)",
         "VIII A 23052 (126) -A.tif": "VIII A 23052 (126)",
+        "VIII A 22956 A (10) -A.tif": "VIII A 22956 A (10)",
     }
     for case in cases:
         case = Path(case)
@@ -150,6 +151,7 @@ def test_fortlaufende_Nummer_pos():
         "I C 1577 a-g <2>": 2,
         "I C 1577 A <2>": 2,
         "VII 78 1234": 2,
+        "VIII A 22956 A (1)": 2,
     }
     for identNr in cases:
         pos = fortlaufende_Nummer_pos(identNr)
