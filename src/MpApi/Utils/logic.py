@@ -17,12 +17,7 @@ import re
 from MpApi.Utils.Xls import ConfigError
 
 
-class identNrParserError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return f"{self.message}"
+class identNrParserError(Exception): ...
 
 
 def extractIdentNr(*, path: Path, parser: str) -> str:
@@ -34,6 +29,8 @@ def extractIdentNr(*, path: Path, parser: str) -> str:
     - raises error ConfigError or identNrParserError
     """
     match parser:
+        case "AKu":
+            return parse_AKu(path)
         case "EM":
             return parse_EM(path)
         case _:
@@ -171,6 +168,15 @@ def not_suspicious(identNr: str) -> bool:
         return False
     else:
         return True
+
+
+def parse_AKu(path: Path) -> str:
+    # print("parse_AKu")
+    # split off end with _{2+} IV-AKu-000059___1.tif
+    some_stem = path.stem.split("_")[0].strip()
+    # replace - with /
+    some_stem2 = re.sub("-", "/", some_stem)
+    return some_stem2
 
 
 def parse_EM(path: Path) -> str:

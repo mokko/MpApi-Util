@@ -546,9 +546,9 @@ class PrepareUpload(BaseApp):
             # TODO seems that identNr with . are not mrked
             logging.info(f"{msg} unwanted symbol {identNr}")
             return True
-        elif " " not in identNr:
-            logging.info(f"{msg} missing space {identNr}")
-            return True
+        # elif " " not in identNr:
+        #    logging.info(f"{msg} missing space {identNr}")
+        #    return True
         elif "-a" in identNr:
             logging.info(f"{msg} combination -a {identNr}")
             return True

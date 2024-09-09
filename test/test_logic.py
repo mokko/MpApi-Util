@@ -9,7 +9,7 @@ from MpApi.Utils.logic import (
 from pathlib import Path
 
 
-def test_extractIdent():
+def test_extractIdent_EM():
     cases = {
         "220222": "220222",
         "Adr_(EJ)_1__0044.jpg": "Adr (EJ) 1",
@@ -49,6 +49,19 @@ def test_extractIdent():
         identNr = extractIdentNr(path=case, parser="EM")
         print(f"{case} -> {identNr}")
         assert cases[str(case)] == identNr
+
+
+def test_extractIdent_AKu():
+    cases = {
+        "IV-AKu-000059___1.tif": "IV/AKu/000059",
+    }
+
+    for case in cases:
+        fn = Path(case)
+        identNr_live = extractIdentNr(path=fn, parser="AKu")
+        identNr_predicted = cases[case]
+        print(f"{case} -> {identNr_live}")
+        assert identNr_live == identNr_predicted
 
 
 def test_has_parts():
