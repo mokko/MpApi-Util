@@ -46,7 +46,7 @@ class IdentNr:
     part1: str = field(init=False)
     part2: str = field(init=False)
     part3: str = field(init=False)
-    part4: str = field(init=False)
+    part4: str = field(init=False, default="")  # False = not required?
     schema: str = field(init=False)
     schemaId: str = field(init=False)
 
@@ -177,6 +177,7 @@ class IdentNrFactory:
                 "part1": iNr.part1,
                 "part2": iNr.part2,
                 "part3": iNr.part3,
+                # what about part4?
                 "schemaId": iNr.schemaId,
                 "text": iNr.text,
             }

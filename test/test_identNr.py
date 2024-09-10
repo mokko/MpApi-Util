@@ -88,4 +88,4 @@ def test_cases():
         assert iNr.part2 == ident_dict[2]
         assert iNr.part3 == ident_dict[3]
         assert iNr.part4 == ident_dict[4]
-        print(f"{ident_str} ok")
+        print(f"{ident_str} ok 4:{iNr.part4}")
