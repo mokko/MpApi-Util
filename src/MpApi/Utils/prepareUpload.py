@@ -148,6 +148,7 @@ class PrepareUpload(BaseApp):
 
         self._check_create_objects()
         temp_str = self.xls.get_conf_required(cell="B1")
+
         ttype, tid = temp_str.split()
         ttype = ttype.strip()  # do i need to strip?
         tid_int = int(tid.strip())
@@ -366,11 +367,13 @@ class PrepareUpload(BaseApp):
     def _create_object(self, *, identNrs: str, template) -> str:
         identL = identNrs.split(";")
         objIds = set()  # unique list of objIds from Excel
+        institution = self.xls.get_conf_required(cell="B4")
+
         for ident in identL:
             identNr = ident.strip()
             # print(f"***trying to create new object '{identNr}' from template")
             new_id = self.client.create_from_template(
-                template=template, identNr=identNr
+                template=template, identNr=identNr, institution=institution
             )
             # logging.info(f"new record created: object {new_id} with {identNr} from template")
             objIds.add(new_id)
@@ -445,7 +448,7 @@ class PrepareUpload(BaseApp):
             "C3": """Steuere scandir Prozess mit einem Muster, z.B. '**/*' oder '*.jpg'.""",
             "A4": "IdentNr Parser",
             "B4": "EM",
-            "C4": "Welcher Logarithmus zum Parsen von Dateinamen in identNrn soll verwendet werden? (EM, Std)",
+            "C4": "Welcher Logarithmus zum Parsen von Dateinamen in identNrn soll verwendet werden? (EM, AKu)",
         }
 
         if conf is not None:

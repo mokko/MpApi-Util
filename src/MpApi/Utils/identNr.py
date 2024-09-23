@@ -34,7 +34,7 @@ from typing import Self  # Self since 3.11
 
 class UnknownSchemaException(Exception):
     """
-    The schema is not known to schemas data silo.
+    The schema is not known to schemas data silo in self.schemas.
     """
 
     pass
@@ -42,13 +42,15 @@ class UnknownSchemaException(Exception):
 
 @dataclass
 class IdentNr:
-    text: str = field(init=False)
-    part1: str = field(init=False)
-    part2: str = field(init=False)
-    part3: str = field(init=False)
+    text: str = field(
+        init=False
+    )  # example as str for a given IdentNr, e.g. "VII f 123"
+    part1: str = field(init=False)  # part 1, e.g. "VII"
+    part2: str = field(init=False)  # part 2, e.g. " f"
+    part3: str = field(init=False)  # part 3, e.g. "123"
     part4: str = field(init=False, default="")  # False = not required?
-    schema: str = field(init=False)
-    schemaId: str = field(init=False)
+    schema: str = field(init=False)  # label for specific schema e.g. "VII f"
+    schemaId: str = field(init=False)  # id from RIA for this schema
 
     def get_node(self) -> lxml.etree:
         """
@@ -95,11 +97,20 @@ class IdentNr:
         return rGrpN
 
 
+#
+#
+#
+
+
 class IdentNrFactory:
     def __init__(self, *, schemas_fn: str = None) -> None:
         if schemas_fn is None:
             parent = Path(__file__).parents[2]
             self.schemas_fn = parent / "data" / "schemas.json"
+        self.schemas = self._load_schemas(
+            schemas_fn=self.schemas_fn
+        )  # explicit is better than implicit
+        # print (self.schemas)
 
     def _extract_schema(self, *, text: str) -> str:
         """
@@ -114,37 +125,59 @@ class IdentNrFactory:
         print(f"WARN: _extract_schema failed: {text}")
         # raise TypeError(f"_extract_schema failed: {text}")
 
-    def _load_schemas(self) -> None:
+    def _load_schemas(self, *, schemas_fn: str) -> None:
         """
         initialies (loads lazily) schemas.json info and saves it in self.schemas.
         """
         if not hasattr(self, "schemas"):  # todo: might not work
             print(f"lazy loading schemas file '{self.schemas_fn}'")
-            if Path(self.schemas_fn).exists():
-                with open(self.schemas_fn, "r") as openfile:
-                    self.schemas = json.load(openfile)
+            if Path(schemas_fn).exists():
+                with open(schemas_fn, "r") as openfile:
+                    return json.load(openfile)
             else:
-                self.schemas = {}
+                return {}
 
-    def _parser_EM(self, iNr: Self):
+    def _parser_AKu(self, text: str) -> IdentNr:
+        iNr = IdentNr()
+        iNr.text = text
+
+        partsL = text.split("/")  # IV/AKu/000059 -> IV, AKu, 00059
+        if len(partsL) != 3:
+            raise SyntaxError(f"identNr str not recognized! {text}")
+        iNr.part1 = partsL[0]
+        iNr.part2 = partsL[1]
+        iNr.part3 = partsL[2]
+        iNr.schema = f"{partsL[0]}/{partsL[1]}"
+        return iNr
+
+    def _parser_EM(self, text: str) -> IdentNr:
         """
         Parse identNr as string into four parts.
         Parse typical EM identNr using roman numeral in the beginning and number towards
         the end.
+
         """
+        iNr = IdentNr()
+        iNr.text = text
+
         m = re.match(
-            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\,\-<>() ]*)", iNr.text
+            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\,\-<>() ]*)", text
         )
+
         if m is None:
             raise SyntaxError("ERROR: Not recognized!")
+
         iNr.part1 = m.group(1)
         iNr.part2 = m.group(2)
         iNr.part3 = m.group(3)
         iNr.part4 = m.group(4).lstrip()
+        iNr.schema = f"{m.group(1)}{m.group(2)}"
+        return iNr
 
     def _parser_space(self, iNr: Self) -> None:
         """
         Use space as a separator to parse the text into parts.
+        Still in use?
         """
         parts = identNr.text.split()
         iNr.part1 = parts[0].strip()
@@ -158,7 +191,6 @@ class IdentNrFactory:
             json.dump(self.schemas, outfile, indent=True, sort_keys=True)
 
     def _update_schemas(self, *, data: Module) -> None:
-        self._load_schemas()
         itemL = data.xpath(
             "/m:application/m:modules/m:module/m:moduleItem/m:repeatableGroup[@name = 'ObjObjectNumberGrp']/m:repeatableGroupItem"
         )
@@ -172,8 +204,9 @@ class IdentNrFactory:
             if iNr.schema is None:
                 print(f"WARN: not storing identNr without schema! {iNr}")
                 break
+                # label = "IV/AKu"
             print(f"{iNr.text}")
-            self.schemas[iNr.schema] = {
+            self.schemas[label] = {
                 "part1": iNr.part1,
                 "part2": iNr.part2,
                 "part3": iNr.part3,
@@ -188,25 +221,27 @@ class IdentNrFactory:
     #
 
     def get_schemas(self) -> dict:
-        self._load_schemas()
         return self.schemas
 
-    def new_from_str(self, *, text: str) -> Self:
-        iNr = IdentNr()
-        iNr.text = text
-        self._parser_EM(iNr)  #  eg. V A Dlg 1234 a,b
-        # self._parser_space(iNr)
-        iNr.schema = self._extract_schema(text=text)
-        self._load_schemas()  # lazy loading
+    def new_from_str(self, *, text: str, institution: str = "EM") -> IdentNr:
+        match institution:
+            case "EM":
+                iNr = self._parser_EM(text)  #  eg. V A Dlg 1234 a,b
+            case "AKu":
+                iNr = self._parser_AKu(text)
+            case other:
+                raise TypeError(f"Unknown institution: {institution}")
 
         try:
             schemaId = self.schemas[iNr.schema]
-        except:
-            raise UnknownSchemaException(f"Unknown schema for '{iNr.text}'")
+        except KeyError:
+            raise UnknownSchemaException(
+                f"Unknown schema for '{iNr.text}' {iNr.schema}"
+            )
         iNr.schemaId = self.schemas[iNr.schema]["schemaId"]
         return iNr
 
-    def new_from_node(self, *, node: lxml.etree._Element) -> Self:
+    def new_from_node(self, *, node: lxml.etree._Element) -> IdentNr:
         """
         node is repeatableGroup[@name='ObjObjectNumberGrp']/repeatableGroupItem. There
         may only be one such item. Not sure

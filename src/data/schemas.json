@@ -237,6 +237,13 @@
   "schemaId": 86,
   "text": "IV Cb 78"
  },
+ "IV/AKu": {
+  "part1": "IV",
+  "part2": "AKu",
+  "part3": "000059",
+  "schemaId": 36232,
+  "text": "IV/AKu/000059"
+ },
  "IX d": {
   "part1": "IX",
   "part2": " d",
@@ -327,13 +334,6 @@
   "part3": null,
   "schemaId": 208,
   "text": "VI 8565"
- },
- "VI 41910 b": {
-  "part1": "VI",
-  "part2": "41910",
-  "part3": "b 12",
-  "schemaId": 208,
-  "text": "VI 41910 b 12"
  },
  "VI Nls": {
   "part1": "VI",

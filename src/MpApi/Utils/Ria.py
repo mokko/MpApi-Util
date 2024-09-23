@@ -62,7 +62,9 @@ class RIA:
         mulId = self.mpapi.createItem3(data=templateM)
         return mulId
 
-    def create_from_template(self, *, template: Module, identNr: str) -> int:
+    def create_from_template(
+        self, *, template: Module, identNr: str, institution: str = "EM"
+    ) -> int:
         """
         Given a template record (a module Object),
         - copy that
@@ -110,7 +112,7 @@ class RIA:
         in here.
         
         """
-        iNr = self.fac.new_from_str(text=identNr)
+        iNr = self.fac.new_from_str(text=identNr, institution=institution)
         new_numberGrpN = iNr.get_node()
 
         new_item = copy.deepcopy(template)  # so we dont change the original
