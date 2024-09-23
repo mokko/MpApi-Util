@@ -288,6 +288,9 @@ class AssetUploader(BaseApp):
                 if str(p.absolute()) not in attached_cache:
                     file_list.append(p)
                     pbar.update()
+                if self.limit == idx:
+                    print("* Limit reached")
+                    break
 
         print(f"Scanning sorted file list... {len(file_list)}")
         for idx, p in enumerate(sorted(file_list), start=1):
@@ -758,6 +761,7 @@ class AssetUploader(BaseApp):
             except identNrParserError:
                 cells["identNr"].font = red
                 identNr = ""
+
             if self.ignore_suspicious and is_suspicious(identNr=identNr):
                 cells["identNr"].font = red
                 return

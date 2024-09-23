@@ -171,11 +171,11 @@ def not_suspicious(identNr: str) -> bool:
 
 
 def parse_AKu(path: Path) -> str:
-    # print("parse_AKu")
     # split off end with _{2+} IV-AKu-000059___1.tif
     some_stem = path.stem.split("_")[0].strip()
     # replace - with /
     some_stem2 = re.sub("-", "/", some_stem)
+    print(f"parse_AKu: {some_stem} -> {some_stem2}")
     return some_stem2
 
 
