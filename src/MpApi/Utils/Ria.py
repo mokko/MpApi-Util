@@ -35,7 +35,7 @@ Reusable methods that interface with the low-level mpapi client
 
 import copy
 from lxml import etree  # type: ignore
-from mpapi.constants import NSMAP
+from mpapi.constants import NSMAP, get_credentials
 from mpapi.client import MpApi
 from mpapi.module import Module
 from mpapi.search import Search
@@ -121,7 +121,7 @@ class RIA:
             numberGrpN = new_item.xpath(
                 "//m:repeatableGroup[@name = 'ObjObjectNumberGrp']"
             )[0]
-        except:
+        except KeyError:
             # if no OBjObjectNumberGrp
             mItemN = new_item.xpath("//m:moduleItem")[0]
             mItemN.append(new_numberGrpN)
@@ -132,6 +132,13 @@ class RIA:
         # new_item.toFile(path="DDrewritten.xml")
         print(f"About to create record '{identNr}'")
         objId = self.mpapi.createItem3(data=new_item)
+        return objId
+
+    def create_item(self, *, item: Module) -> int:
+        """
+        Provide access to client's createItem with "modern" signature.
+        """
+        objId = self.mpapi.createItem3(data=item)
         return objId
 
     def get_objIds(
@@ -671,6 +678,13 @@ class RIA:
             # print("No result")
             return None
         return m.get_ids(mtype="Person")
+
+
+def init_ria() -> RIA:
+    user, pw, baseURL = get_credentials()
+    print(f">> Logging in as {user}")
+    client = RIA(baseURL=baseURL, user=user, pw=pw)
+    return client
 
 
 if __name__ == "__main__":

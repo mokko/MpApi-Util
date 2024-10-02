@@ -13,6 +13,18 @@ Excel file.
 NEW: I changed my mind again. We do move successful uploads again to easily see
 what problems remain. This time to static directory. I wonder if that should be
 configurable.
+
+EXCEL ::: RIA
+1)	IdentNr
+2)	Sachbegriff
+3)	Beteiligte (Rolle)
+4)	Erwerb. Datum
+5)	Erwerb. Nr.
+6)	Erwerbung von
+7)	Geogr. Bezüge
+8)	Obj. Referenz A
+9)	Obj. Referenz B
+10)	 Inventarnotiz: wird das Feld jemals durch uns gefüllt
 """
 
 from datetime import datetime
