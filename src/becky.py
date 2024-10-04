@@ -42,42 +42,33 @@ from MpApi.Utils.set_fields_Object import (
     set_objRefA,
 )
 from MpApi.Utils.Xls import Xls
-
 from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.cell.cell import Cell
 from openpyxl.styles.colors import Color
 from pathlib import Path
+import tomllib
 
 #
 # CONFIGURATION
 #
 
-conf = {
-    "excel_fn": Path(
-        r"C:\Users\M-MM0002\Work Folders\Eigene Dateien\Kamerun\Bis 10224 Abschrift_HK_Afrika_III_C.xlsx"
-    ),
-    "excel_row_offset": 2,  # first line that needs to be processed, 1-based
-    "institution": "EM",
-    "org_unit": "EMAfrika1",
-    "sheet_title": "Sheet1",
-    "template_id": 3659476,  # Object
-}
+conf_fn = "becky_conf.toml"  # in sdata
 
 
-def create_record(*, row: tuple, template: Module, client: RIA, act: bool) -> None:
+def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
 
-    if len(template) != 1:
+    if len(conf["templateM"]) != 1:
         raise TypeError("Template does not have a single record")
 
-    recordM = deepcopy(template)  # so we dont change the original template
+    recordM = deepcopy(conf["templateM"])  # so we dont change the original template
     recordM
     set_ident(
         recordM, ident=row[0].value, institution=conf["institution"]
     )  # from Excel as str
     set_ident_sort(recordM, nr=int(row[1].value))
     set_sachbegriff(recordM, sachbegriff=row[2].value)
-    set_beteiligte(recordM, beteiligte=row[3].value)
+    set_beteiligte(recordM, beteiligte=row[3].value, conf=conf)
     set_erwerbDatum(recordM, datum=row[4].value)
     set_erwerbungsart(recordM, art=row[5].value)
     set_erwerbNr(recordM, nr=row[6].value)
@@ -87,41 +78,46 @@ def create_record(*, row: tuple, template: Module, client: RIA, act: bool) -> No
 
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
-    recordM.toFile(path=f"../sdata/debug.object.xml")
+    p = conf["project_dir"] / "debug.object.xml"
+    print(f">> Writing to '{p}'")
+    recordM.toFile(path=p)
     if act:
-        objId = client.create_item(item=recordM)
-        print(f">> Created record {objId} in RIA ({row[0].value}")
-        recordM.toFile(path=f"../sdata/debug.object{objId}.xml")
+        objId = conf["RIA"].create_item(item=recordM)
+        print(f">> Created record {objId} in RIA ({row[0].value})")
+        p2 = conf["project_dir"] / f"debug.object{objId}.xml"
+        print(f">> Writing to '{p2}'")
+        recordM.toFile(path=p2)
 
 
 def main(*, limit: int = -1, act: bool = False) -> None:
+    conf = _load_conf()
     wb = load_workbook(conf["excel_fn"], data_only=True)
     ws = wb[conf["sheet_title"]]  # sheet exists already
 
-    client = init_ria()
+    conf["RIA"] = init_ria()
 
     print(f">> Getting template from RIA Object {conf['template_id']}")
-    tmplM = client.get_template(ID=conf["template_id"], mtype="Object")
+    conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
 
     for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
-        per_row(idx=idx, row=row, template=tmplM, client=client, act=act)
+        per_row(idx=idx, row=row, conf=conf, act=act)
         if limit == idx:
             print(">> Limit reached")
             break
 
 
-def per_row(*, idx: int, row: Cell, template: Module, client: RIA, act: bool) -> None:
+def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     ident = row[0].value  # from Excel as str
     font_color = row[0].font.color
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
         print(f"{idx}: {ident} red")
-        if record_exists(ident=ident, client=client):
+        if record_exists(ident=ident, conf=conf):
             print(f"   Record '{ident}' exists already")
         else:
-            create_record(template=template, row=row, client=client, act=act)
+            create_record(row=row, conf=conf, act=act)
 
 
-def record_exists(*, ident: str, client: RIA) -> bool:
+def record_exists(*, ident: str, conf: dict) -> bool:
     """
     Check ria if a record with a specific identNr exists. It's not relevant if one or
     multiple results exist.
@@ -137,13 +133,29 @@ def record_exists(*, ident: str, client: RIA) -> bool:
     q.addCriterion(field="__orgUnit", operator="equalsField", value=conf["org_unit"])
     q.addField(field="__id")
     q.validate(mode="search")  # raises if not valid
-    m = client.mpapi.search2(query=q)
+    m = conf["RIA"].mpapi.search2(query=q)
     if len(m) > 1:
         raise TypeError("Warning! more than one result in record_exists")
     if m:
         return True
     else:
         return False
+
+
+#
+# more private
+#
+
+
+def _load_conf() -> dict:
+    global conf_fn
+    print(f">> Reading configuration '{conf_fn}' in sdata")
+    project_dir = Path(__file__).parents[1] / "sdata"
+    p = project_dir / conf_fn
+    with open(p, "rb") as toml_file:
+        conf = tomllib.load(toml_file)
+    conf["project_dir"] = project_dir
+    return conf
 
 
 #

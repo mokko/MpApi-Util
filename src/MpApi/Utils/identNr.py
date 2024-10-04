@@ -63,6 +63,8 @@ class IdentNr:
         might change in the future to preserve potentially existing other rGrpItems.
         """
 
+        noSpecialChars = self.text.replace(" ", "").replace("_", "").replace("/", "")
+
         xml = f"""
             <repeatableGroup name="ObjObjectNumberGrp">
                 <repeatableGroupItem>
@@ -90,6 +92,12 @@ class IdentNr:
                     <moduleReference name="InvNumberSchemeRef" targetModule="InventoryNumber" multiplicity="N:1" size="1">
                         <moduleReferenceItem moduleItemId="{self.schemaId}"/>
                     </moduleReference>
+                    <virtualField name="NumberWithoutSpecialCharactersVrt">
+                        <value>{noSpecialChars}</value>
+                    </virtualField>
+                    <virtualField name="NumberVrt">
+                        <value>{self.text}</value>
+                    </virtualField>
                 </repeatableGroupItem>
             </repeatableGroup>"""
 
