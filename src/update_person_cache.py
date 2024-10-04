@@ -1,5 +1,6 @@
 """
-We read Becky's excel, parse it for names, look them up in RIA and write the results in the cache file
+We read Becky's excel, parse it for names, look them up in RIA and write the
+results in the cache file.
 """
 
 from becky import _load_conf
@@ -12,6 +13,7 @@ from openpyxl import Workbook, load_workbook, worksheet
 from pathlib import Path
 
 conf_fn = "becky_conf.toml"  # in sdata
+# roles = set()
 
 
 def main() -> None:
@@ -39,19 +41,22 @@ def main() -> None:
             idL = query(client=client, name=name)
             person_data[name] = idL
             print(idL)
-        if idx % 25 == 0:
-            save_cache(data=person_data, conf=conf)
+        # if idx % 25 == 0:
+        #    save_cache(data=person_data, conf=conf)
     save_cache(data=person_data, conf=conf)
+    # print(roles)
 
 
 def process_names(*, beteiligte: str, cache: dict) -> dict:
     if beteiligte is None:
         return cache  # it's perfectly possible that a cell is empty...
-    for count, (name_role, name, role) in enumerate(_each_person(beteiligte), start=1):
+    for count, (name, role) in enumerate(_each_person(beteiligte), start=1):
         # we're counting the names in one cell here, not the lines
         # print(f"{count}:{name} [{role}]")
+        # if role not in roles:
+        #    roles.add(role)
         if name not in cache:
-            cache[name] = tuple()
+            cache[name] = []
     return cache
 
 

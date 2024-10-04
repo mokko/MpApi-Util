@@ -13,8 +13,6 @@ from lxml.etree import _Element
 from mpapi.module import Module
 from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.person_cache import open_cache, save_cache
-
-# from becky import _open_person_cache
 from pathlib import Path
 import re
 import tomllib
@@ -23,8 +21,38 @@ from typing import Iterator
 person_data = {}
 
 roles = {
+    "Absender*in": 4378273,
+    "Auftraggeber*in": 4378279,
+    "Auktionator*in": 4378280,
+    "Aussteller*in": 4378283,
+    "Besitzer*in des Originals": 4378291,
+    "Bildhauer*in": 4378292,
+    "Dargestellt": 4378298,
+    "ehemalige*r Eigentümer*in": 4378304,
+    "ehemalige*r Leihgeber*in": 4378305,
+    "Eigentümer*in": 4378308,
+    "Entwerfer*in": 4378312,
+    "Expedition": 4378317,
+    "Expeditionsleiter*in": 4378319,
+    "Fotograf*in": 4378324,
+    "Gutachter*in": 4378341,
+    "Hersteller*in": 4378345,
+    "Hersteller & Produzent": 4378346,
+    "Linolschneider*in": 4378391,
+    "Maler*in": 4378349,
+    "Maler*in des Originals": 4378397,
+    "Mäzen*atin": 4378399,
+    "Nachlasser*in": 4378407,
+    "Objektkünstler*in": 4378410,
     "Sammler*in": 4378427,
+    "Sammler*in des Originals": 4378428,
+    "Schnitzer*in": 4378432,
+    "Treuhänder*in": 4378446,
+    "Veräußerung": 4378452,
+    "Vermittler*in": 4378460,
     "Vorbesitzer*in": 4378466,
+    "Vorsänger*in": 4378470,
+    "Zeichner*in": 4378474,
 }
 
 erwerbungsarten = {
@@ -292,18 +320,37 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str]]:
     - We ignore Zusätze in front of ":"
     - and things like Lebensdaten in brackets
     """
-    beteiligteL = beteiligte.split(";")
-    for name_role in beteiligteL:
-        partsL = name_role.split(",")
-        name = ",".join(partsL[:-1]).strip()
-        name = name.split("(")[0].strip()  # returns list with orignal item if not split
-        try:
-            name = name.split(":")[1].strip()
-        except IndexError:
-            pass
+    exceptions = [  # name_roles with a comma, but no role
+        "Erwähnung: Musée Ribauri - Art Primitif, Ethnographie, Haute Epoque, Curiosités (1964/1965)",
+        "Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873)",
+    ]
 
-        role = partsL[-1].strip()
-        yield (name, role)
+    if beteiligte is not None:
+        beteiligteL = beteiligte.split(";")
+        for name_role in beteiligteL:
+            name_role = name_role.strip()
+            if name_role in exceptions:
+                name = name_role
+                role = None
+            elif "," in name_role:
+                partsL = name_role.split(",")
+                name = ",".join(partsL[:-1]).strip()
+                role = partsL[-1].strip()
+            else:
+                name = name_role
+                role = None
+            # cut off the dates in brackets
+            name = name.split("(")[
+                0
+            ].strip()  # returns list with orignal item if not split
+
+            # cut off the remarks in the beginning
+            try:
+                name = name.split(":")[1].strip()
+            except IndexError:
+                pass
+
+            yield (name, role)
 
 
 def _lookup_name(*, name: str, conf: dict) -> int | None:
