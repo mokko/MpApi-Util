@@ -89,9 +89,10 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         "<moduleReference name='ObjPerAssociationRef' targetModule='Person'/>"
     )
 
-    for count, (name, role) in enumerate(
-        _each_person(beteiligte), start=1
-    ):  # enumerate(, start=1):
+    for count, (name, role) in enumerate(_each_person(beteiligte), start=1):
+        if count > 1:
+            count = (count - 1) * 5
+
         nameID = _lookup_name(name=name, conf=conf)
         roleID = _lookup_role(role)
         print(f"{count} {name} [{role}] {nameID=} {roleID=}")
@@ -110,64 +111,6 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         record=recordM,
         xpath="//m:moduleReference[@name = 'ObjPerAssociationRef']",
         newN=mRefN,
-    )
-
-
-def set_ident(record: Module, *, ident: str, institution: str) -> None:
-    """
-    We take the str ident and in the rGrp ObjObjectNumberGrp, we create the following fields
-    - InventarNrSTxt,
-    - Part1Txt,
-    - Part2Txt,
-    - Part3Txt,
-    - Part4Txt,
-    - SortLnu,
-    - DenominationVoc,
-    - InvNumberSchemeRef
-
-    But we're changing ObjObjectNumberTxt
-        <dataField dataType="Varchar" name="ObjObjectNumberTxt">
-          <value>III C 192</value>
-        </dataField>
-
-    Why dont I need to set the namespace?
-    """
-    # ObjObjectNumberGrp
-    ident = ident.strip()
-    iFac = IdentNrFactory()
-    iNr = iFac.new_from_str(text=ident, institution=institution)
-    new_numberGrpN = iNr.get_node()
-    _new_or_replace(
-        record=record,
-        xpath="//m:repeatableGroup[@name = 'ObjObjectNumberGrp']",
-        newN=new_numberGrpN,
-    )
-
-    # ObjObjectNumberTxt
-    newN = etree.fromstring(f"""
-        <dataField name="ObjObjectNumberTxt">
-          <value>{ident}</value>
-        </dataField>
-    """)
-    _new_or_replace(
-        record=record, xpath="//m:dataField[@name = 'ObjObjectNumberTxt']", newN=newN
-    )
-
-
-def set_ident_sort(record: Module, *, nr: int) -> None:
-    """
-    Setting ObjObjectNumberSortedTxt
-    """
-    print(f"{nr=}")
-    newN = etree.fromstring(f"""
-        <dataField name="ObjObjectNumberSortedTxt">
-            <value>0003 C {nr:05d}</value>
-        </dataField>
-    """)
-    _new_or_replace(
-        record=record,
-        xpath="//m:dataField[@name = 'ObjObjectNumberSortedTxt']",
-        newN=newN,
     )
 
 
@@ -259,8 +202,33 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
     """
     I have the impression we shouldn't write to the field erwerbVon. Instead it goes to
     erwerbNotit or similar. TODO: confirm before I do anything.
+    instanceName="ObjAcquisitionNotesTypeVgr"
+
+    3570719 = Erwerbung von
+
+
     """
-    print(f"{von=}")
+    print(f"ErwerbungVon '{von}'")
+    newN = etree.fromstring(f"""
+    <repeatableGroup name="ObjAcquisitionNotesGrp">
+      <repeatableGroupItem>
+        <dataField name="MemoClb">
+          <value>{von}</value>
+        </dataField>
+        <dataField name="SortLnu">
+          <value>1</value>
+        </dataField>
+        <vocabularyReference name="TypeVoc" id="62641">
+          <vocabularyReferenceItem id="3570719"/>
+        </vocabularyReference>
+      </repeatableGroupItem>
+    </repeatableGroup>
+    """)
+    _new_or_replace(
+        record=recordM,
+        xpath="//m:repeatableGroup[@name = 'ObjAcquisitionNotesGrp']",
+        newN=newN,
+    )
 
 
 def set_geogrBezug(recordM: Module, *, name: str) -> None:
@@ -322,9 +290,90 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     )
 
 
+def set_ident(record: Module, *, ident: str, institution: str) -> None:
+    """
+    We take the str ident and in the rGrp ObjObjectNumberGrp, we create the following fields
+    - InventarNrSTxt,
+    - Part1Txt,
+    - Part2Txt,
+    - Part3Txt,
+    - Part4Txt,
+    - SortLnu,
+    - DenominationVoc,
+    - InvNumberSchemeRef
+
+    But we're changing ObjObjectNumberTxt
+        <dataField dataType="Varchar" name="ObjObjectNumberTxt">
+          <value>III C 192</value>
+        </dataField>
+
+    Why dont I need to set the namespace?
+    """
+    # ObjObjectNumberGrp
+    ident = ident.strip()
+    iFac = IdentNrFactory()
+    iNr = iFac.new_from_str(text=ident, institution=institution)
+    new_numberGrpN = iNr.get_node()
+    _new_or_replace(
+        record=record,
+        xpath="//m:repeatableGroup[@name = 'ObjObjectNumberGrp']",
+        newN=new_numberGrpN,
+    )
+
+    # ObjObjectNumberTxt
+    newN = etree.fromstring(f"""
+        <dataField name="ObjObjectNumberTxt">
+          <value>{ident}</value>
+        </dataField>
+    """)
+    _new_or_replace(
+        record=record, xpath="//m:dataField[@name = 'ObjObjectNumberTxt']", newN=newN
+    )
+
+
+def set_ident_sort(record: Module, *, nr: int) -> None:
+    """
+    Setting ObjObjectNumberSortedTxt
+    """
+    print(f"{nr=}")
+    newN = etree.fromstring(f"""
+        <dataField name="ObjObjectNumberSortedTxt">
+            <value>0003 C {nr:05d}</value>
+        </dataField>
+    """)
+    _new_or_replace(
+        record=record,
+        xpath="//m:dataField[@name = 'ObjObjectNumberSortedTxt']",
+        newN=newN,
+    )
+
+
 def set_objRefA(recordM: Module, *, keineAhnung: str) -> None:
     """
-    TODO
+    seqNo="0"
+    <formattedValue language="de">Vorgang: E 362/1844, Erwerbung: III/8/1909: III A 2667, 2668, Dolch, Axt, (Kordofan), Schenkung Werne (übertragen von III B 2 + 3 -- eigentl. betr. EJ Kunstkammer: Nr. 2105: III A [12-183 203, 204], III E [1-2] -- General Secret. Dielitz vom 23.02.1844,über die durch den Prof. Lepsius angekaufte Wernesch(e) Sammlung ethnographischer Gegenstände aus dem oberen Nil Stromgebiete., 1844, Ferdinand Werne (3.8.1800 - 2.9.1874)</formattedValue>
+    @name?
+
+    <composite name="ObjObjectCre">
+      <compositeItem >
+        <moduleReference name="ObjObjectARef" targetModule="Object" multiplicity="M:N" size="2">
+          <moduleReferenceItem moduleItemId="225082" uuid="225082">
+            <vocabularyReference name="TypeAVoc" id="30413" instanceName="ObjObjectTypeVgr">
+              <vocabularyReferenceItem id="4399791" name="Vorgang"/>
+            </vocabularyReference>
+            <vocabularyReference name="TypeBVoc" id="30413" instanceName="ObjObjectTypeVgr">
+              <vocabularyReferenceItem id="4399760" name="Objekt"/>
+            </vocabularyReference>
+            <vocabularyReference name="PreselectTypeAVoc" id="30413" instanceName="ObjObjectTypeVgr">
+              <vocabularyReferenceItem id="4399760" name="Objekt"/>
+            </vocabularyReference>
+            <vocabularyReference name="PreselectTypeBVoc" id="30413" instanceName="ObjObjectTypeVgr">
+              <vocabularyReferenceItem id="4399791" name="Vorgang"/>
+            </vocabularyReference>
+          </moduleReferenceItem>
+        </moduleReference>
+      </compositeItem>
+    </composite>
     """
     print(f"objRefA {keineAhnung=}")
 

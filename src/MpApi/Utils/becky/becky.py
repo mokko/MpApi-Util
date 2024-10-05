@@ -97,14 +97,14 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
     p = conf["project_dir"] / "debug.object.xml"
-    print(f">> Writing to '{p}'")
+    print(f">> Writing record to file '{p}'")
     recordM.toFile(path=p)
     if act:
         objId = conf["RIA"].create_item(item=recordM)
         print(f">> Created record {objId} in RIA ({row[0].value})")
-        p2 = conf["project_dir"] / f"debug.object{objId}.xml"
-        print(f">> Writing to '{p2}'")
-        recordM.toFile(path=p2)
+        # p2 = conf["project_dir"] / f"debug.object{objId}.xml"
+        # print(f">> Writing to '{p2}'")
+        # recordM.toFile(path=p2)
 
 
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
