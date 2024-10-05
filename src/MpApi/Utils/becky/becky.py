@@ -29,7 +29,7 @@ from mpapi.module import Module
 from mpapi.search import Search
 
 from MpApi.Utils.Ria import RIA, init_ria
-from MpApi.Utils.set_fields_Object import (
+from MpApi.Utils.becky.set_fields_Object import (
     set_ident,
     set_ident_sort,
     set_sachbegriff,
@@ -52,7 +52,22 @@ import tomllib
 # CONFIGURATION
 #
 
-conf_fn = "becky_conf.toml"  # in sdata
+
+def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
+    conf = _load_conf(conf_fn)
+    wb = load_workbook(conf["excel_fn"], data_only=True)
+    ws = wb[conf["sheet_title"]]  # sheet exists already
+
+    conf["RIA"] = init_ria()
+
+    print(f">> Getting template from RIA Object {conf['template_id']}")
+    conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
+
+    for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
+        per_row(idx=idx, row=row, conf=conf, act=act)
+        if limit == idx:
+            print(">> Limit reached")
+            break
 
 
 def create_record(*, row: tuple, conf: dict, act: bool) -> None:
@@ -87,23 +102,6 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         p2 = conf["project_dir"] / f"debug.object{objId}.xml"
         print(f">> Writing to '{p2}'")
         recordM.toFile(path=p2)
-
-
-def main(*, limit: int = -1, act: bool = False) -> None:
-    conf = _load_conf()
-    wb = load_workbook(conf["excel_fn"], data_only=True)
-    ws = wb[conf["sheet_title"]]  # sheet exists already
-
-    conf["RIA"] = init_ria()
-
-    print(f">> Getting template from RIA Object {conf['template_id']}")
-    conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
-
-    for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
-        per_row(idx=idx, row=row, conf=conf, act=act)
-        if limit == idx:
-            print(">> Limit reached")
-            break
 
 
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
@@ -147,30 +145,9 @@ def record_exists(*, ident: str, conf: dict) -> bool:
 #
 
 
-def _load_conf() -> dict:
-    global conf_fn
-    print(f">> Reading configuration '{conf_fn}' in sdata")
-    project_dir = Path(__file__).parents[1] / "sdata"
-    p = project_dir / conf_fn
-    with open(p, "rb") as toml_file:
+def _load_conf(conf_fn: str) -> dict:
+    print(f">> Reading configuration '{conf_fn}'")
+    with open(Path(conf_fn), "rb") as toml_file:
         conf = tomllib.load(toml_file)
-    conf["project_dir"] = project_dir
+    conf["project_dir"] = Path(__file__).parents[4] / "sdata"  # project_dir
     return conf
-
-
-#
-# script
-#
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--act", help="Actually change RIA", action="store_true")
-    parser.add_argument(
-        "-l",
-        "--limit",
-        help="Stop after a number of rows in Excel file are processed.",
-        type=int,
-    )
-    args = parser.parse_args()
-    main(limit=args.limit, act=args.act)

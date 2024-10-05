@@ -1,9 +1,9 @@
-from becky import _load_conf
+from MpApi.Utils.becky.becky import _load_conf
 
 # from mpapi.constants import get_credentials
 # from mpapi.search import Search
-from MpApi.Utils.person_cache import open_cache, save_cache
-from MpApi.Utils.set_fields_Object import _each_person, roles
+from MpApi.Utils.becky.person_cache import open_cache, save_cache
+from MpApi.Utils.becky.set_fields_Object import _each_person, roles
 from openpyxl import Workbook, load_workbook, worksheet
 from pathlib import Path
 

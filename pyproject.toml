@@ -35,6 +35,7 @@ Home = "https://github.com/mokko/MpApi-Util"
 [project.scripts]
 attach = 'MpApi.Utils:attacher'
 attach2 = 'MpApi.Utils:attacher2'
+becky = 'MpApi.Utils:becky'
 count = 'MpApi.Utils:count'
 #du = 'MpApi.Utils:du'
 #breplace = 'MpApi.Utils:replace'

@@ -12,7 +12,7 @@ from lxml import etree
 from lxml.etree import _Element
 from mpapi.module import Module
 from MpApi.Utils.identNr import IdentNrFactory
-from MpApi.Utils.person_cache import open_cache, save_cache
+from MpApi.Utils.becky.person_cache import open_cache, save_cache
 from pathlib import Path
 import re
 import tomllib
@@ -251,7 +251,8 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
 
 def set_erwerbVon(recordM: Module, *, von: str) -> None:
     """
-    TODO
+    I have the impression we shouldn't write to the field erwerbVon. Instead it goes to
+    erwerbNotit or similar. TODO: confirm before I do anything.
     """
     print(f"{von=}")
 

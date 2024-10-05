@@ -1,0 +1,9 @@
+# This file is here as an example for the conf file only 
+excel_fn = "C:/Users/M-MM0002/Work Folders/Eigene Dateien/Kamerun/Bis 10224 Abschrift_HK_Afrika_III_C.xlsx"
+excel_row_offset = 2  # first line that needs to be processed, 1-based
+institution = "EM"
+org_unit = "EMAfrika1"
+sheet_title = "Sheet1"
+template_id = 3659476  # Object
+person_cache = "person_cache.toml"
+

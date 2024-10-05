@@ -1,6 +1,6 @@
 """Higer-level tools for MpApi, the unofficial MuseumPlus Client in Python"""
 
-__version__ = "0.0.9"  # include mk_grp
+__version__ = "0.0.10"  # include becky
 import argparse
 
 from mpapi.client import MpApi
@@ -9,6 +9,7 @@ from mpapi.constants import get_credentials
 from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.attach2 import Attacher2
+from MpApi.Utils.becky.becky import becky_main
 from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.count import counter
 from MpApi.Utils.mover import Mover
@@ -23,15 +24,6 @@ import subprocess
 import sys
 
 user, pw, baseURL = get_credentials()
-
-
-def _version(args: dict) -> None:
-    """
-    Display version information and exit
-    """
-    if args.version:
-        print(f"Version: {__version__}")
-        sys.exit(0)
 
 
 def attacher():
@@ -50,7 +42,6 @@ def attacher():
         "-v", "--version", help="display version information", action="store_true"
     )
     args = parser.parse_args()
-    _version(args)
     a = Attacher()
     # an asset can only have one attachment
     match args.cmd:
@@ -93,7 +84,6 @@ def attacher2():
         "-v", "--version", help="display version information", action="store_true"
     )
     args = parser.parse_args()
-    _version(args)
 
     a = Attacher2(cache=args.cache, act=args.act)
     match args.cmd:
@@ -103,6 +93,20 @@ def attacher2():
             a.scandir()
         case "up":
             a.up()
+
+
+def becky():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("conf", help="Location of becky_conf.toml")
+    parser.add_argument("-a", "--act", help="Actually change RIA", action="store_true")
+    parser.add_argument(
+        "-l",
+        "--limit",
+        help="Stop after a number of rows in Excel file are processed.",
+        type=int,
+    )
+    args = parser.parse_args()
+    becky_main(conf_fn=args.conf, limit=args.limit, act=args.act)
 
 
 def count():
@@ -127,7 +131,6 @@ def count():
     )
 
     args = parser.parse_args()
-    _version(args)
 
     src_dir = Path()
     counter(src_dir=src_dir, filemask=args.filemask, show_size=args.size)
@@ -150,7 +153,6 @@ def mk_grp():
         "-v", "--version", help="display version information", action="store_true"
     )
     args = parser.parse_args()
-    _version(args)
     maker = MakeGroup(col=args.col, file=args.file, sheet=args.sheet, limit=args.limit)
 
 
@@ -170,7 +172,6 @@ def move():
     )
 
     args = parser.parse_args()
-    _version(args)
 
     m = Mover(limit=args.limit)
     match args.first:
@@ -200,7 +201,6 @@ def prepareUpload():
     )
 
     args = parser.parse_args()
-    _version(args)
 
     if not args.phase:
         raise SyntaxError("ERROR: Phase required!")
@@ -241,7 +241,6 @@ def reportX():
         "-v", "--version", help="display version information", action="store_true"
     )
     args = parser.parse_args()
-    _version(args)
     r = ReportX(limit=args.limit)
     r.write_report("reportx.xlsx")
 
@@ -316,7 +315,6 @@ def sren():
     parser.add_argument("second", help="second string", nargs="?", default=False)
 
     args = parser.parse_args()
-    _version(args)
 
     r = Sren(act=args.act, filemask=args.filemask, limit=args.limit)
     match args.cmd:
@@ -361,7 +359,6 @@ def upload():
     )
 
     args = parser.parse_args()
-    _version(args)
 
     u = AssetUploader(limit=args.limit)
     match args.cmd:
@@ -422,7 +419,6 @@ def update_schemas():
         "-v", "--version", help="display version info and exit", action="store_true"
     )
     args = parser.parse_args()
-    _version(args)
 
     if args.schemas_fn is None:  # setting default
         print("Using default schemas file.")
