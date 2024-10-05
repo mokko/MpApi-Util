@@ -201,9 +201,19 @@ def set_erwerbDatum(recordM: Module, *, datum: str) -> None:
 
 def set_erwerbNr(recordM: Module, *, nr: str) -> None:
     """
-    TODO
+    set ObjAcquisitionReferenceNrTxt
     """
-    print(f"{nr=}")
+    print(f"erwerbNr='{nr}'")
+    newN = etree.fromstring(f"""
+        <dataField name="ObjAcquisitionReferenceNrTxt">
+          <value>{nr}</value>
+        </dataField>
+    """)
+    _new_or_replace(
+        record=recordM,
+        xpath="//m:dataField[@name = 'ObjAcquisitionReferenceNrTxt']",
+        newN=newN,
+    )
 
 
 def set_erwerbungsart(recordM: Module, *, art: str) -> None:
@@ -217,7 +227,7 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
         artID = erwerbungsarten[art]
     except IndexError:
         raise IndexError(f"Erwerbungsart unbekannt: '{art}'")
-    print(f"Erwerbungsart={art} {artID=}")
+    print(f"Erwerbungsart='{art}' {artID=}")
     bemerkung = "Kamerun 2024"
 
     newN = etree.fromstring(f"""
