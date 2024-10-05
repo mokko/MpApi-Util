@@ -12,13 +12,19 @@ from lxml import etree
 from lxml.etree import _Element
 from mpapi.module import Module
 from MpApi.Utils.identNr import IdentNrFactory
-from MpApi.Utils.becky.person_cache import open_cache, save_cache
+from MpApi.Utils.becky.cache_ops import (
+    open_person_cache,
+    save_person_cache,
+    open_geo_cache,
+    save_geo_cache,
+)
 from pathlib import Path
 import re
 import tomllib
 from typing import Iterator
 
 person_data = {}
+geo_data = {}
 
 roles = {
     "Absender*in": 4378273,
@@ -259,9 +265,61 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
 
 def set_geogrBezug(recordM: Module, *, name: str) -> None:
     """
-    TODO
+    virtualField\@ObjGeograficVrt
+
+    <virtualField name="ObjGeograficVrt">
+      <value>Berlin</value>
+    </virtualField>
+
+    <repeatableGroup name="ObjGeograficGrp" size="1">
+      <repeatableGroupItem>
+        <dataField name="DetailsTxt">
+          <value>Berlin (Deutschland)</value>
+        </dataField>
+      </repeatableGroupItem>
+    </repeatableGroup>
     """
+
     print(f"geogrBezug {name=}")
+    newN = etree.fromstring(f"""
+        <virtualField name="ObjGeograficVrt">
+          <value>{name}</value>
+        </virtualField>
+    """)
+    _new_or_replace(
+        record=recordM,
+        xpath="//m:virtualField[@name = 'ObjGeograficVrt']",
+        newN=newN,
+    )
+
+    source = "Hauptkatalog"
+    notes = "Eintrag erstellt im Projekt Kamerun 2024"
+    # placeID = _lookup_place(name)
+    # assuming that there is only one item in the Excel always
+    # instanceName="GenPlaceVgr"
+    newN = etree.fromstring(f"""
+        <repeatableGroup name="ObjGeograficGrp">
+          <repeatableGroupItem>
+            <dataField name="SourceTxt">
+              <value>{source}</value>
+            </dataField>
+            <dataField name="NotesClb">
+              <value>{notes}</value>
+            </dataField>
+            <dataField dataType="Long" name="SortLnu">
+              <value>1</value>
+            </dataField>
+            <dataField name="DetailsTxt">
+              <value>{name}</value>
+            </dataField>
+          </repeatableGroupItem>
+        </repeatableGroup>
+    """)
+    _new_or_replace(
+        record=recordM,
+        xpath="//m:repeatableGroup[@name = 'ObjGeograficGrp']",
+        newN=newN,
+    )
 
 
 def set_objRefA(recordM: Module, *, keineAhnung: str) -> None:
@@ -367,7 +425,7 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str]]:
 def _lookup_name(*, name: str, conf: dict) -> int | None:
     global person_data
     if not person_data:  # cache empty
-        person_data = open_cache(conf)
+        person_data = open_person_cache(conf)
 
     try:
         atuple = person_data[name]  # currently ALWAYS using first name
@@ -380,6 +438,19 @@ def _lookup_name(*, name: str, conf: dict) -> int | None:
         return atuple[0]
     else:
         return None
+
+
+def _lookup_place(*, name: str, conf: dict) -> int:
+    """
+    Not used at the moment
+    """
+    global geo_data
+    if not geo_data:
+        geo_data = open_geo_cache(conf)
+    try:
+        return geo_data[name]
+    except KeyError:
+        raise TypeError(f"Unbekannter Ort: '{name}'!")
 
 
 def _lookup_role(role: str) -> int:

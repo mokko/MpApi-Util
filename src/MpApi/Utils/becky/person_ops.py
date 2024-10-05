@@ -3,7 +3,7 @@ import tomli_w
 from pathlib import Path
 
 
-def open_cache(conf: dict) -> dict:
+def open_person_cache(conf: dict) -> dict:
     cache_fn = conf["project_dir"] / conf["person_cache"]
     if not cache_fn.exists():
         print(">> Starting new person cache")
@@ -15,7 +15,7 @@ def open_cache(conf: dict) -> dict:
         return person_data
 
 
-def save_cache(*, conf: dict, data: dict) -> None:
+def save_person_cache(*, conf: dict, data: dict) -> None:
     print(">> Saving person cache")
     cache_fn = conf["project_dir"] / conf["person_cache"]
     # Write the data to a TOML file

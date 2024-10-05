@@ -55,6 +55,9 @@ import tomllib
 
 def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
     conf = _load_conf(conf_fn)
+    conf["project_dir"] = Path(__file__).parents[4] / "sdata"  # project_dir
+    print(f">> Setting project_dir '{conf['project_dir']}'")
+
     wb = load_workbook(conf["excel_fn"], data_only=True)
     ws = wb[conf["sheet_title"]]  # sheet exists already
 
@@ -149,5 +152,4 @@ def _load_conf(conf_fn: str) -> dict:
     print(f">> Reading configuration '{conf_fn}'")
     with open(Path(conf_fn), "rb") as toml_file:
         conf = tomllib.load(toml_file)
-    conf["project_dir"] = Path(__file__).parents[4] / "sdata"  # project_dir
     return conf
