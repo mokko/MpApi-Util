@@ -348,11 +348,12 @@ def set_ident_sort(record: Module, *, nr: int) -> None:
     )
 
 
-def set_objRefA(recordM: Module, *, keineAhnung: str) -> None:
+def set_objRefA(recordM: Module, *, Vorgang: str) -> None:
     """
     seqNo="0"
     <formattedValue language="de">Vorgang: E 362/1844, Erwerbung: III/8/1909: III A 2667, 2668, Dolch, Axt, (Kordofan), Schenkung Werne (übertragen von III B 2 + 3 -- eigentl. betr. EJ Kunstkammer: Nr. 2105: III A [12-183 203, 204], III E [1-2] -- General Secret. Dielitz vom 23.02.1844,über die durch den Prof. Lepsius angekaufte Wernesch(e) Sammlung ethnographischer Gegenstände aus dem oberen Nil Stromgebiete., 1844, Ferdinand Werne (3.8.1800 - 2.9.1874)</formattedValue>
     @name?
+    E 362/1844: objId 225082
 
     <composite name="ObjObjectCre">
       <compositeItem >
@@ -375,7 +376,8 @@ def set_objRefA(recordM: Module, *, keineAhnung: str) -> None:
       </compositeItem>
     </composite>
     """
-    print(f"objRefA {keineAhnung=}")
+    Vorgang = Vorgang.strip()
+    print(f"objRefA {Vorgang=}")
 
 
 def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:

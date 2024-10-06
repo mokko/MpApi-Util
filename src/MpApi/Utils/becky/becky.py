@@ -54,8 +54,7 @@ import tomllib
 
 
 def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
-    conf = _load_conf(conf_fn)
-    conf["project_dir"] = Path(__file__).parents[4] / "sdata"  # project_dir
+    conf = _load_conf(conf_fn)  # sets project_dir
     print(f">> Setting project_dir '{conf['project_dir']}'")
 
     wb = load_workbook(conf["excel_fn"], data_only=True)
@@ -92,7 +91,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     set_erwerbNr(recordM, nr=row[6].value)
     set_erwerbVon(recordM, von=row[7].value)
     set_geogrBezug(recordM, name=row[8].value)
-    set_objRefA(recordM, keineAhnung=row[9].value)
+    set_objRefA(recordM, Vorgang=row[9].value)
 
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
@@ -152,4 +151,5 @@ def _load_conf(conf_fn: str) -> dict:
     print(f">> Reading configuration '{conf_fn}'")
     with open(Path(conf_fn), "rb") as toml_file:
         conf = tomllib.load(toml_file)
+    conf["project_dir"] = Path(__file__).parents[4] / "sdata"  # project_dir
     return conf
