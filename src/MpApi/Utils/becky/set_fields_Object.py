@@ -15,8 +15,8 @@ from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.becky.cache_ops import (
     open_person_cache,
     save_person_cache,
-    open_geo_cache,
-    save_geo_cache,
+    open_archive_cache,
+    save_archive_cache,
 )
 from pathlib import Path
 import re
@@ -25,6 +25,7 @@ from typing import Iterator
 
 person_data = {}
 geo_data = {}
+archive_data = {}
 
 roles = {
     "Absender*in": 4378273,
@@ -233,7 +234,7 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
 
 def set_geogrBezug(recordM: Module, *, name: str) -> None:
     """
-    virtualField\@ObjGeograficVrt
+    virtualField/@ObjGeograficVrt
 
     <virtualField name="ObjGeograficVrt">
       <value>Berlin</value>
@@ -348,36 +349,53 @@ def set_ident_sort(record: Module, *, nr: int) -> None:
     )
 
 
-def set_objRefA(recordM: Module, *, Vorgang: str) -> None:
+def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     """
     seqNo="0"
     <formattedValue language="de">Vorgang: E 362/1844, Erwerbung: III/8/1909: III A 2667, 2668, Dolch, Axt, (Kordofan), Schenkung Werne (übertragen von III B 2 + 3 -- eigentl. betr. EJ Kunstkammer: Nr. 2105: III A [12-183 203, 204], III E [1-2] -- General Secret. Dielitz vom 23.02.1844,über die durch den Prof. Lepsius angekaufte Wernesch(e) Sammlung ethnographischer Gegenstände aus dem oberen Nil Stromgebiete., 1844, Ferdinand Werne (3.8.1800 - 2.9.1874)</formattedValue>
     @name?
     E 362/1844: objId 225082
 
-    <composite name="ObjObjectCre">
-      <compositeItem >
-        <moduleReference name="ObjObjectARef" targetModule="Object" multiplicity="M:N" size="2">
-          <moduleReferenceItem moduleItemId="225082" uuid="225082">
-            <vocabularyReference name="TypeAVoc" id="30413" instanceName="ObjObjectTypeVgr">
-              <vocabularyReferenceItem id="4399791" name="Vorgang"/>
-            </vocabularyReference>
-            <vocabularyReference name="TypeBVoc" id="30413" instanceName="ObjObjectTypeVgr">
-              <vocabularyReferenceItem id="4399760" name="Objekt"/>
-            </vocabularyReference>
-            <vocabularyReference name="PreselectTypeAVoc" id="30413" instanceName="ObjObjectTypeVgr">
-              <vocabularyReferenceItem id="4399760" name="Objekt"/>
-            </vocabularyReference>
-            <vocabularyReference name="PreselectTypeBVoc" id="30413" instanceName="ObjObjectTypeVgr">
-              <vocabularyReferenceItem id="4399791" name="Vorgang"/>
-            </vocabularyReference>
-          </moduleReferenceItem>
-        </moduleReference>
-      </compositeItem>
-    </composite>
+    4399791 Vorgang
+    4399760 Object
     """
     Vorgang = Vorgang.strip()
     print(f"objRefA {Vorgang=}")
+    global archive_data
+    if not archive_data:
+        archive_data = open_archive_cache(conf)
+    if Vorgang not in archive_data:
+        raise TypeError(f"Archival document not in cache '{Vorgang}'")
+
+    rel_objId = archive_data[Vorgang][0]
+
+    newN = etree.fromstring(f"""
+        <composite name="ObjObjectCre">
+          <compositeItem >
+            <moduleReference name="ObjObjectARef" targetModule="Object">
+              <moduleReferenceItem moduleItemId="{rel_objId}">
+                <vocabularyReference name="TypeAVoc" id="30413">
+                  <vocabularyReferenceItem id="4399791"/>
+                </vocabularyReference>
+                <vocabularyReference name="TypeBVoc" id="30413">
+                  <vocabularyReferenceItem id="4399760"/>
+                </vocabularyReference>
+                <vocabularyReference name="PreselectTypeAVoc">
+                  <vocabularyReferenceItem id="4399760"/>
+                </vocabularyReference>
+                <vocabularyReference name="PreselectTypeBVoc">
+                  <vocabularyReferenceItem id="4399791"/>
+                </vocabularyReference>
+              </moduleReferenceItem>
+            </moduleReference>
+          </compositeItem>
+        </composite>
+    """)
+    _new_or_replace(
+        record=recordM,
+        xpath="//m:composite[@name = 'ObjObjectCre']",
+        newN=newN,
+    )
 
 
 def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:

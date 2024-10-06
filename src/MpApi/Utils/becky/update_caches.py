@@ -55,7 +55,8 @@ def query_archives(*, ident: str, client: RIA) -> list:
     If there is no such record, returns empty list.
     """
     if ident is None:
-        #it's purrfectly allowed for an Excel cell to be empty
+        # it's purrfectly allowed for an Excel cell to be empty
+        print("ident is None")
         return list()
     else:
         archive_ident = ident.strip()
@@ -99,14 +100,10 @@ def update_archive(*, conf: dict, sheet: worksheet, limit: int) -> None:
     client = init_ria()
     for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
         # print(f"Line {idx}")
-        objRefA = row[9].value
         font_color = row[9].font.color  # relying on red font
         if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
-            if objRefA not in archive_data:
-                print(f">> querying archives '{objRefA}'")
-                idL = query_archives(ident=objRefA, client=client)
-                archive_data[objRefA] = idL
-        if idx % 25 == 0:
+            _per_red_cell(row[9].value, data=archive_data, client=client)
+        if idx % 500 == 0:
             save_archive_cache(data=archive_data, conf=conf)
         if limit == idx:
             save_archive_cache(data=archive_data, conf=conf)
@@ -144,6 +141,36 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
             print(">> Limit reached")
             break
     save_person_cache(data=person_data, conf=conf)
+
+
+#
+# private
+#
+def _per_red_cell(cell: str, *, data: dict, client: RIA) -> None:
+    # may contain multiple values separated by ;
+    if cell is not None:
+        identL = cell.split(";")  #
+        identL = [element.strip() for element in identL]
+
+        for ident in identL:
+            if ident in data:
+                if len(data[ident]) == 0:
+                    # Do we want to re-check empty lists?
+                    # ident exists, but list is empty
+                    # _query_archives(ident, client, data)
+                    pass
+            else:  # ident not (yet) in cache
+                if ident is None:
+                    data[ident] = list()
+                else:
+                    _query_archives(ident, client, data)
+
+
+def _query_archives(ident: str, client: RIA, data: dict) -> None:
+    print(f">> querying archives '{ident}'")
+    idL = query_archives(ident=ident, client=client)
+    print(f"{idL=}")
+    data[ident] = idL  # may be empty list
 
 
 #

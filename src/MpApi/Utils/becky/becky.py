@@ -91,7 +91,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     set_erwerbNr(recordM, nr=row[6].value)
     set_erwerbVon(recordM, von=row[7].value)
     set_geogrBezug(recordM, name=row[8].value)
-    set_objRefA(recordM, Vorgang=row[9].value)
+    set_objRefA(recordM, Vorgang=row[9].value, conf=conf)
 
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
@@ -100,7 +100,10 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     recordM.toFile(path=p)
     if act:
         objId = conf["RIA"].create_item(item=recordM)
-        print(f">> Created record {objId} in RIA ({row[0].value})")
+        print(f">> Created record {objId} in RIA '{row[0].value}'")
+    else:
+        print(f">> Not creating record in RIA '{row[0].value}' (since no act)")
+
         # p2 = conf["project_dir"] / f"debug.object{objId}.xml"
         # print(f">> Writing to '{p2}'")
         # recordM.toFile(path=p2)
