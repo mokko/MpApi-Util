@@ -6,6 +6,10 @@ Set refers here to the following process: If there is a field already, overwrite
 there is none, we create it.
 
 We don't use return values here, but rather change the record in place (reference)
+
+TODO
+Do we need to check if arguments are empty? Where is that test?
+
 """
 
 from lxml import etree
@@ -123,7 +127,7 @@ def set_erwerbDatum(recordM: Module, *, datum: str) -> None:
     delete old entries from the template.
     """
     print(f"Erwerb.datum={datum}")
-    quelle = "Hauptkatalog / Kamerun 2024"
+    quelle = "Hauptkatalog / #KP24"
     newN = etree.fromstring(f"""
         <repeatableGroup name="ObjAcquisitionDateGrp">
           <repeatableGroupItem>
@@ -178,7 +182,7 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
     except IndexError:
         raise IndexError(f"Erwerbungsart unbekannt: '{art}'")
     print(f"Erwerbungsart='{art}' {artID=}")
-    bemerkung = "Kamerun 2024"
+    bemerkung = "#KP24"
 
     newN = etree.fromstring(f"""
         <repeatableGroup name="ObjAcquisitionMethodGrp">
@@ -262,7 +266,7 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     )
 
     source = "Hauptkatalog"
-    notes = "Eintrag erstellt im Projekt Kamerun 2024"
+    notes = "Eintrag erstellt im Projekt #KP24"
     # placeID = _lookup_place(name)
     # assuming that there is only one item in the Excel always
     # instanceName="GenPlaceVgr"
@@ -349,6 +353,53 @@ def set_ident_sort(record: Module, *, nr: int) -> None:
     )
 
 
+def set_invNotiz(record: Module, bemerkung: str) -> None:
+    """
+    UNTESTED
+    z.B. "Kein geographischer Bezug genannt" (Zeile 16255 im Excel)
+
+    <repeatableGroup name="ObjEditorNotesGrp" size="1">
+      <repeatableGroupItem id="42033280" uuid="0983f3b6-ecb5-4f5b-bba1-6d901ff766c8">
+        <dataField dataType="Clob" name="NotesClb">
+          <value>GeoBezug, Ansetzung angepasst</value>
+        </dataField>
+        <dataField dataType="Long" name="SortLnu">
+          <value>5</value>
+          <formattedValue language="de">5</formattedValue>
+        </dataField>
+        <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
+          <vocabularyReferenceItem id="4407670" name="Redaktionelle Notiz">
+            <formattedValue language="de">Redaktionelle Notiz</formattedValue>
+          </vocabularyReferenceItem>
+        </vocabularyReference>
+      </repeatableGroupItem>
+    </repeatableGroup>
+    4407671 = InventarNotiz
+    """
+    if len(bemerkung) > 0:
+        newN = etree.fromstring(f"""
+        <repeatableGroup name="ObjEditorNotesGrp">
+          <repeatableGroupItem>
+            <dataField dataType="Clob" name="NotesClb">
+              <value>{bemerkung}</value>
+            </dataField>
+            <dataField dataType="Long" name="SortLnu">
+              <value>5</value>
+            </dataField>
+            <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
+              <vocabularyReferenceItem id="4407671"/> 
+            </vocabularyReference>
+          </repeatableGroupItem>
+        </repeatableGroup>
+        """)
+
+        _new_or_replace(
+            record=recordM,
+            xpath="//m:repeatableGroup[@name = 'ObjEditorNotesGrp']",
+            newN=newN,
+        )
+
+
 def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     """
     seqNo="0"
@@ -406,7 +457,7 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
 
     We will NOT fill this out
     <virtualField name="ObjObjectVrt">
-      <value>1234567, Pfeile, Testdatensatz für Kamerun-Projekt (Template/Vorlage)</value>
+      <value>1234567, Pfeile, Testdatensatz für #KP24 (Template/Vorlage)</value>
     </virtualField>
     """
     print(f"{sachbegriff=}")
@@ -431,7 +482,7 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
               <value>true</value>
             </dataField>
             <dataField name="NotesClb">
-              <value>vereinfachter Sachbegriff aus Hauptkatalog (Kamerun 2024)</value>
+              <value>vereinfachter Sachbegriff aus Hauptkatalog (#KB24)</value>
             </dataField>
             <dataField name="SortLnu">
               <value>1</value>

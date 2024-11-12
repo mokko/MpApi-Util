@@ -39,6 +39,7 @@ from MpApi.Utils.becky.set_fields_Object import (
     set_erwerbNr,
     set_erwerbVon,
     set_geogrBezug,
+    set_invNotiz,
     set_objRefA,
 )
 from MpApi.Utils.Xls import Xls
@@ -79,7 +80,6 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         raise TypeError("Template does not have a single record")
 
     recordM = deepcopy(conf["templateM"])  # so we dont change the original template
-    recordM
     set_ident(
         recordM, ident=row[0].value, institution=conf["institution"]
     )  # from Excel as str
@@ -92,6 +92,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     set_erwerbVon(recordM, von=row[7].value)
     set_geogrBezug(recordM, name=row[8].value)
     set_objRefA(recordM, Vorgang=row[9].value, conf=conf)
+    set_invNotiz(recordM, Vorgang=row[10].value)  # Spalte L rarely filled-in
 
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
