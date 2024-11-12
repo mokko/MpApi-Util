@@ -376,6 +376,9 @@ def set_invNotiz(record: Module, bemerkung: str) -> None:
     </repeatableGroup>
     4407671 = InventarNotiz
     """
+    if bemerkung is None:
+        return
+
     if len(bemerkung) > 0:
         newN = etree.fromstring(f"""
         <repeatableGroup name="ObjEditorNotesGrp">

@@ -92,7 +92,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     set_erwerbVon(recordM, von=row[7].value)
     set_geogrBezug(recordM, name=row[8].value)
     set_objRefA(recordM, Vorgang=row[9].value, conf=conf)
-    set_invNotiz(recordM, Vorgang=row[10].value)  # Spalte L rarely filled-in
+    set_invNotiz(recordM, bemerkung=row[10].value)  # Spalte L rarely filled-in
 
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
