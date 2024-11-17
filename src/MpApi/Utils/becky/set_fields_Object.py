@@ -88,6 +88,9 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     """
     setting ObjPerAssociationRef
     """
+    if _is_space_etc(beteiligte):
+        return None
+
     print(f"{beteiligte=}")
 
     mRefN = etree.fromstring(
@@ -126,6 +129,10 @@ def set_erwerbDatum(recordM: Module, *, datum: str) -> None:
     N.B. Whe I requested to use dataField[@name = 'ObjAcquisitionDateGrp'], RIA didnn't
     delete old entries from the template.
     """
+
+    if _is_space_etc(str(datum)):
+        return None
+
     print(f"Erwerb.datum={datum}")
     quelle = "Hauptkatalog / #KP24"
     newN = etree.fromstring(f"""
@@ -157,6 +164,9 @@ def set_erwerbNr(recordM: Module, *, nr: str) -> None:
     """
     set ObjAcquisitionReferenceNrTxt
     """
+    if _is_space_etc(nr):
+        return None
+
     print(f"erwerbNr='{nr}'")
     newN = etree.fromstring(f"""
         <dataField name="ObjAcquisitionReferenceNrTxt">
@@ -176,6 +186,9 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
 
     instanceName="ObjAcquisitionMethodVgr"
     """
+    if _is_space_etc(art):
+        return None
+
     global erwerbungsarten
     try:
         artID = erwerbungsarten[art]
@@ -213,6 +226,9 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
 
 
     """
+    if _is_space_etc(von):
+        return None
+
     print(f"ErwerbungVon '{von}'")
     newN = etree.fromstring(f"""
     <repeatableGroup name="ObjAcquisitionNotesGrp">
@@ -252,6 +268,8 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
       </repeatableGroupItem>
     </repeatableGroup>
     """
+    if _is_space_etc(name):
+        return None
 
     print(f"geogrBezug {name=}")
     newN = etree.fromstring(f"""
@@ -315,6 +333,9 @@ def set_ident(record: Module, *, ident: str, institution: str) -> None:
     Why dont I need to set the namespace?
     """
     # ObjObjectNumberGrp
+    if _is_space_etc(ident):
+        return None
+
     ident = ident.strip()
     iFac = IdentNrFactory()
     iNr = iFac.new_from_str(text=ident, institution=institution)
@@ -340,7 +361,11 @@ def set_ident_sort(record: Module, *, nr: int) -> None:
     """
     Setting ObjObjectNumberSortedTxt
     """
+    if not _is_int(nr):
+        return None
+
     print(f"{nr=}")
+
     newN = etree.fromstring(f"""
         <dataField name="ObjObjectNumberSortedTxt">
             <value>0003 C {nr:05d}</value>
@@ -376,31 +401,30 @@ def set_invNotiz(record: Module, bemerkung: str) -> None:
     </repeatableGroup>
     4407671 = InventarNotiz
     """
-    if bemerkung is None:
-        return
+    if _is_space_etc(bemerkung):
+        return None
 
-    if len(bemerkung) > 0:
-        newN = etree.fromstring(f"""
-        <repeatableGroup name="ObjEditorNotesGrp">
-          <repeatableGroupItem>
-            <dataField dataType="Clob" name="NotesClb">
-              <value>{bemerkung}</value>
-            </dataField>
-            <dataField dataType="Long" name="SortLnu">
-              <value>5</value>
-            </dataField>
-            <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
-              <vocabularyReferenceItem id="4407671"/> 
-            </vocabularyReference>
-          </repeatableGroupItem>
-        </repeatableGroup>
-        """)
+    newN = etree.fromstring(f"""
+    <repeatableGroup name="ObjEditorNotesGrp">
+      <repeatableGroupItem>
+        <dataField dataType="Clob" name="NotesClb">
+          <value>{bemerkung}</value>
+        </dataField>
+        <dataField dataType="Long" name="SortLnu">
+          <value>5</value>
+        </dataField>
+        <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
+          <vocabularyReferenceItem id="4407671"/> 
+        </vocabularyReference>
+      </repeatableGroupItem>
+    </repeatableGroup>
+    """)
 
-        _new_or_replace(
-            record=recordM,
-            xpath="//m:repeatableGroup[@name = 'ObjEditorNotesGrp']",
-            newN=newN,
-        )
+    _new_or_replace(
+        record=recordM,
+        xpath="//m:repeatableGroup[@name = 'ObjEditorNotesGrp']",
+        newN=newN,
+    )
 
 
 def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
@@ -413,6 +437,9 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     4399791 Vorgang
     4399760 Object
     """
+    if _is_space_etc(Vorgang):
+        return None
+
     Vorgang = Vorgang.strip()
     print(f"objRefA {Vorgang=}")
     global archive_data
@@ -463,6 +490,9 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
       <value>1234567, Pfeile, Testdatensatz für #KP24 (Template/Vorlage)</value>
     </virtualField>
     """
+    if _is_space_etc(sachbegriff):
+        return None
+
     print(f"{sachbegriff=}")
 
     # Sachbegriff Ausg
@@ -541,7 +571,6 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str]]:
                 name = name.split(":")[1].strip()
             except IndexError:
                 pass
-
             yield (name, role)
 
 
@@ -599,3 +628,44 @@ def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
         parentN.append(newN)
     else:
         oldN.getparent().replace(oldN, newN)
+
+
+def _is_space_etc(value: str | None) -> bool:
+    """
+    Expects a string or None. Returns True if value is None or an empty string ('') or
+    an de facto empty string (e.g. ' '). Otherwise return False.
+
+    Currently, dies if you pass in an int instead of an str which is not so bad since it
+    points to a problem we should be aware of.
+
+    Could be better tested.
+    """
+
+    if not isinstance(value, str) and not value is None:
+        raise TypeError(f"Value should be str|None, but it's not! {value}")
+
+    match value:
+        case None | "":
+            return True
+        case value if value.isspace():
+            return True
+        case _:
+            return False
+
+
+def _is_int(value: int | None) -> bool:
+    """
+    Expects int or None. Returns True if is an integer or false otherwise.
+
+    TODO: Test if it dies on error.
+    """
+    if not isinstance(value, int) and not value is None:
+        raise TypeError(f"Value should be int|None, but it's not! {value}")
+
+    match value:
+        case None:
+            return False
+        case int():
+            return True
+        case _:
+            return False
