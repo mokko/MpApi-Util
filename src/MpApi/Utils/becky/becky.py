@@ -116,6 +116,8 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
         print(f"{idx}: {ident} red")
         if record_exists(ident=ident, conf=conf):
+            # Wollen wir hier fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
+            # nicht eingetragen wurden?
             print(f"   Record '{ident}' exists already")
         else:
             create_record(row=row, conf=conf, act=act)

@@ -94,7 +94,7 @@ def query_persons(*, name: str, client: RIA) -> list:
 
 
 def update_archive(*, conf: dict, sheet: worksheet, limit: int) -> None:
-    print(f">> Loading archive cache '{conf["archive_cache"]}'")
+    print(f">> Loading archive cache '{conf['archive_cache']}'")
     archive_data = open_archive_cache(conf)
     print(">> Looping thru excel looking for archival documents' idents")
     client = init_ria()
@@ -113,7 +113,7 @@ def update_archive(*, conf: dict, sheet: worksheet, limit: int) -> None:
 
 
 def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
-    print(f">> Loading person cache '{conf["person_cache"]}'")
+    print(f">> Loading person cache '{conf['person_cache']}'")
     person_data = open_person_cache(conf)
 
     print(">> Looping thru excel looking for names")

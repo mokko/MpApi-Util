@@ -855,7 +855,8 @@ class AssetUploader(BaseApp):
             if idL is None:
                 print("\tcreatorID not found")
             else:
-                cells["creatorID"].value = "; ".join(idL)
+                idL_str = [str(ID) for ID in idL]
+                cells["creatorID"].value = "; ".join(idL_str)
                 # print(cells["creatorID"].value)
 
     def _write_photographer(self, cells, path):

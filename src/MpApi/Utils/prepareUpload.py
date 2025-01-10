@@ -79,7 +79,7 @@ import logging
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.identNr import IdentNrFactory
-from MpApi.Utils.logic import extractIdentNr, not_suspicious
+from MpApi.Utils.logic import extractIdentNr, extract_weitereNr, not_suspicious
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.Xls import Xls
 from openpyxl.styles import Alignment, Font
@@ -107,6 +107,7 @@ class PrepareUpload(BaseApp):
 
         self.wb = self.xls.get_or_create_wb()
         self.ws = self.xls.get_or_create_sheet(title="Prepare")
+        self.fortlaufendeNr = 0  # for weitere_nr to create new identNrs
 
     #
     # public
@@ -194,56 +195,62 @@ class PrepareUpload(BaseApp):
                 "col": "B",
                 "width": 15,
             },
+            "wNr": {
+                "label": "weitere Nr",
+                "desc": "aus Dateiname",
+                "col": "C",
+                "width": 15,
+            },
             "assetUploaded": {
                 "label": "Asset hochgeladen?",
                 "desc": "mulId(s) aus RIA",
-                "col": "C",
+                "col": "D",
                 "width": 15,
             },
             "objIds": {
                 "label": "objId(s) aus RIA",
                 "desc": "für diese IdentNr",
-                "col": "D",
+                "col": "E",
                 "width": 15,
             },
             "partsObjIds": {
                 "label": "Teile/Ganzes",
                 "desc": "objId für Teile/Ganzes",
-                "col": "E",
+                "col": "F",
                 "width": 20,
             },
             "candidate": {
                 "label": "Kandidat",
                 "desc": "neue Objekte erzeugen?",
-                "col": "F",
+                "col": "G",
                 "width": 7,
             },
             "notes": {
                 "label": "Bemerkung",
                 "desc": "",
-                "col": "G",
+                "col": "H",
                 "width": 20,
             },
             "fullpath": {
                 "label": "Pfad",
                 "desc": "aus Verzeichnis",
-                "col": "H",
+                "col": "I",
                 "width": 115,
             },
             "schema": {
                 "label": "Schema",
                 "desc": "aus IdentNr",
-                "col": "I",
+                "col": "J",
             },
             "schemaId": {
                 "label": "SchemaId",
                 "desc": "aus IdentNr",
-                "col": "J",
+                "col": "K",
             },
             "duplicate": {
                 "label": "Duplikat",
                 "desc": "aus IdentNr",
-                "col": "K",
+                "col": "L",
             },
         }
         return desc
@@ -294,10 +301,16 @@ class PrepareUpload(BaseApp):
                 break
         print(f"* {len(file_list)} new files found")
         known_idents: set[str] = set()  # mark duplicates
+        known_weitere_nr = dict()  # cache for weitereNr
 
         c = self.xls.real_max_row(sheet=self.ws) + 1
         for path in sorted(file_list):
-            self._scan_per_row(c=c, path=path, known_idents=known_idents)
+            self._scan_per_row(
+                c=c,
+                path=path,
+                known_idents=known_idents,
+                known_weitere_nr=known_weitere_nr,
+            )
             print(f"sd {c} of {len(file_list)}")
             if c % 500 == 0:
                 self.xls.save()
@@ -379,6 +392,24 @@ class PrepareUpload(BaseApp):
             objIds.add(new_id)
         objIds_str = "; ".join(str(objId) for objId in objIds)
         return objIds_str
+
+    def _determine_ident(self, path: Path, known_weitere_nr: dict) -> (str, str):
+        if self.parser == "iitm":
+            print("INFO: iitm identNr/weitereNr parser")
+            wNr = extract_weitereNr(path=path)
+            if wNr in known_weitere_nr:
+                # return the identNr associated with this wNr
+                identNr = known_weitere_nr[wNr]
+            else:
+                # make the next identNr
+                # update the cache where wNr is associated with identNr
+                self.fortlaufendeNr += 1
+                identNr = f"VII OA 1003.{self.fortlaufendeNr}"
+                known_weitere_nr[wNr] = identNr
+        else:
+            wNr = None
+            identNr = extractIdentNr(path=path, parser=self.parser)
+        return identNr, wNr
 
     def _fill_in_candidate(self, c) -> None:
         if c["schemaId"].value is None or c["schemaId"].value == "None":
@@ -493,33 +524,40 @@ class PrepareUpload(BaseApp):
                 c["partsObjIds"].value = "None"
             c["partsObjIds"].alignment = Alignment(wrap_text=True)
 
-    def _scan_per_row(self, *, c: int, path: Path, known_idents: set) -> None:
+    def _scan_per_row(
+        self, *, c: int, path: Path, known_idents: set, known_weitere_nr: set
+    ) -> None:
         """
-        c: row count
-        specific to this scandisk task of prepare command
-
+        During the scandisk process we fill in a couple of columns per file
+        - Dateiname
+        - identNr
+        - weitereNr
+        - abs. Pfad
         writes to self.ws
         """
-        identNr = extractIdentNr(path=path, parser=self.parser)
-        identNrF = IdentNrFactory()
-        print(f"   {path.name} -> {identNr}")
+        identNr, wNr = self._determine_ident(path, known_weitere_nr)
+        print(f"   {path.name} -> {identNr} {wNr=}")
+
         self.ws[f"A{c}"] = path.name
         self.ws[f"B{c}"] = str(identNr)
-        self.ws[f"H{c}"] = str(path.absolute())
+        if wNr is not None:
+            self.ws[f"C{c}"] = wNr
+        self.ws[f"I{c}"] = str(path.absolute())
         self.xls.set_change()
 
         if identNr is not None:
+            identNrF = IdentNrFactory()
             schema = identNrF._extract_schema(text=identNr)
         else:
             schema = "None"
-        self.ws[f"I{c}"] = schema
+        self.ws[f"J{c}"] = schema
 
         try:
             schemaId = self.schemas[schema]["schemaId"]
-            self.ws[f"J{c}"] = schemaId
+            self.ws[f"K{c}"] = schemaId
         except:
-            self.ws[f"J{c}"] = "None"
-            self.ws[f"J{c}"].font = red
+            self.ws[f"K{c}"] = "None"
+            self.ws[f"K{c}"].font = red
 
         if self._suspicious_characters(identNr=identNr):
             for x in "ABCDEF":
@@ -530,7 +568,7 @@ class PrepareUpload(BaseApp):
 
         if identNr in known_idents:
             self.ws[f"B{c}"].font = red
-            self.ws[f"K{c}"] = "Duplikat"
+            self.ws[f"L{c}"] = "Duplikat"
             # print(f"Duplikat {identNr}")
         known_idents.add(identNr)
 
@@ -544,10 +582,6 @@ class PrepareUpload(BaseApp):
             return True
         elif "  " in identNr:
             logging.info(f"{msg} double space {identNr}")
-            return True
-        elif "." in identNr:
-            # TODO seems that identNr with . are not mrked
-            logging.info(f"{msg} unwanted symbol {identNr}")
             return True
         # elif " " not in identNr:
         #    logging.info(f"{msg} missing space {identNr}")

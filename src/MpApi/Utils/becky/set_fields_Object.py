@@ -98,16 +98,18 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     )
 
     for count, (name, role) in enumerate(_each_person(beteiligte), start=1):
-        if count > 1:
-            count = (count - 1) * 5
+        if count == 1:
+            sort = 1
+        elif count > 1:
+            sort = (count - 1) * 5
 
-        nameID = _lookup_name(name=name, conf=conf)
-        roleID = _lookup_role(role)
-        print(f"{count} {name} [{role}] {nameID=} {roleID=}")
+        nameID = _lookup_name(name=name, conf=conf)  # raises if unknown
+        roleID = _lookup_role(role)  # raises if unknown
+        print(f"{count} {sort} {name} [{role}] {nameID=} {roleID=}")
         mRefItemN = etree.fromstring(f"""
             <moduleReferenceItem moduleItemId="{nameID}">
               <dataField dataType="Long" name="SortLnu">
-                <value>{count}</value>
+                <value>{sort}</value>
               </dataField>
               <vocabularyReference name="RoleVoc" id="30423" instanceName="ObjPerAssociationRoleVgr">
                 <vocabularyReferenceItem id="{roleID}"/>

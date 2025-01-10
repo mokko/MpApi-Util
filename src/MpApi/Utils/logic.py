@@ -33,13 +33,17 @@ def extractIdentNr(*, path: Path, parser: str) -> str:
             return parse_AKu(path)
         case "EM":
             return parse_EM(path)
+        case "iitm":
+            raise SyntaxError("We should never get here")
+        case "old":
+            return parse_old(path)
         case _:
             raise ConfigError(f"Unknown identNr parser: {parser}!")
 
 
 def fortlaufende_Nummer(identNr: str) -> str:
     """
-    Return the actual fortlaufende Nummer as integer.
+    Return the actual fortlaufende Nummer from identNr as integer.
 
     Definition "fortlaufende Nummer" is the number(actually: string) that defines the
     main object:
@@ -56,7 +60,6 @@ def fortlaufende_Nummer_pos(identNr: str) -> int:
     """
     Return the position of the first "fortlaufende Nummer".
     Expects a identNr-like object as string. Counts zero-based.
-
 
     New
     - identNrParserError if no fortlaufende_Nummer not found
@@ -297,7 +300,23 @@ def parse_EM(path: Path) -> str:
     return new
 
 
-def parse_old(*, path: Path) -> str | None:
+def extract_weitereNr(path: Path) -> str | None:
+    """
+    We want to take Fiche No from the file name
+
+    Currently, only used for iitm
+    """
+    stem = str(path.name).split(".")[0]  # if there is no ., we take the whole?
+    part = stem.split(" Rückseite")[0]
+    part = part.replace(" -", "-")
+    part = part.replace(" +", "+")
+    part = part.replace(" à ", "-")
+    wNr = part.split(" Foto")[0].strip()
+    print(f"Extracted WeitereNr: {wNr}")
+    return wNr
+
+
+def parse_old(path: Path) -> str | None:
     """
     Attempts to extract the full identifier (identNr) from a filename.
     Multiple file extensions are ignored, only the real_stem is processed.
