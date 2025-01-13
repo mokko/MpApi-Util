@@ -65,6 +65,12 @@ cases = {
         3: "23052",
         4: "(126)",
     },
+    "VII OA 1005.12": {
+        1: "VII",
+        2: " OA",
+        3: "1005",
+        4: "12",
+    },
 }
 
 
@@ -92,8 +98,8 @@ def test_cases_EM():
 
 
 def test_cases_AKu():
-    f = IdentNrFactory(institution="AKu")
-    iNr = f.new_from_str(text="IV/AKu/000059")
+    f = IdentNrFactory()
+    iNr = f.new_from_str(text="IV/AKu/000059", institution="AKu")
     assert iNr.part1 == "IV"
     assert iNr.part2 == "AKu"
     assert iNr.part3 == "000059"

@@ -169,7 +169,7 @@ class IdentNrFactory:
         iNr.text = text
 
         m = re.match(
-            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\,\-<>() ]*)", text
+            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\.\,\-<>() ]*)", text
         )
 
         if m is None:
@@ -178,7 +178,8 @@ class IdentNrFactory:
         iNr.part1 = m.group(1)
         iNr.part2 = m.group(2)
         iNr.part3 = m.group(3)
-        iNr.part4 = m.group(4).lstrip()
+        iNr.part4 = m.group(4).lstrip().lstrip(".")
+
         iNr.schema = f"{m.group(1)}{m.group(2)}"
         return iNr
 
@@ -233,7 +234,7 @@ class IdentNrFactory:
 
     def new_from_str(self, *, text: str, institution: str = "EM") -> IdentNr:
         match institution:
-            case "EM":
+            case "EM" | "iitm":
                 iNr = self._parser_EM(text)  #  eg. V A Dlg 1234 a,b
             case "AKu":
                 iNr = self._parser_AKu(text)

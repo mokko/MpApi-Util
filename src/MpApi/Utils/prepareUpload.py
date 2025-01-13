@@ -75,13 +75,16 @@ TODO
 - Make use of the log file
 """
 
+from copy import deepcopy
 import logging
+from lxml import etree
 from mpapi.constants import get_credentials
 from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.logic import extractIdentNr, extract_weitereNr, not_suspicious
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.Xls import Xls
+from mpapi.module import Module
 from openpyxl.styles import Alignment, Font
 from pathlib import Path
 
@@ -141,23 +144,17 @@ class PrepareUpload(BaseApp):
     def create_objects(self) -> None:
         """
         Loop thru excel objId column. Act for rows where candidates = "x" or "X".
-        For those, create a new object record in RIA using template record mentioned in
-        the configuration (templateID).
+        Create a new object record in RIA copying a template record (templateID).
 
         Write the objId(s) of the newly created records in candidate column.
         """
 
         self._check_create_objects()
-        temp_str = self.xls.get_conf_required(cell="B1")
 
-        ttype, tid = temp_str.split()
-        ttype = ttype.strip()  # do i need to strip?
-        tid_int = int(tid.strip())
-        print(f"***template: {ttype} {tid}")
+        template_type, template_id = self._template_from_conf("B1")
+        print(f"***template: {template_type} {template_id}")
 
-        self.xls.raise_if_no_content(sheet=self.ws)
-
-        templateM = self.client.get_template(ID=tid_int, mtype=ttype)
+        templateM = self.client.get_template(ID=template_id, mtype=template_type)
         # templateM.toFile(path="debug.template.xml")
 
         for c, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
@@ -171,7 +168,9 @@ class PrepareUpload(BaseApp):
                 cand_str = c["candidate"].value.strip().lower()
                 if cand_str == "x":
                     objIds_str = self._create_object(
-                        identNrs=c["identNr"].value, template=templateM
+                        identNrs=c["identNr"].value,
+                        template=templateM,
+                        wNr=c["wNr"].value,
                     )
                     c["objIds"].value = objIds_str
                     c["candidate"].value = None
@@ -366,6 +365,7 @@ class PrepareUpload(BaseApp):
         self.xls.raise_if_conf_value_missing(required)
         self.filemask = self.xls.get_conf_required(cell="B3")
         print(f"Using filemask {self.filemask}")
+        self.xls.raise_if_no_content(sheet=self.ws)
 
     def _check_scandir(self) -> None:
         self.xls.raise_if_not_initialized(sheet=self.ws)
@@ -377,7 +377,7 @@ class PrepareUpload(BaseApp):
         identNrF = IdentNrFactory()
         self.schemas = identNrF.get_schemas()
 
-    def _create_object(self, *, identNrs: str, template) -> str:
+    def _create_object(self, *, identNrs: str, template: Module, wNr: str) -> str:
         identL = identNrs.split(";")
         objIds = set()  # unique list of objIds from Excel
         institution = self.xls.get_conf_required(cell="B4")
@@ -385,8 +385,12 @@ class PrepareUpload(BaseApp):
         for ident in identL:
             identNr = ident.strip()
             # print(f"***trying to create new object '{identNr}' from template")
+            template2 = deepcopy(template)
+            if wNr is not None:
+                # we need to add weitereNummer to template
+                template2 = self._new_wNr(template, wNr)
             new_id = self.client.create_from_template(
-                template=template, identNr=identNr, institution=institution
+                template=template2, identNr=identNr, institution=institution
             )
             # logging.info(f"new record created: object {new_id} with {identNr} from template")
             objIds.add(new_id)
@@ -488,6 +492,61 @@ class PrepareUpload(BaseApp):
             conf = default  # use only defaults
 
         self.xls.make_conf(conf)
+
+    def _new_wNr(self, template: Module, wNr: str) -> None:
+        """
+        We assume there is no weitereNummer and we add one.
+        With the following format:
+        <repeatableGroup name="ObjOtherNumberGrp" size="1">
+          <repeatableGroupItem id="59788074" uuid="2b959d42-788e-406d-aef6-890285c5f32c">
+            <dataField dataType="Varchar" name="ModifiedByTxt">
+              <value>EM_MM</value>
+            </dataField>
+            <dataField dataType="Long" name="SortLnu">
+              <value>1</value>
+              <formattedValue language="de">1</formattedValue>
+            </dataField>
+            <dataField dataType="Date" name="ModifiedDateDat">
+              <value>2025-01-13</value>
+              <formattedValue language="de">13.01.2025</formattedValue>
+            </dataField>
+            <dataField dataType="Varchar" name="NumberTxt">
+              <value>weitereNummerHeike</value>
+            </dataField>
+            <vocabularyReference name="DenominationVoc" id="77649" instanceName="ObjOtherNumberDenominationVgr">
+              <vocabularyReferenceItem id="4399544" name="Sammler-Nr.">
+                <formattedValue language="de">Sammler-Nr.</formattedValue>
+              </vocabularyReferenceItem>
+            </vocabularyReference>
+          </repeatableGroupItem>
+        </repeatableGroup>
+
+        """
+        # exists always
+        mItemN = template.xpath(
+            "/m:application/m:modules/m:module[@name ='Object']/m:moduleItem"
+        )[0]
+
+        rGrpN = etree.fromstring(f"""
+        <repeatableGroup name="ObjOtherNumberGrp" size="1">
+          <repeatableGroupItem>
+            <dataField dataType="Long" name="SortLnu">
+              <value>1</value>
+              <formattedValue language="de">1</formattedValue>
+            </dataField>
+            <dataField dataType="Varchar" name="NumberTxt">
+              <value>{wNr}</value>
+            </dataField>
+            <vocabularyReference name="DenominationVoc" id="77649" instanceName="ObjOtherNumberDenominationVgr">
+              <vocabularyReferenceItem id="4399544" name="Sammler-Nr.">
+                <formattedValue language="de">Sammler-Nr.</formattedValue>
+              </vocabularyReferenceItem>
+            </vocabularyReference>
+          </repeatableGroupItem>
+        </repeatableGroup>""")
+
+        mItemN.append(rGrpN)
+        return template
 
     def _objId_for_ident(self, c) -> None:
         """
@@ -595,6 +654,13 @@ class PrepareUpload(BaseApp):
 
         # print (" -> not suspicious")
         return False
+
+    def _template_from_conf(self, cell: str) -> (str, int):
+        temp_str = self.xls.get_conf_required(cell="B1")
+        ttype, tid = temp_str.split()
+        ttype = ttype.strip()  # do i need to strip?
+        tid_int = int(tid.strip())
+        return ttype, tid_int
 
 
 if __name__ == "__main__":
