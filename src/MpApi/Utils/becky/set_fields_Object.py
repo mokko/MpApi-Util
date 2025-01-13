@@ -576,6 +576,47 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str]]:
             yield (name, role)
 
 
+def _is_int(value: int | None) -> bool:
+    """
+    Expects int or None. Returns True if is an integer or false otherwise.
+
+    TODO: Test if it dies on error.
+    """
+    if not isinstance(value, int) and not value is None:
+        raise TypeError(f"Value should be int|None, but it's not! {value}")
+
+    match value:
+        case None:
+            return False
+        case int():
+            return True
+        case _:
+            return False
+
+
+def _is_space_etc(value: str | None) -> bool:
+    """
+    Expects a string or None. Returns True if value is None or an empty string ('') or
+    an de facto empty string (e.g. ' '). Otherwise return False.
+
+    Currently, dies if you pass in an int instead of an str which is not so bad since it
+    points to a problem we should be aware of.
+
+    Could be better tested.
+    """
+
+    if not isinstance(value, str) and not value is None:
+        raise TypeError(f"Value should be str|None, but it's not! {value}")
+
+    match value:
+        case None | "":
+            return True
+        case value if value.isspace():
+            return True
+        case _:
+            return False
+
+
 def _lookup_name(*, name: str, conf: dict) -> int | None:
     global person_data
     if not person_data:  # cache empty
@@ -630,44 +671,3 @@ def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
         parentN.append(newN)
     else:
         oldN.getparent().replace(oldN, newN)
-
-
-def _is_space_etc(value: str | None) -> bool:
-    """
-    Expects a string or None. Returns True if value is None or an empty string ('') or
-    an de facto empty string (e.g. ' '). Otherwise return False.
-
-    Currently, dies if you pass in an int instead of an str which is not so bad since it
-    points to a problem we should be aware of.
-
-    Could be better tested.
-    """
-
-    if not isinstance(value, str) and not value is None:
-        raise TypeError(f"Value should be str|None, but it's not! {value}")
-
-    match value:
-        case None | "":
-            return True
-        case value if value.isspace():
-            return True
-        case _:
-            return False
-
-
-def _is_int(value: int | None) -> bool:
-    """
-    Expects int or None. Returns True if is an integer or false otherwise.
-
-    TODO: Test if it dies on error.
-    """
-    if not isinstance(value, int) and not value is None:
-        raise TypeError(f"Value should be int|None, but it's not! {value}")
-
-    match value:
-        case None:
-            return False
-        case int():
-            return True
-        case _:
-            return False

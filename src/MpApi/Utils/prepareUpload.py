@@ -387,7 +387,7 @@ class PrepareUpload(BaseApp):
             # print(f"***trying to create new object '{identNr}' from template")
             template2 = deepcopy(template)
             if wNr is not None:
-                # we need to add weitereNummer to template
+                # adds weitereNummer to template assuming there is no weitere Nummer yet.
                 template2 = self._new_wNr(template, wNr)
             new_id = self.client.create_from_template(
                 template=template2, identNr=identNr, institution=institution
@@ -495,6 +495,8 @@ class PrepareUpload(BaseApp):
 
     def _new_wNr(self, template: Module, wNr: str) -> None:
         """
+        This method might better be located in some other class.
+
         We assume there is no weitereNummer and we add one.
         With the following format:
         <repeatableGroup name="ObjOtherNumberGrp" size="1">
@@ -522,7 +524,7 @@ class PrepareUpload(BaseApp):
         </repeatableGroup>
 
         """
-        # exists always
+        # should exist always, but who knows
         mItemN = template.xpath(
             "/m:application/m:modules/m:module[@name ='Object']/m:moduleItem"
         )[0]
@@ -545,7 +547,20 @@ class PrepareUpload(BaseApp):
           </repeatableGroupItem>
         </repeatableGroup>""")
 
-        mItemN.append(rGrpN)
+        try:
+            oldN = template.xpath("""/m:application/m:modules/m:module[
+                @name ='Object'
+            ]/m:moduleItem/m:repeatableGroup[
+                @name = 'ObjOtherNumberGrp'
+            ]""")[0]
+        except IndexError:  # KeyError,
+            mItemN = template.xpath("""/m:application/m:modules/m:module[
+                @name ='Object'
+            ]/m:moduleItem""")[0]
+            mItemN.append(rGrpN)
+        else:
+            # overwrite existing weitere Nummer
+            oldN.getparent().replace(oldN, rGrpN)
         return template
 
     def _objId_for_ident(self, c) -> None:
