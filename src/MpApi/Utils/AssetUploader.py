@@ -35,6 +35,7 @@ from MpApi.Record import Record  # should be MpApi.Record.Multimedia
 from MpApi.Utils.BaseApp import BaseApp, ConfigError
 from MpApi.Utils.logic import (
     extractIdentNr,
+    extract_weitereNr,
     identNrParserError,
     is_suspicious,
     whole_for_parts,
@@ -52,8 +53,8 @@ from typing import Optional
 from tqdm import tqdm
 
 # adding number of fields to prevent accidental overwriting of old versions
-excel_fn = Path("upload14.xlsx")
-bak_fn = Path("upload14.xlsx.bak")  # should go away
+excel_fn = Path("upload15.xlsx")
+bak_fn = Path("upload15.xlsx.bak")  # should go away
 parser = etree.XMLParser(remove_blank_text=True)
 red = Font(color="FF0000")
 teal = Font(color="008080")
@@ -97,58 +98,64 @@ class AssetUploader(BaseApp):
                 "col": "B",  # 1
                 "width": 15,
             },
+            "wNr": {
+                "label": "Weitere Nr",
+                "desc": "aus Dateinamen",
+                "col": "C",  # 1
+                "width": 15,
+            },
             "asset_fn_exists": {
                 "label": "Assets mit diesem Dateinamen",
                 "desc": "mulId(s) aus RIA",
-                "col": "C",  # 2
+                "col": "D",  # 2
                 "width": 15,
             },
             "objIds": {
                 "label": "objId(s) aus RIA",
                 "desc": "exact match für diese IdentNr",
-                "col": "D",  # 3
+                "col": "E",  # 3
                 "width": 15,
             },
             "parts_objIds": {
                 "label": "Geschwister",
                 "desc": "für diese IdentNr",
-                "col": "E",  # 4
+                "col": "F",  # 4
                 "width": 20,
             },
             "whole_objIds": {
                 "label": "Ganzes objId",
                 "desc": "exact match für diese IdentNr",
-                "col": "F",  # 5
+                "col": "G",  # 5
                 "width": 20,
             },
             "ref": {
                 "label": "Objekte-Link",
                 "desc": "automat. Vorschlag für Objekte-DS",
-                "col": "G",  # 6
+                "col": "H",  # 6
                 "width": 9,
             },
             "notes": {
                 "label": "Bemerkung",
                 "desc": "für Notizen",
-                "col": "H",  # 7
+                "col": "I",  # 7
                 "width": 20,
             },
             "photographer": {
                 "label": "Fotograf*in",
                 "desc": "aus Datei",
-                "col": "I",  # 8
+                "col": "J",  # 8
                 "width": 20,
             },
             "creatorID": {
                 "label": "ID Urheber*in",
                 "desc": "aus RIA",
-                "col": "J",  # 9
+                "col": "K",  # 9
                 "width": 20,
             },
             "fullpath": {
                 "label": "absoluter Pfad",
                 "desc": "aus Verzeichnis",
-                "col": "K",  # 10
+                "col": "L",  # 10
                 "width": 90,
             },
             # "targetpath": {
@@ -430,6 +437,21 @@ class AssetUploader(BaseApp):
         if self.parser == "":
             raise ConfigError("Need identNr parser!")
 
+        if self.parser == "iitm":
+            print("loading prepare.xlsx for wNr to identNr mapping")
+            self.ident_cache = {}
+            from MpApi.Utils.prepareUpload import PrepareUpload
+
+            pu = PrepareUpload()
+            ident_xls = Xls(path="prepare.xlsx", description=pu.desc())
+            asheet = ident_xls.get_sheet(title="Prepare")
+            for cell, rno in ident_xls.loop(sheet=asheet):
+                wNr = cell["wNr"].value
+                identNr = cell["identNr"].value
+                # print(f"{wNr} {identNr}")
+                if wNr not in self.ident_cache:
+                    self.ident_cache[wNr] = identNr
+
     def _create_from_template(
         self,
         *,
@@ -546,7 +568,7 @@ class AssetUploader(BaseApp):
 
         This is for the scandir step.
         """
-        print(f"file_to_list '{path}'")
+        # print(f"file_to_list '{path}'")
         if rno is None:
             rno = self.ws.max_row + 1  # max_row seems to be zero-based
         cells = self.xls._rno2dict(rno, sheet=self.ws)
@@ -555,6 +577,9 @@ class AssetUploader(BaseApp):
         # relative path, but not if we use this recursively
         if cells["filename"].value is None:
             cells["filename"].value = path.name
+
+        if cells["wNr"].value is None:
+            cells["wNr"].value = extract_weitereNr(path)
 
         self._write_identNr(cells, path)
 
@@ -765,14 +790,21 @@ class AssetUploader(BaseApp):
                 # We need the x here to fast-forward during continous mode
 
     def _write_identNr(self, cells: dict, path: Path) -> None:
+        wNr = cells["wNr"].value
         if cells["identNr"].value is None:
-            try:
-                identNr = extractIdentNr(
-                    path=path, parser=self.parser
-                )  # returns Python's None on failure
-            except identNrParserError:
-                cells["identNr"].font = red
-                identNr = ""
+            if wNr is not None and self.parser == "iitm":
+                try:
+                    identNr = self.ident_cache[wNr]
+                except:
+                    raise SyntaxError(f"wNr not found: {wNr}")
+            else:
+                try:
+                    identNr = extractIdentNr(
+                        path=path, parser=self.parser
+                    )  # returns Python's None on failure
+                except identNrParserError:
+                    cells["identNr"].font = red
+                    identNr = ""
 
             if self.ignore_suspicious and is_suspicious(identNr=identNr):
                 cells["identNr"].font = red
