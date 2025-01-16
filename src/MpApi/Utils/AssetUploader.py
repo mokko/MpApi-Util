@@ -578,7 +578,7 @@ class AssetUploader(BaseApp):
         if cells["filename"].value is None:
             cells["filename"].value = path.name
 
-        if cells["wNr"].value is None:
+        if cells["wNr"].value is None and self.parser == "iitm":
             cells["wNr"].value = extract_weitereNr(path)
 
         self._write_identNr(cells, path)
