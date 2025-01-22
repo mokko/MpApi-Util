@@ -312,7 +312,7 @@ def extract_weitereNr(path: Path) -> str | None:
     part = part.replace(" +", "+")
     part = part.replace(" à ", "-")
     wNr = part.split(" Foto")[0].strip()
-    print(f"Extracted WeitereNr: {wNr}")
+    # print(f"Extracted WeitereNr: {wNr}")
     return wNr
 
 

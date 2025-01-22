@@ -84,7 +84,7 @@ class Sren:
                 dst = parent / f"{new_stem}{suffix}"
             self._move(p, dst, c)
 
-    def replace_suffix(self, first, second) -> None:
+    def replace_suffix(self, first: str, second: str) -> None:
         """
         Replace working on suffix
         """
@@ -92,8 +92,9 @@ class Sren:
             suffix = path.suffix
             stem = path.stem
             parent = path.parent
+            # print(f"***************{first=}")
             if first != second:
-                dst = parent / f"{stem}{second}"
+                dst = parent / f"{stem}{first}"
             else:
                 dst = path
             self._move(path, dst, count)
@@ -127,6 +128,6 @@ class Sren:
             # print(f"{count}: {src} - name is not new, not moving")
             # print(f"{src} -> {dst}")
             return
-        print(f"{count}: {src} -> {dst}")
+        print(f"{count}: {src} \n\t-> {dst}")
         if self.act:
             shutil.move(src, dst)

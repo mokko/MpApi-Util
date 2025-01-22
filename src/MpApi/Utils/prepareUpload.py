@@ -377,6 +377,11 @@ class PrepareUpload(BaseApp):
         identNrF = IdentNrFactory()
         self.schemas = identNrF.get_schemas()
 
+        if self.parser == "iitm":
+            self.root_ident = self.xls.get_conf(cell="B5")
+            self.start_no = int(self.xls.get_conf(cell="B6"))
+            print(f"***root_ident: {self.root_ident} start_no:{self.start_no}")
+
     def _create_object(self, *, identNrs: str, template: Module, wNr: str) -> str:
         identL = identNrs.split(";")
         objIds = set()  # unique list of objIds from Excel
@@ -400,15 +405,16 @@ class PrepareUpload(BaseApp):
     def _determine_ident(self, path: Path, known_weitere_nr: dict) -> (str, str):
         if self.parser == "iitm":
             print("INFO: iitm identNr/weitereNr parser")
+            current_no = self.start_no + self.fortlaufendeNr
             wNr = extract_weitereNr(path=path)
             if wNr in known_weitere_nr:
                 # return the identNr associated with this wNr
                 identNr = known_weitere_nr[wNr]
             else:
-                # make the next identNr
+                self.fortlaufendeNr += 1  # make the next identNr
+                identNr = f"{self.root_ident}{current_no}"
                 # update the cache where wNr is associated with identNr
-                self.fortlaufendeNr += 1
-                identNr = f"VII OA 1003.{self.fortlaufendeNr}"
+                print(f"***{identNr=}")
                 known_weitere_nr[wNr] = identNr
         else:
             wNr = None

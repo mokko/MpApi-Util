@@ -435,9 +435,12 @@ class AssetUploader(BaseApp):
         self.ignore_suspicious = self.xls.get_conf_true(cell="B7")
         self.parser = self.xls.get_conf_required(cell="B8")
         if self.parser == "":
+            # why not None?
             raise ConfigError("Need identNr parser!")
 
         if self.parser == "iitm":
+            # is loading the identNr cache from XLS file the right method?
+            # in current case I would rather the get the info from RIA
             print("loading prepare.xlsx for wNr to identNr mapping")
             self.ident_cache = {}
             from MpApi.Utils.prepareUpload import PrepareUpload

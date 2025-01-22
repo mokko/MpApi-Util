@@ -98,8 +98,11 @@ class Xls:
         """
         conf_ws = self.wb["Conf"]
         value = conf_ws[cell].value  # can be None
-        if value is None or value.isspace() or value == "":
+        if value is None:
             value = default
+        elif isinstance(value, str):
+            if value.isspace() or value == "":
+                value = default
         return value
 
     def get_conf2(self, *, cell: str, default: Any = None) -> str:
