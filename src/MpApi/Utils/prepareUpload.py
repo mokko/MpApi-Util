@@ -390,9 +390,9 @@ class PrepareUpload(BaseApp):
         for ident in identL:
             identNr = ident.strip()
             # print(f"***trying to create new object '{identNr}' from template")
-            template2 = deepcopy(template)
             if wNr is not None:
                 # adds weitereNummer to template assuming there is no weitere Nummer yet.
+                template2 = deepcopy(template)
                 template2 = self._new_wNr(template2, wNr)
             new_id = self.client.create_from_template(
                 template=template2, identNr=identNr, institution=institution
