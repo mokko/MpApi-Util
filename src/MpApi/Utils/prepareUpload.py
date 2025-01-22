@@ -393,7 +393,7 @@ class PrepareUpload(BaseApp):
             template2 = deepcopy(template)
             if wNr is not None:
                 # adds weitereNummer to template assuming there is no weitere Nummer yet.
-                template2 = self._new_wNr(template, wNr)
+                template2 = self._new_wNr(template2, wNr)
             new_id = self.client.create_from_template(
                 template=template2, identNr=identNr, institution=institution
             )
