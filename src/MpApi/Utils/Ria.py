@@ -488,6 +488,9 @@ class RIA:
             raise SyntaxError(f"ERROR: Template record not found: {mtype} {ID}")
 
         # m.clean()  # necessary? Eliminates Versicherungswert; let's just drop the virtual fields
+        # we might want to delete virtual identNr fields. TODO: Corrent the content.
+        m._dropFieldsByName(element="dataField", name="ObjObjectNumberSortedTxt")
+        m._dropFieldsByName(element="dataField", name="ObjObjectNumberTxt")
         m.uploadForm()
         # if DEBUG:
         #    m.toFile(path=f"DDtemplate-{mtype}{ID}.xml")

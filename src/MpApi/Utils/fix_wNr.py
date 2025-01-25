@@ -6,10 +6,30 @@ first: Loop through an excel and delete all entries in Weitere Nummer
 second: Loop through the same stuff and write the correct number in there.
 
 Or can we do that in one step? Why not
+
+I am having trouble with the field "weitere Nummer". On closer inspection I notice that
+this field has valid UUIDs. Can I do something with that?
+
+        <repeatableGroup name="ObjOtherNumberGrp">
+          <repeatableGroupItem id="59790729" uuid="254cf05b-aa75-446a-bbbd-1de244f86d28">
+            <dataField name="SortLnu">
+              <value>1</value>
+            </dataField>
+            <dataField name="NumberTxt">
+              <value>311-11</value>
+            </dataField>
+            <vocabularyReference name="DenominationVoc">
+              <vocabularyReferenceItem id="4399544"/>
+            </vocabularyReference>
+          </repeatableGroupItem>
+
+
 """
 
+# from copy import deepcopy  # for lxml
 from lxml import etree
-from mpapi.constants import get_credentials
+from mpapi.constants import get_credentials, NSMAP
+from MpApi.Utils.prepareUpload import PrepareUpload
 from MpApi.Utils.BaseApp import BaseApp
 from MpApi.Utils.Ria import RIA
 from MpApi.Utils.Xls import Xls
@@ -33,141 +53,112 @@ class Fix_wNr(BaseApp):
         self.main_loop()
 
     def desc(self) -> dict:
-        desc = {
-            "filename": {
-                "label": "Asset Dateiname",
-                "desc": "aus Verzeichnis",
-                "col": "A",  # 0
-                "width": 20,
-            },
-            "identNr": {
-                "label": "IdentNr",
-                "desc": "aus Dateinamen",
-                "col": "B",  # 1
-                "width": 15,
-            },
-            "wNr": {
-                "label": "Weitere Nr",
-                "desc": "aus Dateinamen",
-                "col": "C",  # 1
-                "width": 15,
-            },
-            "asset_fn_exists": {
-                "label": "Assets mit diesem Dateinamen",
-                "desc": "mulId(s) aus RIA",
-                "col": "D",  # 2
-                "width": 15,
-            },
-            "objIds": {
-                "label": "objId(s) aus RIA",
-                "desc": "exact match für diese IdentNr",
-                "col": "E",  # 3
-                "width": 15,
-            },
-            "parts_objIds": {
-                "label": "Geschwister",
-                "desc": "für diese IdentNr",
-                "col": "F",  # 4
-                "width": 20,
-            },
-            "whole_objIds": {
-                "label": "Ganzes objId",
-                "desc": "exact match für diese IdentNr",
-                "col": "G",  # 5
-                "width": 20,
-            },
-            "ref": {
-                "label": "Objekte-Link",
-                "desc": "automat. Vorschlag für Objekte-DS",
-                "col": "H",  # 6
-                "width": 9,
-            },
-            "notes": {
-                "label": "Bemerkung",
-                "desc": "für Notizen",
-                "col": "I",  # 7
-                "width": 20,
-            },
-            "photographer": {
-                "label": "Fotograf*in",
-                "desc": "aus Datei",
-                "col": "J",  # 8
-                "width": 20,
-            },
-            "creatorID": {
-                "label": "ID Urheber*in",
-                "desc": "aus RIA",
-                "col": "K",  # 9
-                "width": 20,
-            },
-            "fullpath": {
-                "label": "absoluter Pfad",
-                "desc": "aus Verzeichnis",
-                "col": "L",  # 10
-                "width": 90,
-            },
-            # "targetpath": {
-            # "label": "nach Bewegen der Datei",
-            # "desc": "wenn Upload erfolgreich",
-            # "col": "L",  # 11
-            # "width": 30,
-            # },
-            "attached": {
-                "label": "Asset hochgeladen?",
-                "desc": "wenn Upload erfolgreich",
-                "col": "M",  # 12
-                "width": 15,
-            },
-            "standardbild": {
-                "label": "Standardbild",
-                "desc": "Standardbild setzen, wenn noch keines existiert",
-                "col": "N",  # 13
-                "width": 5,
-            },
-        }
-        return desc
+        return PrepareUpload.desc("self")
 
     def main_loop(self) -> None:
         for cells, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
             if cells["objIds"].value != "None":
+                print(f"***{cells['identNr'].value}")
                 self._rewrite_wNr(objId=cells["objIds"].value, new=cells["wNr"].value)
 
     def _rewrite_wNr(self, *, objId: int, new: str) -> None:
-        newN = etree.fromstring(f"""
-        <repeatableGroup xmlns="http://www.zetcom.com/ria/ws/module" name="ObjOtherNumberGrp" size="1">
-          <repeatableGroupItem>
-            <dataField dataType="Long" name="SortLnu">
-              <value>1</value>
-              <formattedValue language="de">1</formattedValue>
-            </dataField>
-            <dataField dataType="Varchar" name="NumberTxt">
-              <value>{new}</value>
-            </dataField>
-            <vocabularyReference name="DenominationVoc" id="77649" instanceName="ObjOtherNumberDenominationVgr">
-              <vocabularyReferenceItem id="4399544" name="Sammler-Nr.">
-                <formattedValue language="de">Sammler-Nr.</formattedValue>
-              </vocabularyReferenceItem>
-            </vocabularyReference>
-          </repeatableGroupItem>
-        </repeatableGroup>""")
+        # newN = etree.fromstring(f"""
+        # <repeatableGroup xmlns="http://www.zetcom.com/ria/ws/module" name="ObjOtherNumberGrp">
+        # <repeatableGroupItem>
+        # <dataField dataType="Long" name="SortLnu">
+        # <value>1</value>
+        # </dataField>
+        # <dataField dataType="Varchar" name="NumberTxt">
+        # <value>{new}</value>
+        # </dataField>
+        # <vocabularyReference name="DenominationVoc" id="77649" instanceName="ObjOtherNumberDenominationVgr">
+        # <vocabularyReferenceItem id="4399544"/>
+        # </vocabularyReference>
+        # </repeatableGroupItem>
+        # </repeatableGroup>""")
 
         objId = int(objId)
         print(f"{objId=} {new=}")
         print("getting record from ria")
-        m = self.client.get_template(mtype="Object", ID=objId)
-        rGrpN = m.xpath("""/m:application/m:modules/m:module[
-                @name ='Object'
+        m = self.client2.getItem2(mtype="Object", ID=objId)
+        # m.uploadForm()
+        # m._dropFieldsByName(element="dataField", name="ObjObjectNumberSortedTxt")
+        # m._dropFieldsByName(element="dataField", name="ObjObjectNumberTxt")
+        # m._dropFieldsByName(element="repeatableGroup", name="ObjOtherNumberGrp")
+        # m.toFile(path="debug2.xml")
+        # rGrpN = m.xpath("""/m:application/m:modules/m:module[
+        # @name = 'Object'
+        # ]/m:moduleItem/m:repeatableGroup[
+        # @name = 'ObjOtherNumberGrp'
+        # ]""")[0]
+        # rGrpN.getparent().replace(rGrpN,newN)
+        # m.toFile(path="debug.xml")
+        self.other_way(doc=m.toET(), objId=objId, new=new)
+        # m.validate()
+        # print("validates")
+        # m2=deepcopy(m)
+        # print("reuploading")
+        # self.client2.updateItem4(data=m)
+
+    def other_way(self, *, doc, objId: int, new: str) -> None:
+        """
+        Other way tries atomic update operations on RIA. More calls. More precise
+        log entries.
+        """
+        print(f"OTHER WAY objId {objId} {new=}")
+        try:
+            r = doc.xpath(
+                """/m:application/m:modules/m:module[
+                @name = 'Object'
             ]/m:moduleItem/m:repeatableGroup[
                 @name = 'ObjOtherNumberGrp'
-            ]""")[0]
-        # rGrpN.getparent().replace(rGrpN, newN)
-        m.validate()
-        print("validates")
-        m.uploadForm()
-        m.toFile(path="debug.xml")
-        print("reuploading")
-        self.client2.updateItem2(mtype="Object", ID=objId, data=m)
+            ]/*""",
+                namespaces=NSMAP,
+            )
+        except IndexError:
+            print("No ObjOtherNumberGrp **Item** found")
+        else:
+            for idx, itemN in enumerate(r):
+                refID = int(itemN.xpath("@id")[0])
+                uuid = itemN.xpath("@uuid")[0]
+                # print(etree.tostring(each, encoding="unicode"))
+                print(f"about to rm item {refID} {uuid} {idx}/{len(r)}")
+                self.client2.deleteRepeatableGroup(
+                    module="Object",
+                    id=objId,
+                    referenceId=refID,
+                    repeatableGroup="ObjOtherNumberGrp",
+                )
+
+        xml = f"""
+        <application xmlns="http://www.zetcom.com/ria/ws/module">
+            <modules>
+                <module name="Object">
+                    <moduleItem id="{objId}">
+                        <repeatableGroup name="ObjOtherNumberGrp">
+                          <repeatableGroupItem>
+                            <dataField dataType="Long" name="SortLnu">
+                              <value>1</value>
+                            </dataField>
+                            <dataField dataType="Varchar" name="NumberTxt">
+                              <value>{new}</value>
+                            </dataField>
+                            <vocabularyReference name="DenominationVoc" id="77649" instanceName="ObjOtherNumberDenominationVgr">
+                              <vocabularyReferenceItem id="4399544"/>
+                            </vocabularyReference>
+                          </repeatableGroupItem>
+                        </repeatableGroup>
+                    </moduleItem>
+                </module>
+            </modules>
+        </application>
+        """
+
+        print("Creating new group item")
+        self.client2.createRepeatableGroup(
+            module="Object", id=objId, repeatableGroup="ObjOtherNumberGrp", xml=xml
+        )
 
 
 if __name__ == "__main__":
-    fix = Fix_wNr(limit=3)
+    fix = Fix_wNr(limit=-1)
