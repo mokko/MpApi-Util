@@ -61,46 +61,11 @@ class Fix_wNr(BaseApp):
                 print(f"***{cells['identNr'].value}")
                 self._rewrite_wNr(objId=cells["objIds"].value, new=cells["wNr"].value)
 
-    def _rewrite_wNr(self, *, objId: int, new: str) -> None:
-        # newN = etree.fromstring(f"""
-        # <repeatableGroup xmlns="http://www.zetcom.com/ria/ws/module" name="ObjOtherNumberGrp">
-        # <repeatableGroupItem>
-        # <dataField dataType="Long" name="SortLnu">
-        # <value>1</value>
-        # </dataField>
-        # <dataField dataType="Varchar" name="NumberTxt">
-        # <value>{new}</value>
-        # </dataField>
-        # <vocabularyReference name="DenominationVoc" id="77649" instanceName="ObjOtherNumberDenominationVgr">
-        # <vocabularyReferenceItem id="4399544"/>
-        # </vocabularyReference>
-        # </repeatableGroupItem>
-        # </repeatableGroup>""")
+    #
+    # more private
+    #
 
-        objId = int(objId)
-        print(f"{objId=} {new=}")
-        print("getting record from ria")
-        m = self.client2.getItem2(mtype="Object", ID=objId)
-        # m.uploadForm()
-        # m._dropFieldsByName(element="dataField", name="ObjObjectNumberSortedTxt")
-        # m._dropFieldsByName(element="dataField", name="ObjObjectNumberTxt")
-        # m._dropFieldsByName(element="repeatableGroup", name="ObjOtherNumberGrp")
-        # m.toFile(path="debug2.xml")
-        # rGrpN = m.xpath("""/m:application/m:modules/m:module[
-        # @name = 'Object'
-        # ]/m:moduleItem/m:repeatableGroup[
-        # @name = 'ObjOtherNumberGrp'
-        # ]""")[0]
-        # rGrpN.getparent().replace(rGrpN,newN)
-        # m.toFile(path="debug.xml")
-        self.other_way(doc=m.toET(), objId=objId, new=new)
-        # m.validate()
-        # print("validates")
-        # m2=deepcopy(m)
-        # print("reuploading")
-        # self.client2.updateItem4(data=m)
-
-    def other_way(self, *, doc, objId: int, new: str) -> None:
+    def _atomic_changes(self, *, doc, objId: int, new: str) -> None:
         """
         Other way tries atomic update operations on RIA. More calls. More precise
         log entries.
@@ -158,6 +123,48 @@ class Fix_wNr(BaseApp):
         self.client2.createRepeatableGroup(
             module="Object", id=objId, repeatableGroup="ObjOtherNumberGrp", xml=xml
         )
+
+    def _global_changes(self, *, m: Module, objId: int, new: str) -> None:
+        newN = etree.fromstring(f"""
+            <repeatableGroup xmlns="http://www.zetcom.com/ria/ws/module" name="ObjOtherNumberGrp">
+                <repeatableGroupItem>
+                    <dataField dataType="Long" name="SortLnu">
+                        <value>1</value>
+                    </dataField>
+                    <dataField dataType="Varchar" name="NumberTxt">
+                        <value>{new}</value>
+                    </dataField>
+                    <vocabularyReference name="DenominationVoc" id="77649" instanceName="ObjOtherNumberDenominationVgr">
+                        <vocabularyReferenceItem id="4399544"/>
+                    </vocabularyReference>
+                </repeatableGroupItem>
+            </repeatableGroup>
+        """)
+        m.uploadForm()
+        m._dropFieldsByName(element="dataField", name="ObjObjectNumberSortedTxt")
+        m._dropFieldsByName(element="dataField", name="ObjObjectNumberTxt")
+        m._dropFieldsByName(element="repeatableGroup", name="ObjOtherNumberGrp")
+        m.toFile(path="debug2.xml")
+        rGrpN = m.xpath("""/m:application/m:modules/m:module[
+            @name = 'Object'
+        ]/m:moduleItem/m:repeatableGroup[
+            @name = 'ObjOtherNumberGrp'
+        ]""")[0]
+        rGrpN.getparent().replace(rGrpN, newN)
+        m.toFile(path="debug.xml")
+        m.validate()
+        print("validates")
+        #m2 = deepcopy(m)
+        print("reuploading")
+        self.client2.updateItem4(data=m)
+
+    def _rewrite_wNr(self, *, objId: int, new: str) -> None:
+        objId = int(objId)
+        print(f"{objId=} {new=}")
+        print("getting record from ria")
+        m = self.client2.getItem2(mtype="Object", ID=objId)
+        # self._global_changes(m=m, objId=objId, new=new)
+        self._atomic_changes(doc=m.toET(), objId=objId, new=new)
 
 
 if __name__ == "__main__":
