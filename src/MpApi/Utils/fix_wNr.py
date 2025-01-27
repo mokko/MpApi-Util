@@ -70,7 +70,7 @@ class Fix_wNr(BaseApp):
         Other way tries atomic update operations on RIA. More calls. More precise
         log entries.
         """
-        print(f"OTHER WAY objId {objId} {new=}")
+        print(f"Atomic changes: objId {objId} {new=}")
         try:
             r = doc.xpath(
                 """/m:application/m:modules/m:module[
@@ -154,7 +154,7 @@ class Fix_wNr(BaseApp):
         m.toFile(path="debug.xml")
         m.validate()
         print("validates")
-        #m2 = deepcopy(m)
+        # m2 = deepcopy(m)
         print("reuploading")
         self.client2.updateItem4(data=m)
 

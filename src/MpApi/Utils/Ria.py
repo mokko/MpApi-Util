@@ -516,6 +516,12 @@ class RIA:
         Now it works. I assume that previous attempts didn't work, because I needed to
         provide all the items, not only the changed one.
         """
+        try:
+            int(objId)
+        except ValueError:
+            print("WARING: objId is not int")
+            return None
+
         # print (f"Getting whole record object {objId}")
         m = self.mpapi.getItem2(mtype="Object", ID=objId)
         # the xpath could fail, but only if that object doesn't exist or doesn't have
