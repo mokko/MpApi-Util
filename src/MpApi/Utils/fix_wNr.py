@@ -58,8 +58,12 @@ class Fix_wNr(BaseApp):
     def main_loop(self) -> None:
         for cells, rno in self.xls.loop(sheet=self.ws, limit=self.limit):
             if cells["objIds"].value != "None":
-                print(f"***{cells['identNr'].value}")
+                print(f"***{rno=} {cells['identNr'].value}")
                 self._rewrite_wNr(objId=cells["objIds"].value, new=cells["wNr"].value)
+            if rno >= 1811:
+                # why did it repeat?
+                break
+        print("ALL DONE")
 
     #
     # more private
