@@ -2,7 +2,7 @@ import tomllib
 import tomli_w
 from pathlib import Path
 
-changed = False # global variable
+changed = False  # global variable
 
 
 def open_archive_cache(conf: dict) -> dict:
@@ -24,6 +24,7 @@ def reset_change():
     global changed
     changed = False
 
+
 def save_archive_cache(*, conf: dict, data: dict) -> None:
     cache_fn = conf["project_dir"] / conf["archive_cache"]
     _save(cache_fn, data)
@@ -40,9 +41,9 @@ def save_person_cache(*, conf: dict, data: dict) -> None:
 
 
 def set_change():
-    """ 
-        set internal variable to indicate that cache contents have been changed 
-        and need saving
+    """
+    set internal variable to indicate that cache contents have been changed
+    and need saving
     """
     global changed
     changed = True
