@@ -32,6 +32,7 @@ geo_data = {}
 archive_data = {}
 
 roles = {
+    None: None,
     "Absender*in": 4378273,
     "Auftraggeber*in": 4378279,
     "Auktionator*in": 4378280,
@@ -73,10 +74,13 @@ erwerbungsarten = {
     "Kommission": 1630988,
     "Leihe": 1630989,
     "Nachlass/Vermächtnis": 1630990,
+    "Nachlass (Vermächtnis) / Kauf": 1630990,
     "Pfändung": 1630992,
     "Restitution": 1630993,
     "Rückgewinnung": 2737042,
     "Schenkung": 1630994,
+    "Tausch": 1630995,
+    "Übertrag ": 000000,
     "Übereignung": 4129997,
     "Überweisung": 1630996,
     "Zugang ungeklärt": 1631000,
@@ -106,15 +110,20 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         nameID = _lookup_name(name=name, conf=conf)  # raises if unknown
         roleID = _lookup_role(role)  # raises if unknown
         print(f"{count} {sort} {name} [{role}] {nameID=} {roleID=}")
-        mRefItemN = etree.fromstring(f"""
+        xml = f"""
             <moduleReferenceItem moduleItemId="{nameID}">
               <dataField dataType="Long" name="SortLnu">
                 <value>{sort}</value>
-              </dataField>
+              </dataField>"""
+        if roleID is not None:
+            xml += f"""
               <vocabularyReference name="RoleVoc" id="30423" instanceName="ObjPerAssociationRoleVgr">
                 <vocabularyReferenceItem id="{roleID}"/>
-              </vocabularyReference>
-            </moduleReferenceItem>""")
+              </vocabularyReference>"""
+        xml += """
+            </moduleReferenceItem>"""
+
+        mRefItemN = etree.fromstring(xml)
         mRefN.append(mRefItemN)
 
     _new_or_replace(

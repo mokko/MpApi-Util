@@ -53,6 +53,8 @@ import tomllib
 # CONFIGURATION
 #
 
+hits = 1 # global variable, 1-based
+
 
 def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
     conf = _load_conf(conf_fn)  # sets project_dir
@@ -75,17 +77,22 @@ def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
 
 def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
+    global hits
+    hits += 1 # we're counting the records that have or would be created
 
     if len(conf["templateM"]) != 1:
         raise TypeError("Template does not have a single record")
 
     recordM = deepcopy(conf["templateM"])  # so we dont change the original template
+    recordM._dropFieldsByName(element="systemField", name="__uuid")
+    recordM._dropAttribs(xpath="//m:moduleItem", attrib="id")
     set_ident(
         recordM, ident=row[0].value, institution=conf["institution"]
     )  # from Excel as str
     set_ident_sort(recordM, nr=int(row[1].value))
     set_sachbegriff(recordM, sachbegriff=row[2].value)
-    set_beteiligte(recordM, beteiligte=row[3].value, conf=conf)
+    # problems
+    set_beteiligte(recordM, beteiligte=row[3].value, conf=conf) 
     set_erwerbDatum(recordM, datum=row[4].value)
     set_erwerbungsart(recordM, art=row[5].value)
     set_erwerbNr(recordM, nr=row[6].value)
@@ -113,10 +120,11 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     ident = row[0].value  # from Excel as str
     font_color = row[0].font.color
+    global hits
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
-        print(f"{idx}: {ident} red")
+        print(f"***[{hits}]{idx}: {ident} red")
         if record_exists(ident=ident, conf=conf):
-            # Wollen wir hier fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
+            # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
             # nicht eingetragen wurden?
             print(f"   Record '{ident}' exists already")
         else:
