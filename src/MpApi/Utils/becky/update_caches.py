@@ -12,6 +12,7 @@ from MpApi.Utils.becky.cache_ops import (
     open_person_cache,
     save_person_cache,
     save_archive_cache,
+    set_change,
 )
 from MpApi.Utils.becky.set_fields_Object import _each_person
 from MpApi.Utils.Ria import RIA, init_ria
@@ -133,10 +134,11 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
     for idx, name in enumerate(person_data, start=1):
         if not person_data[name]:  # if tuple is empty
             idL = query_persons(client=client, name=name)
+            set_change() 
             person_data[name] = idL
             print(idL)
         if idx % 25 == 0:
-            save_person_cache(data=person_data, conf=conf)
+                save_person_cache(data=person_data, conf=conf)
         if limit == idx:
             print(">> Limit reached")
             break
@@ -169,6 +171,7 @@ def _per_red_cell(cell: str, *, data: dict, client: RIA) -> None:
 def _query_archives(ident: str, client: RIA, data: dict) -> None:
     print(f">> querying archives '{ident}'")
     idL = query_archives(ident=ident, client=client)
+    set_change() 
     print(f"{idL=}")
     data[ident] = idL  # may be empty list
 
