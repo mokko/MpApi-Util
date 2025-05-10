@@ -22,6 +22,8 @@ Todo:
 
 import argparse
 from copy import deepcopy
+from datetime import datetime
+import logging
 from lxml import etree  # t y p e : i g n o r e
 
 from mpapi.constants import get_credentials
@@ -53,7 +55,7 @@ import tomllib
 # CONFIGURATION
 #
 
-hits = 1 # global variable, 1-based
+hits = 1  # global variable, 1-based
 
 
 def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
@@ -64,7 +66,7 @@ def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
     ws = wb[conf["sheet_title"]]  # sheet exists already
 
     conf["RIA"] = init_ria()
-
+    init_log(act=act, conf=conf, conf_fn=conf_fn, limit=limit)
     print(f">> Getting template from RIA Object {conf['template_id']}")
     conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
 
@@ -78,7 +80,7 @@ def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
 def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
     global hits
-    hits += 1 # we're counting the records that have or would be created
+    hits += 1  # we're counting the records that have or would be created
 
     if len(conf["templateM"]) != 1:
         raise TypeError("Template does not have a single record")
@@ -92,7 +94,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     set_ident_sort(recordM, nr=int(row[1].value))
     set_sachbegriff(recordM, sachbegriff=row[2].value)
     # problems
-    set_beteiligte(recordM, beteiligte=row[3].value, conf=conf) 
+    set_beteiligte(recordM, beteiligte=row[3].value, conf=conf)
     set_erwerbDatum(recordM, datum=row[4].value)
     set_erwerbungsart(recordM, art=row[5].value)
     set_erwerbNr(recordM, nr=row[6].value)
@@ -117,16 +119,51 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         # recordM.toFile(path=p2)
 
 
+def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int) -> None:
+    """
+    Create a simple logger at file becky20250510-0956.log
+    """
+    # should we only log if we actually do something with act=True?
+    # to avoid plethora of log files?
+    if act is True:
+        now = datetime.now()
+        datetime_str = now.strftime("%Y%m%d-%H%M%S")
+        log_fn = f"becky{datetime_str}.log"
+        logging.basicConfig(
+            filename=log_fn,
+            level=logging.INFO,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+        )
+        # - %(name)s is currently not necessary
+        logger = logging.getLogger(__name__)
+        logger.info(f"becky started with {act=} and {limit=}")
+        logger.info(f"loading Excel file '{conf['excel_fn']}'")
+    else:
+        logger = logging.getLogger(__name__)
+        logger.addHandler(logging.NullHandler())
+
+
+def log_print_info(msg: str) -> None:
+    """
+    log and print info message simultaneously
+    """
+    logger = logging.getLogger(__name__)
+    logger.info(msg)
+    print(f"   {msg}")
+
+
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     ident = row[0].value  # from Excel as str
     font_color = row[0].font.color
     global hits
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
-        print(f"***[{hits}]{idx}: {ident} red")
+        print(f"***[{hits}]{idx}: {ident}")
         if record_exists(ident=ident, conf=conf):
             # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
             # nicht eingetragen wurden?
-            print(f"   Record '{ident}' exists already")
+            log_print_info(
+                f"Record '{ident}' exists already (not creating another one)"
+            )
         else:
             create_record(row=row, conf=conf, act=act)
 
