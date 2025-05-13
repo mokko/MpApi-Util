@@ -65,7 +65,7 @@ def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
     wb = load_workbook(conf["excel_fn"], data_only=True)
     ws = wb[conf["sheet_title"]]  # sheet exists already
 
-    conf["RIA"] = init_ria()
+    conf["RIA"] = init_ria()  # mpApi.util.Ria's client
     init_log(act=act, conf=conf, conf_fn=conf_fn, limit=limit)
     print(f">> Getting template from RIA Object {conf['template_id']}")
     conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
@@ -170,9 +170,13 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
 
 def record_exists(*, ident: str, conf: dict) -> bool:
     """
-    Check ria if a record with a specific identNr exists. It's not relevant if one or
-    multiple results exist.
-    N.B. This search is not exact.
+    Check ria if a record with a specific identNr exists. It's not particularly relevant
+    if one or multiple results exist with this identNr.
+
+    N.B.
+    - This search is not particularly exact. Internally it uses ObjObjectNumberVrt
+    - Typical query, could also be in differet python file.
+    - Currently no pytest
     """
     q = Search(module="Object", limit=-1, offset=0)
     q.AND()

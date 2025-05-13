@@ -1,9 +1,31 @@
 """
+Rewriting existing records
+    from copy import deepcopy
+    from MpApi.Utils.becky.set_fields_Object import (
+        set_ident,
+        set_ident_sort,
+        set_sachbegriff,
+        set_beteiligte,
+        set_erwerbDatum,
+        set_erwerbungsart,
+        set_erwerbNr,
+        set_erwerbVon,
+        set_geogrBezug,
+        set_invNotiz,
+        set_objRefA,
+    )
+    from MpApi.Utils.Ria import RIA, init_ria
+
+    ria = init_ria()
+    templateM = ria.get_template(ID=123456, mtype="Object")
+    recordM = deepcopy(templateM) # record should contain only one moduleItem
+    set_ident(recordM, ident="III c 123", institution = "EM")
+
 Several functions that expect a Module object with a full record and rewrite/overwrite
 specific elements given an appropriate value, typically of type str.
 
-Set refers here to the following process: If there is a field already, overwrite it. If
-there is none, we create it.
+Set refers here to the following process: If there is a field overwrite it; otherwise
+create it with given value.
 
 We don't use return values here, but rather change the record in place (reference)
 
@@ -31,8 +53,17 @@ person_data = {}
 geo_data = {}
 archive_data = {}
 
+"""
+Für alle manuellen Indexe gilt:
+- Wenn ein unbekannter Begriff in den Daten auftaucht, bricht das Programm ab. Soll auch Fehler loggen.
+- Wenn ein Begriff in diesem Index eine Null erhält (auch 000000), bleibt das Feld in RIA leer.  
+- Sollen wir das auch loggen? Wohl ja, denn dann hat man nachträglich die Chance, die Daten (manuell) 
+  zu korrigieren
+- Brauchen wir den None-Eintrag? Nein.
+"""
+
+
 roles = {
-    None: None,
     "Absender*in": 4378273,
     "Auftraggeber*in": 4378279,
     "Auktionator*in": 4378280,
@@ -88,6 +119,9 @@ erwerbungsarten = {
 }
 
 
+NS = "xmlns='http://www.zetcom.com/ria/ws/module'"
+
+
 def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     """
     setting ObjPerAssociationRef
@@ -98,7 +132,7 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     print(f"{beteiligte=}")
 
     mRefN = etree.fromstring(
-        "<moduleReference name='ObjPerAssociationRef' targetModule='Person'/>"
+        f"<moduleReference {NS} name='ObjPerAssociationRef' targetModule='Person'/>"
     )
 
     for count, (name, role) in enumerate(_each_person(beteiligte), start=1):
@@ -108,14 +142,25 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
             sort = (count - 1) * 5
 
         nameID = _lookup_name(name=name, conf=conf)  # raises if unknown
-        roleID = _lookup_role(role)  # raises if unknown
+        roleID = _lookup_role(role)  # raises if not part of index
         print(f"{count} {sort} {name} [{role}] {nameID=} {roleID=}")
         xml = f"""
-            <moduleReferenceItem moduleItemId="{nameID}">
+            <moduleReferenceItem {NS} moduleItemId="{nameID}">
               <dataField dataType="Long" name="SortLnu">
                 <value>{sort}</value>
               </dataField>"""
-        if roleID is not None:
+        # do we really need the None test?
+        if roleID == 0:
+            # Untested ...
+            logger = logging.getLogger(__name__)
+            # at this point there is no objId yet, but we can use IdentNr instead
+            identNr = recordM.xpath("""
+                //m:application/m:modules/m:module/m:moduleItem[1]/m:repeatableGroup[
+                    @name eq 'ObjObjectNumberGrp'
+                ]/m:repeatableGroupItem/m:dataField[
+                    @name = 'InventarNrSTxt']""")
+            logger.WARN(f"null role for {identNr=} with {beteiligte=}")
+        else:
             xml += f"""
               <vocabularyReference name="RoleVoc" id="30423" instanceName="ObjPerAssociationRoleVgr">
                 <vocabularyReferenceItem id="{roleID}"/>
@@ -147,7 +192,7 @@ def set_erwerbDatum(recordM: Module, *, datum: str) -> None:
     print(f"Erwerb.datum={datum}")
     quelle = "Hauptkatalog / #KP24"
     newN = etree.fromstring(f"""
-        <repeatableGroup name="ObjAcquisitionDateGrp">
+        <repeatableGroup {NS} name="ObjAcquisitionDateGrp">
           <repeatableGroupItem>
             <dataField name="DateToTxt">
               <value>{datum}</value>
@@ -180,7 +225,7 @@ def set_erwerbNr(recordM: Module, *, nr: str) -> None:
 
     print(f"erwerbNr='{nr}'")
     newN = etree.fromstring(f"""
-        <dataField name="ObjAcquisitionReferenceNrTxt">
+        <dataField {NS} name="ObjAcquisitionReferenceNrTxt">
           <value>{nr}</value>
         </dataField>
     """)
@@ -208,18 +253,25 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
     print(f"Erwerbungsart='{art}' {artID=}")
     bemerkung = "#KP24"
 
-    newN = etree.fromstring(f"""
-        <repeatableGroup name="ObjAcquisitionMethodGrp">
+    xml = f"""
+        <repeatableGroup {NS} name="ObjAcquisitionMethodGrp">
           <repeatableGroupItem>
             <dataField name="NotesClb">
               <value>{bemerkung}</value>
-            </dataField>
-          <vocabularyReference name="MethodVoc" id="62639" >
-            <vocabularyReferenceItem id="{artID}"/>
-          </vocabularyReference>
+            </dataField>"""
+    if artID != 0:
+        xml += f"""
+            <vocabularyReference name="MethodVoc" id="62639" >
+               <vocabularyReferenceItem id="{artID}"/>
+            </vocabularyReference>
+        """
+    xml += """
           </repeatableGroupItem>
         </repeatableGroup>
-    """)
+    """
+
+    newN = etree.fromstring(xml)
+
     _new_or_replace(
         record=recordM,
         xpath="//m:repeatableGroup[@name = 'ObjAcquisitionMethodGrp']",
@@ -242,7 +294,7 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
 
     print(f"ErwerbungVon '{von}'")
     newN = etree.fromstring(f"""
-    <repeatableGroup name="ObjAcquisitionNotesGrp">
+    <repeatableGroup {NS} name="ObjAcquisitionNotesGrp">
       <repeatableGroupItem>
         <dataField name="MemoClb">
           <value>{von}</value>
@@ -284,7 +336,7 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
 
     print(f"geogrBezug {name=}")
     newN = etree.fromstring(f"""
-        <virtualField name="ObjGeograficVrt">
+        <virtualField {NS} name="ObjGeograficVrt">
           <value>{name}</value>
         </virtualField>
     """)
@@ -300,7 +352,7 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     # assuming that there is only one item in the Excel always
     # instanceName="GenPlaceVgr"
     newN = etree.fromstring(f"""
-        <repeatableGroup name="ObjGeograficGrp">
+        <repeatableGroup {NS} name="ObjGeograficGrp">
           <repeatableGroupItem>
             <dataField name="SourceTxt">
               <value>{source}</value>
@@ -359,7 +411,7 @@ def set_ident(record: Module, *, ident: str, institution: str) -> None:
 
     # ObjObjectNumberTxt
     newN = etree.fromstring(f"""
-        <dataField name="ObjObjectNumberTxt">
+        <dataField {NS} name="ObjObjectNumberTxt">
           <value>{ident}</value>
         </dataField>
     """)
@@ -378,7 +430,7 @@ def set_ident_sort(record: Module, *, nr: int) -> None:
     print(f"{nr=}")
 
     newN = etree.fromstring(f"""
-        <dataField name="ObjObjectNumberSortedTxt">
+        <dataField {NS} name="ObjObjectNumberSortedTxt">
             <value>0003 C {nr:05d}</value>
         </dataField>
     """)
@@ -416,7 +468,7 @@ def set_invNotiz(record: Module, bemerkung: str) -> None:
         return None
 
     newN = etree.fromstring(f"""
-    <repeatableGroup name="ObjEditorNotesGrp">
+    <repeatableGroup {NS} name="ObjEditorNotesGrp">
       <repeatableGroupItem>
         <dataField dataType="Clob" name="NotesClb">
           <value>{bemerkung}</value>
@@ -462,7 +514,7 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     rel_objId = archive_data[Vorgang][0]
 
     newN = etree.fromstring(f"""
-        <composite name="ObjObjectCre">
+        <composite {NS} name="ObjObjectCre">
           <compositeItem >
             <moduleReference name="ObjObjectARef" targetModule="Object">
               <moduleReferenceItem moduleItemId="{rel_objId}">
@@ -508,7 +560,7 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
 
     # Sachbegriff Ausg
     newN = etree.fromstring(f"""
-        <dataField name="ObjTechnicalTermClb">
+        <dataField {NS} name="ObjTechnicalTermClb">
           <value>{sachbegriff}</value>
         </dataField>
     """)
@@ -517,7 +569,7 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
     )
 
     newN = etree.fromstring(f"""
-        <repeatableGroup name="ObjTechnicalTermGrp">
+        <repeatableGroup {NS} name="ObjTechnicalTermGrp">
           <repeatableGroupItem>
             <dataField name="TechnicalTermTxt">
               <value>{sachbegriff}</value>
@@ -587,7 +639,7 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str]]:
 
 def _is_int(value: int | None) -> bool:
     """
-    Expects int or None. Returns True if is an integer or false otherwise.
+    Expects int or None. Returns True if is an integer or False otherwise.
 
     TODO: Test if it dies on error.
     """
@@ -658,6 +710,11 @@ def _lookup_place(*, name: str, conf: dict) -> int:
 
 
 def _lookup_role(role: str) -> int:
+    """
+    Would only return None if that is a value in the index and that values should not be used.
+    Use 0 oder 000000 instead if you want to keep the field empty in RIA.
+    """
+
     global roles
     try:
         return roles[role]
@@ -675,8 +732,8 @@ def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
     """
     try:
         oldN = record.xpath(xpath)[0]
-    except IndexError:  # KeyError,
+    except IndexError:  # append
         parentN = record.xpath("//m:moduleItem")[0]
         parentN.append(newN)
-    else:
+    else:  # replace
         oldN.getparent().replace(oldN, newN)

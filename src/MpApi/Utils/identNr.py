@@ -66,7 +66,7 @@ class IdentNr:
         noSpecialChars = self.text.replace(" ", "").replace("_", "").replace("/", "")
 
         xml = f"""
-            <repeatableGroup name="ObjObjectNumberGrp">
+            <repeatableGroup xmlns='http://www.zetcom.com/ria/ws/module' name="ObjObjectNumberGrp">
                 <repeatableGroupItem>
                     <dataField name="InventarNrSTxt">
                         <value>{self.text}</value>

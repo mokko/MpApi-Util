@@ -58,7 +58,10 @@ class RIA:
         self.photographer_cache: dict[str, list | None] = {}
 
     def create_asset_from_template(self, *, templateM) -> int:
-        """method not really necessary"""
+        """
+        This method is for convenience, not really necessary. Assumes that
+        templateM is of type Multimedia.
+        """
         mulId = self.mpapi.createItem3(data=templateM)
         return mulId
 

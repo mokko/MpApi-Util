@@ -1,17 +1,45 @@
-from MpApi.Utils.becky.becky import _load_conf
-
 # from mpapi.constants import get_credentials
 # from mpapi.search import Search
-from MpApi.Utils.becky.person_cache import open_cache, save_cache
-from MpApi.Utils.becky.set_fields_Object import _each_person, roles
-from openpyxl import Workbook, load_workbook, worksheet
+from copy import deepcopy
+from MpApi.Utils.becky.cache_ops import open_person_cache, save_person_cache
+from MpApi.Utils.becky.set_fields_Object import (
+    _each_person,
+    roles,
+    set_ident,
+    set_ident_sort,
+    set_sachbegriff,
+    set_beteiligte,
+    set_erwerbDatum,
+    set_erwerbungsart,
+    set_erwerbNr,
+    set_erwerbVon,
+    set_geogrBezug,
+    set_invNotiz,
+    set_objRefA,
+)
+from MpApi.Utils.Ria import RIA, init_ria
 from pathlib import Path
 
-conf_fn = "becky_conf.toml"  # in sdata
-# roles = set()
+# conf_fn = Path(__file__).parents[1] / "sdata" / "becky_conf.toml"
 
 
-def test_two() -> None:
+def test_init() -> None:
+    client = init_ria()
+    templateM = client.get_template(ID=625690, mtype="Object")
+    recordM = deepcopy(templateM)  # record should contain only one moduleItem
+    set_ident(recordM, ident="III C 123", institution="EM")
+    recordM = deepcopy(recordM)
+    # print(recordM)
+    # recordM.toFile(path="test.debug.xml")
+    InventarNrSTxt = recordM.xpath("""/m:application/m:modules/m:module[
+        @name = 'Object'
+    ]/m:moduleItem/m:repeatableGroup[
+        @name = 'ObjObjectNumberGrp'
+    ]/m:repeatableGroupItem/m:dataField[@name ='InventarNrSTxt']/m:value/text()""")[0]
+    assert InventarNrSTxt == "III C 123"
+
+
+def test_each_person1() -> None:
     beteiligte = """
         Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in; 
         Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung; 
@@ -31,7 +59,7 @@ def test_two() -> None:
                 assert role is None
 
 
-def test_three() -> None:
+def test_each_person2() -> None:
     beteiligte = """
         Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
         Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
@@ -51,19 +79,3 @@ def test_three() -> None:
 
 def test_four() -> None:
     assert 1 == 1
-
-
-def test_one() -> None:
-    conf = _load_conf()
-
-    print(">> Reading workbook")
-    wb = load_workbook(conf["excel_fn"], data_only=True)
-    ws = wb[conf["sheet_title"]]  # sheet exists already
-
-    print(">> Looping thru table")
-    for idx, row in enumerate(ws.iter_rows(min_row=2), start=2):
-        print(f"Line {idx}")
-        for name, role in _each_person(beteiligte=row[3].value):
-            print(f"[{role}] {name}")
-            if role is not None and role not in roles:
-                assert False
