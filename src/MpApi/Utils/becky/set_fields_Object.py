@@ -34,6 +34,7 @@ Do we need to check if arguments are empty? Where is that test?
 
 """
 
+import logging
 from lxml import etree
 from lxml.etree import _Element
 from mpapi.module import Module
@@ -152,14 +153,14 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         # do we really need the None test?
         if roleID == 0:
             # Untested ...
-            logger = logging.getLogger(__name__)
             # at this point there is no objId yet, but we can use IdentNr instead
             identNr = recordM.xpath("""
                 //m:application/m:modules/m:module/m:moduleItem[1]/m:repeatableGroup[
                     @name eq 'ObjObjectNumberGrp'
                 ]/m:repeatableGroupItem/m:dataField[
                     @name = 'InventarNrSTxt']""")
-            logger.WARN(f"null role for {identNr=} with {beteiligte=}")
+            logger = logging.getLogger(__name__)
+            logger.warning(f"null role for {identNr=} with {beteiligte=}")
         else:
             xml += f"""
               <vocabularyReference name="RoleVoc" id="30423" instanceName="ObjPerAssociationRoleVgr">
@@ -317,6 +318,8 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
 
 def set_geogrBezug(recordM: Module, *, name: str) -> None:
     """
+    TODO: parameterize souce and notes.
+    
     virtualField/@ObjGeograficVrt
 
     <virtualField name="ObjGeograficVrt">
@@ -393,7 +396,7 @@ def set_ident(record: Module, *, ident: str, institution: str) -> None:
           <value>III C 192</value>
         </dataField>
 
-    Why dont I need to set the namespace?
+    Why dont I need to set the namespace? Doing that now. See if RIA likes it.
     """
     # ObjObjectNumberGrp
     if _is_space_etc(ident):
@@ -678,22 +681,39 @@ def _is_space_etc(value: str | None) -> bool:
             return False
 
 
-def _lookup_name(*, name: str, conf: dict) -> int | None:
+def _lookup_name(*, name: str, conf: dict) -> int:
+    """
+    Lookup that returns the ids for a given name in the cache.
+
+    Note it is possible that one name has multiple entries, hence we
+    always return a tuple which often contains only one hit.
+
+    For cases where there are  multiple records for one name,
+    raise TypeError and log. (We used to silently take the first name record.)
+    
+    Raises TypeError if name not in cache.
+    May return 0 if a name known to the cache has no valid equivalent in RIA.
+
+    
+    """
     global person_data
+    logger = logging.getLogger(__name__)
     if not person_data:  # cache empty
         person_data = open_person_cache(conf)
 
     try:
-        atuple = person_data[name]  # currently ALWAYS using first name
+        atuple = person_data[name]
     except KeyError:
         # production should use raise, development may warn
+        
+        logger.warning(f"Person not in cache! '{name}'")
         raise TypeError(f"Person not in cache! '{name}'")
         # print(f">> WARN Person not in cache! '{name}'")
 
-    if len(atuple) > 0:
-        return atuple[0]
-    else:
-        return None
+    if len(atuple) > 1:
+        logger.warning(f"Ambiguous person name in cache! '{name}'")
+        raise TypeError(f"Ambiguous person name in cache! '{name}'")
+    return atuple[0]
 
 
 def _lookup_place(*, name: str, conf: dict) -> int:
@@ -701,11 +721,13 @@ def _lookup_place(*, name: str, conf: dict) -> int:
     Not used at the moment
     """
     global geo_data
+    logger = logging.getLogger(__name__)
     if not geo_data:
         geo_data = open_geo_cache(conf)
     try:
         return geo_data[name]
     except KeyError:
+        logger.ERROR(f"Unbekannte Ort: '{name}'")
         raise TypeError(f"Unbekannter Ort: '{name}'!")
 
 
@@ -716,11 +738,13 @@ def _lookup_role(role: str) -> int:
     """
 
     global roles
+    logger = logging.getLogger(__name__)
     try:
         return roles[role]
     except KeyError:
+        logger.ERROR(f"Unbekannte Rolle: '{role}'")
         raise TypeError(f"Unbekannte Rolle: '{role}'!")
-
+        
 
 def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
     """

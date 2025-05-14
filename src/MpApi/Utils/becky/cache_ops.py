@@ -56,7 +56,7 @@ def set_change():
 
 def _open(cache_fn: Path, name: str) -> dict:
     if not cache_fn.exists():
-        print(">> Starting new {name}")
+        print(f">> Starting new {name} ({cache_fn})")
         return {}
 
     print(f">> {name} from file'{cache_fn}'")
