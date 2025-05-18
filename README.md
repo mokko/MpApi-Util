@@ -11,7 +11,7 @@ relatively slow, so dont expect anything here to win a speed competition.
 - mover: move files that are already in RIA to safe location
 - prepare: create object records for assets that dont have one yet
 - reportx: writes a report on files scanning a directory recursively 
-- upload: based on properly named files on disk, create asset records, link to object 
+- up: based on properly named files on disk, create asset records, link to object 
   records, and attach assets in RIA.
 - becky: create records for Kamerun 2024 Projekt based on Excel file
 
