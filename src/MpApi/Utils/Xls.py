@@ -273,18 +273,19 @@ class Xls:
 
         Note that when you are using relative path, you need to be in correct directory.
 
-        Currently, we're using the filename from column A which SHOULD be unique in the
+        We used to use the filename from column A which SHOULD be unique in the
         MuseumPlus context, but which is strange requirement in the world of directories,
         where multiple dirs may contain files with the same name.
 
-        What happens if filenames are not unique? Files on disk will not be
-        uploaded listed in scandir and hence not uploaded and hence not moved.
+        Now we use a cno (no 8) column as int.
         """
+
         for idx, row in enumerate(sheet.iter_rows(min_row=3), start=3):
             # start at 3rd row
             fn = row[cno].value
             # print (f"_path_in_list: {fn=}{name=}")
             if fn == str(path):
+                print(f"WARN: Known full path '{path}' (not adding to list)")
                 return idx
         return None
 

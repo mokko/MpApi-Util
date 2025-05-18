@@ -290,8 +290,9 @@ class PrepareUpload(BaseApp):
                 continue
             if path.name.lower().strip() in ignore_names:
                 continue
-            if self.xls.path_exists(path=path.absolute(), cno=7, sheet=self.ws):
+            if self.xls.path_exists(path=path.absolute(), cno=8, sheet=self.ws):
                 # if absolute path is already in Excel ignore it
+                # only works again since 18.5.2025
                 continue
             file_list.append(path)
             c += 1
@@ -325,7 +326,7 @@ class PrepareUpload(BaseApp):
         Mainly fills in the "already uploaded?" cell in Excel (column C).
 
         Checks if an asset with that filename exists already in RIA. If so, it lists the
-        corresponding mulId(s); if not None
+        corresponding mulId(s); if not None.
 
         If config value mv_dupes exists, move asset files to the directory from the
         mv_dupes config value.
@@ -609,11 +610,14 @@ class PrepareUpload(BaseApp):
     ) -> None:
         """
         During the scandisk process we fill in a couple of columns per file
-        - Dateiname
-        - identNr
-        - weitereNr
-        - abs. Pfad
+        - A: Dateiname
+        - B: identNr
+        - C: weitereNr
+        - I: abs. Pfad
+        - K: schemaId
         writes to self.ws
+
+        N.B. We have already checked for duplicates in scan_disk.
         """
         identNr, wNr = self._determine_ident(path, known_weitere_nr)
         print(f"   {path.name} -> {identNr} {wNr=}")
