@@ -30,7 +30,7 @@ from mpapi.constants import get_credentials
 from mpapi.module import Module
 from mpapi.search import Search
 
-from MpApi.Utils.Ria import RIA, init_ria
+from MpApi.Utils.Ria import RIA, init_ria, record_exists, record_exists2
 from MpApi.Utils.becky.set_fields_Object import (
     set_ident,
     set_ident_sort,
@@ -166,35 +166,6 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
             )
         else:
             create_record(row=row, conf=conf, act=act)
-
-
-def record_exists(*, ident: str, conf: dict) -> bool:
-    """
-    Check ria if a record with a specific identNr exists. It's not particularly relevant
-    if one or multiple results exist with this identNr.
-
-    N.B.
-    - This search is not particularly exact. Internally it uses ObjObjectNumberVrt
-    - Typical query, could also be in differet python file.
-    - Currently no pytest
-    """
-    q = Search(module="Object", limit=-1, offset=0)
-    q.AND()
-    q.addCriterion(
-        field="ObjObjectNumberVrt",
-        operator="equalsField",
-        value=str(ident),
-    )
-    q.addCriterion(field="__orgUnit", operator="equalsField", value=conf["org_unit"])
-    q.addField(field="__id")
-    q.validate(mode="search")  # raises if not valid
-    m = conf["RIA"].mpapi.search2(query=q)
-    if len(m) > 1:
-        raise TypeError("Warning! more than one result in record_exists")
-    if m:
-        return True
-    else:
-        return False
 
 
 #

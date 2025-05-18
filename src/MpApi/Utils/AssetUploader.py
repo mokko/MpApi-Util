@@ -663,6 +663,7 @@ class AssetUploader(BaseApp):
             objIds = self.client.get_objIds(
                 identNr=identNr, strict=True, orgUnit=self.orgUnit
             )
+            print(f"***{objIds}***")
             self.objIds_cache[identNr] = objIds
             # print(f"   new objId from RIA [{objIds}]")
             return objIds

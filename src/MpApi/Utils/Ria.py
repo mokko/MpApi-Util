@@ -692,11 +692,87 @@ class RIA:
         return m.get_ids(mtype="Person")
 
 
+#
+# these are functions for the new functional interface
+#
+
+
 def init_ria() -> RIA:
     user, pw, baseURL = get_credentials()
     print(f">> Logging in as {user}")
     client = RIA(baseURL=baseURL, user=user, pw=pw)
     return client
+
+
+def record_exists(*, ident: str, conf: dict) -> bool:
+    """
+    Check ria if a record with a specific identNr exists. It's not particularly relevant
+    if one or multiple results exist with this identNr.
+
+    N.B.
+    - This search is not particularly exact. Internally it uses ObjObjectNumberVrt
+    - Typical query, could also be in differet python file.
+    - Currently no pytest
+    """
+    if ident is None:
+        raise ValueError("ident may not be None")
+    q = Search(module="Object", limit=-1, offset=0)
+    q.AND()
+    q.addCriterion(
+        field="ObjObjectNumberVrt",
+        operator="equalsField",
+        value=str(ident),
+    )
+    q.addCriterion(field="__orgUnit", operator="equalsField", value=conf["org_unit"])
+    q.addField(field="__id")
+    q.validate(mode="search")  # raises if not valid
+    m = conf["RIA"].mpapi.search2(query=q)
+    if len(m) > 1:
+        raise ValueError("Warning! more than one result in record_exists")
+    if m:
+        return True
+    else:
+        return False
+
+
+def record_exists2(*, ident: str, conf: dict) -> int:
+    """
+    Hendryk wants a different check (Dublettencheck).
+
+    Here is Signaturbereich III C baked in, could also be parameter, of course.
+
+    Ignores parts "a-c" etc.
+
+    Returns int 0 for false, or number of hits
+    """
+    fortlaufendeNr = ident.split(" ")[2]
+    # print(f"***exist2: {ident}***")
+    if fortlaufendeNr is None:
+        raise ValueError("fortlaufendeNr may not be None")
+
+    q = Search(module="Object", limit=-1, offset=0)
+    q.AND()
+    q.addCriterion(
+        field="ObjObjectNumberGrp.InvNumberSchemeRef",
+        operator="equalsField",
+        value="51",
+    )
+    q.addCriterion(
+        field="ObjObjectNumberGrp.Part3Txt",
+        operator="equalsField",
+        value=str(fortlaufendeNr),
+    )
+    q.addCriterion(field="__orgUnit", operator="equalsField", value=conf["org_unit"])
+    q.addField(field="__id")
+    q.validate(mode="search")  # raises if not valid
+    m = conf["RIA"].mpapi.search2(query=q)
+    # if len(m) > 1:
+    #    print(f"WARN: multiple results in record_exists2 {ident}")
+    #    #raise TypeError("Warning! More than one result in record_exists2")
+    if m:
+        return len(m)
+    else:
+        return 0
 
 
 if __name__ == "__main__":

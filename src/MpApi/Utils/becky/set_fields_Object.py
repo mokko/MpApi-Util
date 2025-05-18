@@ -319,7 +319,7 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
 def set_geogrBezug(recordM: Module, *, name: str) -> None:
     """
     TODO: parameterize souce and notes.
-    
+
     virtualField/@ObjGeograficVrt
 
     <virtualField name="ObjGeograficVrt">
@@ -663,10 +663,10 @@ def _is_space_etc(value: str | None) -> bool:
     Expects a string or None. Returns True if value is None or an empty string ('') or
     an de facto empty string (e.g. ' '). Otherwise return False.
 
-    Currently, dies if you pass in an int instead of an str which is not so bad since it
+    Currently, dies if you pass in an int instead of an str which is good behavior since it
     points to a problem we should be aware of.
 
-    Could be better tested.
+    TODO: tests
     """
 
     if not isinstance(value, str) and not value is None:
@@ -690,11 +690,11 @@ def _lookup_name(*, name: str, conf: dict) -> int:
 
     For cases where there are  multiple records for one name,
     raise TypeError and log. (We used to silently take the first name record.)
-    
+
     Raises TypeError if name not in cache.
     May return 0 if a name known to the cache has no valid equivalent in RIA.
 
-    
+
     """
     global person_data
     logger = logging.getLogger(__name__)
@@ -704,14 +704,11 @@ def _lookup_name(*, name: str, conf: dict) -> int:
     try:
         atuple = person_data[name]
     except KeyError:
-        # production should use raise, development may warn
-        
-        logger.warning(f"Person not in cache! '{name}'")
+        logger.error(f"Person not in cache! '{name}'")
         raise TypeError(f"Person not in cache! '{name}'")
-        # print(f">> WARN Person not in cache! '{name}'")
 
     if len(atuple) > 1:
-        logger.warning(f"Ambiguous person name in cache! '{name}'")
+        logger.error(f"Ambiguous person name in cache! '{name}'")
         raise TypeError(f"Ambiguous person name in cache! '{name}'")
     return atuple[0]
 
@@ -733,7 +730,8 @@ def _lookup_place(*, name: str, conf: dict) -> int:
 
 def _lookup_role(role: str) -> int:
     """
-    Would only return None if that is a value in the index and that values should not be used.
+    Would only return None if that is a value in the index and that values should not be used
+    in the index.
     Use 0 oder 000000 instead if you want to keep the field empty in RIA.
     """
 
@@ -744,7 +742,7 @@ def _lookup_role(role: str) -> int:
     except KeyError:
         logger.ERROR(f"Unbekannte Rolle: '{role}'")
         raise TypeError(f"Unbekannte Rolle: '{role}'!")
-        
+
 
 def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
     """
