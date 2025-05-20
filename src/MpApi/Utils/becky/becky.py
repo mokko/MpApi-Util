@@ -30,7 +30,7 @@ from mpapi.constants import get_credentials
 from mpapi.module import Module
 from mpapi.search import Search
 
-from MpApi.Utils.Ria import RIA, init_ria, record_exists, record_exists2
+from MpApi.Utils.Ria import RIA, init_ria, record_exists2
 from MpApi.Utils.becky.set_fields_Object import (
     set_ident,
     set_ident_sort,
@@ -158,7 +158,7 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     global hits
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
         print(f"***[{hits}]{idx}: {ident}")
-        if record_exists(ident=ident, conf=conf):
+        if m := record_exists2(ident=ident, conf=conf):
             # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
             # nicht eingetragen wurden?
             log_print_info(
@@ -166,6 +166,10 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
             )
         else:
             create_record(row=row, conf=conf, act=act)
+            if m > 1:
+                logging.warning(
+                    f"Multiple identNr: More than one IdentNr exists already with this number {ident}"
+                )
 
 
 #

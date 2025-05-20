@@ -105,6 +105,7 @@ erwerbungsarten = {
     "Kauf": 1630987,
     "Kommission": 1630988,
     "Leihe": 1630989,
+    "Nachlass (Vermächtnis)": 1630990,
     "Nachlass/Vermächtnis": 1630990,
     "Nachlass (Vermächtnis) / Kauf": 1630990,
     "Pfändung": 1630992,
@@ -151,14 +152,17 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
                 <value>{sort}</value>
               </dataField>"""
         # do we really need the None test?
-        if roleID == 0:
+        if roleID == 0 or roleID is None:
             # Untested ...
             # at this point there is no objId yet, but we can use IdentNr instead
-            identNr = recordM.xpath("""
-                //m:application/m:modules/m:module/m:moduleItem[1]/m:repeatableGroup[
-                    @name eq 'ObjObjectNumberGrp'
-                ]/m:repeatableGroupItem/m:dataField[
-                    @name = 'InventarNrSTxt']""")
+            identNr = recordM.xpath("""/m:application/m:modules/m:module[
+        @name = 'Object'
+    ]/m:moduleItem/m:repeatableGroup[
+        @name = 'ObjObjectNumberGrp'
+    ]/m:repeatableGroupItem/m:dataField[@
+        name ='InventarNrSTxt'
+    ]/m:value/text()""")[0]
+
             logger = logging.getLogger(__name__)
             logger.warning(f"null role for {identNr=} with {beteiligte=}")
         else:
@@ -249,8 +253,9 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
     global erwerbungsarten
     try:
         artID = erwerbungsarten[art]
-    except IndexError:
-        raise IndexError(f"Erwerbungsart unbekannt: '{art}'")
+    except KeyError:
+        # raise KeyError(f"Erwerbungsart unbekannt: '{art}'")
+        logging.warning(f"KeyError: Erwerbungsart unbekannt: '{art}'")
     print(f"Erwerbungsart='{art}' {artID=}")
     bemerkung = "#KP24"
 
@@ -709,7 +714,7 @@ def _lookup_name(*, name: str, conf: dict) -> int:
 
     if len(atuple) > 1:
         logger.error(f"Ambiguous person name in cache! '{name}'")
-        raise TypeError(f"Ambiguous person name in cache! '{name}'")
+        # raise TypeError(f"Ambiguous person name in cache! '{name}'")
     return atuple[0]
 
 
@@ -724,23 +729,26 @@ def _lookup_place(*, name: str, conf: dict) -> int:
     try:
         return geo_data[name]
     except KeyError:
-        logger.ERROR(f"Unbekannte Ort: '{name}'")
+        logger.error(f"Unbekannte Ort: '{name}'")
         raise TypeError(f"Unbekannter Ort: '{name}'!")
 
 
-def _lookup_role(role: str) -> int:
+def _lookup_role(role: str | None) -> int | None:
     """
-    Would only return None if that is a value in the index and that values should not be used
-    in the index.
+    Updae: returns None if that role is None.
+
     Use 0 oder 000000 instead if you want to keep the field empty in RIA.
     """
+
+    if role is None:
+        return None
 
     global roles
     logger = logging.getLogger(__name__)
     try:
         return roles[role]
     except KeyError:
-        logger.ERROR(f"Unbekannte Rolle: '{role}'")
+        logger.error(f"Unbekannte Rolle: '{role}'")
         raise TypeError(f"Unbekannte Rolle: '{role}'!")
 
 
