@@ -29,20 +29,23 @@ def test_each_person1() -> None:
     beteiligte = """
         Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in; 
         Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung; 
-        Bezug unklar: Paul Grade († 05.04.1894*¹)
+        Bezug unklar: Paul Grade († 05.04.1894*)
     """
-    for idx, (name, role) in enumerate(_each_person(beteiligte=beteiligte)):
+    for idx, (name, role, date) in enumerate(_each_person(beteiligte=beteiligte)):
         print(f"[{role}] {name}")
         match idx:
             case 0:
                 assert name == "Joachim Pfeil"
                 assert role == "Sammler*in"
+                assert date == "30.12.1857 - 12.3.1924"
             case 1:
                 assert name == "Kaiserliches Auswärtiges Amt des Deutschen Reiches"
                 assert role == "Veräußerung"
+                assert date == "1875"
             case 2:
                 assert name == "Paul Grade"
                 assert role is None
+                assert date == "† 05.04.1894*"
 
 
 def test_each_person2() -> None:
@@ -50,17 +53,19 @@ def test_each_person2() -> None:
         Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
         Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
     """
-    for idx, (name, role) in enumerate(_each_person(beteiligte=beteiligte)):
+    for idx, (name, role, date) in enumerate(_each_person(beteiligte=beteiligte)):
         match idx:
             case 0:
                 assert name == "Heinrich Barth"
                 assert role == "Sammler*in"
+                assert date == "16.2.1821 - 25.11.1865"
             case 1:
                 assert (
                     name
                     == "Königliche Preußische Kunstkammer, Ethnografische Abteilung"
                 )
                 assert role == "Vorbesitzer*in"
+                assert date == "1801 - 1873"
 
 
 def test_lookup_person() -> None:

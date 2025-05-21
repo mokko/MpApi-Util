@@ -38,7 +38,7 @@ def main(conf_fn: str, mode: str, limit: int = -1) -> None:
 def process_names(*, beteiligte: str, cache: dict) -> dict:
     if beteiligte is None:
         return cache  # it's perfectly possible that a cell is empty...
-    for count, (name, role) in enumerate(_each_person(beteiligte), start=1):
+    for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
         # we're counting the names in one cell here, not the lines
         # print(f"{count}:{name} [{role}]")
         # if role not in roles:

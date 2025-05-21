@@ -137,7 +137,7 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         f"<moduleReference {NS} name='ObjPerAssociationRef' targetModule='Person'/>"
     )
 
-    for count, (name, role) in enumerate(_each_person(beteiligte), start=1):
+    for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
         if count == 1:
             sort = 1
         elif count > 1:
@@ -155,14 +155,7 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         if roleID == 0 or roleID is None:
             # Untested ...
             # at this point there is no objId yet, but we can use IdentNr instead
-            identNr = recordM.xpath("""/m:application/m:modules/m:module[
-        @name = 'Object'
-    ]/m:moduleItem/m:repeatableGroup[
-        @name = 'ObjObjectNumberGrp'
-    ]/m:repeatableGroupItem/m:dataField[@
-        name ='InventarNrSTxt'
-    ]/m:value/text()""")[0]
-
+            identNr = _ident_from_record(recordM)
             logger = logging.getLogger(__name__)
             logger.warning(f"null role for {identNr=} with {beteiligte=}")
         else:
@@ -606,12 +599,13 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
 #
 
 
-def _each_person(beteiligte: str) -> Iterator[tuple[str, str]]:
+def _each_person(beteiligte: str) -> Iterator[tuple[str, str, str|None]]:
     """
     - We split the string at ";"
     - We assume the role is the thing before the last comma
     - We ignore Zusätze in front of ":"
-    - and things like Lebensdaten in brackets
+
+    New: We used to ignore Lebensdaten in brackets, now we extract them if they exist or return None if not.
     """
     exceptions = [  # name_roles with a comma, but no role
         "Erwähnung: Musée Ribauri - Art Primitif, Ethnographie, Haute Epoque, Curiosités (1964/1965)",
@@ -633,6 +627,13 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str]]:
                 name = name_role
                 role = None
             # cut off the dates in brackets
+            match = re.search(r'\(([^)]*)\)', name)
+            if match:
+                date = match.group(1)
+            else:
+                #it's perfectly possible that person has no date
+                #raise TypeError(f"No date found! {name}")
+                date = None 
             name = name.split("(")[
                 0
             ].strip()  # returns list with orignal item if not split
@@ -642,8 +643,17 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str]]:
                 name = name.split(":")[1].strip()
             except IndexError:
                 pass
-            yield (name, role)
+            yield (name, role, date)
 
+
+def _ident_from_record(recordM: Module) -> str:
+    return recordM.xpath("""/m:application/m:modules/m:module[
+        @name = 'Object'
+    ]/m:moduleItem/m:repeatableGroup[
+        @name = 'ObjObjectNumberGrp'
+    ]/m:repeatableGroupItem/m:dataField[@
+        name ='InventarNrSTxt'
+    ]/m:value/text()""")[0]
 
 def _is_int(value: int | None) -> bool:
     """
@@ -709,12 +719,15 @@ def _lookup_name(*, name: str, conf: dict) -> int:
     try:
         atuple = person_data[name]
     except KeyError:
-        logger.error(f"Person not in cache! '{name}'")
-        raise TypeError(f"Person not in cache! '{name}'")
+        msg = f"Person not in cache! '{name}'"
+        logger.error(msg)
+        raise KeyError(msg)
 
     if len(atuple) > 1:
-        logger.error(f"Ambiguous person name in cache! '{name}'")
-        # raise TypeError(f"Ambiguous person name in cache! '{name}'")
+        # break early especially during dry-runs
+        msg = f"Ambiguous person name in cache! '{name}'"
+        logger.error(msg)
+        raise TypeError(msg)
     return atuple[0]
 
 
@@ -730,7 +743,7 @@ def _lookup_place(*, name: str, conf: dict) -> int:
         return geo_data[name]
     except KeyError:
         logger.error(f"Unbekannte Ort: '{name}'")
-        raise TypeError(f"Unbekannter Ort: '{name}'!")
+        raise KeyError(f"Unbekannter Ort: '{name}'!")
 
 
 def _lookup_role(role: str | None) -> int | None:
@@ -749,7 +762,7 @@ def _lookup_role(role: str | None) -> int | None:
         return roles[role]
     except KeyError:
         logger.error(f"Unbekannte Rolle: '{role}'")
-        raise TypeError(f"Unbekannte Rolle: '{role}'!")
+        raise KeyError(f"Unbekannte Rolle: '{role}'!")
 
 
 def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
