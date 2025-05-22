@@ -599,7 +599,7 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
 #
 
 
-def _each_person(beteiligte: str) -> Iterator[tuple[str, str, str|None]]:
+def _each_person(beteiligte: str) -> Iterator[tuple[str, str, str | None]]:
     """
     - We split the string at ";"
     - We assume the role is the thing before the last comma
@@ -627,13 +627,13 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str, str|None]]:
                 name = name_role
                 role = None
             # cut off the dates in brackets
-            match = re.search(r'\(([^)]*)\)', name)
+            match = re.search(r"\(([^)]*)\)", name)
             if match:
                 date = match.group(1)
             else:
-                #it's perfectly possible that person has no date
-                #raise TypeError(f"No date found! {name}")
-                date = None 
+                # it's perfectly possible that person has no date
+                # raise TypeError(f"No date found! {name}")
+                date = None
             name = name.split("(")[
                 0
             ].strip()  # returns list with orignal item if not split
@@ -654,6 +654,7 @@ def _ident_from_record(recordM: Module) -> str:
     ]/m:repeatableGroupItem/m:dataField[@
         name ='InventarNrSTxt'
     ]/m:value/text()""")[0]
+
 
 def _is_int(value: int | None) -> bool:
     """
@@ -717,17 +718,28 @@ def _lookup_name(*, name: str, conf: dict) -> int:
         person_data = open_person_cache(conf)
 
     try:
-        atuple = person_data[name]
+        adict = person_data[name]
     except KeyError:
         msg = f"Person not in cache! '{name}'"
         logger.error(msg)
         raise KeyError(msg)
 
-    if len(atuple) > 1:
+    if len(adict) > 1:
         # break early especially during dry-runs
-        msg = f"Ambiguous person name in cache! '{name}'"
+        msg = f"Ambiguous date for person in cache! '{name}'"
+        # this has never happened so far, so die when it does
         logger.error(msg)
         raise TypeError(msg)
+
+    for date in person_data[name]:
+        print(f"{person_data[name][date]=}")
+        atuple = person_data[name][date]
+
+        if len(atuple) > 1:
+            # break early especially during dry-runs
+            msg = f"Ambiguous person name in cache! '{name}'"
+            logger.error(msg)
+            raise TypeError(msg)
     return atuple[0]
 
 

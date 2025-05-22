@@ -36,6 +36,7 @@ def save_geo_cache(*, conf: dict, data: dict) -> None:
 
 
 def save_person_cache(*, conf: dict, data: dict) -> None:
+    # print("Saving person cache") at this point we're still not sure if it saves
     cache_fn = conf["project_dir"] / conf["person_cache"]
     _save(cache_fn, data)
 

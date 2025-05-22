@@ -36,6 +36,9 @@ def main(conf_fn: str, mode: str, limit: int = -1) -> None:
 
 
 def process_names(*, beteiligte: str, cache: dict) -> dict:
+    """
+    Gets called when looping through Excel, so no info from RIA yet.
+    """
     if beteiligte is None:
         return cache  # it's perfectly possible that a cell is empty...
     for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
@@ -44,8 +47,16 @@ def process_names(*, beteiligte: str, cache: dict) -> dict:
         # if role not in roles:
         #    roles.add(role)
         if name not in cache:
-            print(f">> Name not yet in cache {name}")
-            cache[name] = []
+            print(f">> Name not yet in cache '{name}'")
+            # cache[name] = {}
+            cache[name] = {date: []}
+            set_change()
+        else:
+            if date not in cache[name]:
+                print(f">> Date not yet in cache '{name}' '{date}'")
+                cache[name][date] = []
+                set_change()
+
     return cache
 
 
@@ -79,13 +90,25 @@ def query_archives(*, ident: str, client: RIA) -> list:
         return m.get_ids(mtype="Object")
 
 
-def query_persons(*, name: str, client: RIA) -> list:
+def query_persons(*, name: str, date: str, client: RIA) -> list:
+    """
+    for a given name (Nennfom), look up the objIds in RIA and return them as a list.
+
+    New: We expect date, include date in query and return less ids, i.e. only the
+    ones that match the date.
+    """
+    print(f"***{name}***{date=}")
     q = Search(module="Person", limit=-1, offset=0)
-    # q.AND()
+    q.AND()
     q.addCriterion(
         field="PerNennformTxt",
         operator="equalsField",
         value=name,
+    )
+    q.addCriterion(
+        field="PerDateGrp.DatingNewTxt",
+        operator="equalsField",
+        value=date,
     )
     q.addField(field="__id")
     q.validate(mode="search")  # raises if not valid
@@ -118,6 +141,8 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
     person_data = open_person_cache(conf)
 
     print(">> Looping thru excel looking for names")
+    # many rows repeat the same name, so we first make an index with
+    # distinct entries.
     for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
         # print(f"Line {idx}")
         person_data = process_names(beteiligte=row[3].value, cache=person_data)
@@ -127,21 +152,25 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
             print(">> Limit reached")
             break
 
+    # set_change()
     save_person_cache(data=person_data, conf=conf)
 
     client = init_ria()
     print(">> Unidentified names?")
     for idx, name in enumerate(person_data, start=1):
-        if not person_data[name]:  # if tuple is empty
-            idL = query_persons(client=client, name=name)
-            set_change()
-            person_data[name] = idL
-            print(idL)
-        if idx % 25 == 0:
-            save_person_cache(data=person_data, conf=conf)
-        if limit == idx:
-            print(">> Limit reached")
-            break
+        for date in person_data[name]:
+            # print (f"**{date=}")
+            if not person_data[name][date]:  # if tuple is empty
+                # where do we get date from? _each_person
+                idL = query_persons(client=client, name=name, date=date)
+                person_data[name][date] = idL
+                set_change()
+                print(f"{idL}")
+            if idx % 25 == 0:
+                save_person_cache(data=person_data, conf=conf)
+            if limit == idx:
+                print(">> Limit reached")
+                break
     save_person_cache(data=person_data, conf=conf)
 
 

@@ -78,11 +78,15 @@ def test_lookup_person() -> None:
         "Henriquez & Petersen": 335532,
     }
 
+    # why is this person problematic? Because he used to exist twice in index?
+    # Should be solved soon
     problematic = {"Carl Ritter": [2438]}
 
     for name in valid_cases:
         assert _lookup_name(name=name, conf=conf) == valid_cases[name]
 
+    for name in problematic:
+        assert _lookup_name(name=name, conf=conf) == problematic[name]
     # doesn't raise anymore
     # for name in problematic:
     #    with pytest.raises(TypeError):

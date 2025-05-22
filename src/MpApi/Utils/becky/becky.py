@@ -161,9 +161,7 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
         if m := record_exists2(ident=ident, conf=conf):
             # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
             # nicht eingetragen wurden?
-            log_print_info(
-                f"Record '{ident}' exists already (not creating another one)"
-            )
+            log_print_info(f"Record '{ident}' exists already")
         else:
             create_record(row=row, conf=conf, act=act)
             if m > 1:
