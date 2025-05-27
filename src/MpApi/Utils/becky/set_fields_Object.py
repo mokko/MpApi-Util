@@ -318,6 +318,8 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     """
     TODO: parameterize souce and notes.
 
+    N.B. name can be a string that contains multiple entries separated by ;
+
     virtualField/@ObjGeograficVrt
 
     <virtualField name="ObjGeograficVrt">
@@ -335,7 +337,12 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     if _is_space_etc(name):
         return None
 
-    print(f"geogrBezug {name=}")
+    print(f"geogrBezug {name=}")  # can be multiple names; names
+
+    # Multiple should look like:
+    # <virtualField name="ObjGeograficVrt">
+    #   <value>Togo; Kabure</value>
+    # </virtualField>
     newN = etree.fromstring(f"""
         <virtualField {NS} name="ObjGeograficVrt">
           <value>{name}</value>
@@ -350,26 +357,34 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     source = "Hauptkatalog"
     notes = "Eintrag erstellt im Projekt #KP24"
     # placeID = _lookup_place(name)
-    # assuming that there is only one item in the Excel always
+    # we used to assume that there is only one item in the Excel always
     # instanceName="GenPlaceVgr"
     newN = etree.fromstring(f"""
-        <repeatableGroup {NS} name="ObjGeograficGrp">
-          <repeatableGroupItem>
-            <dataField name="SourceTxt">
-              <value>{source}</value>
-            </dataField>
-            <dataField name="NotesClb">
-              <value>{notes}</value>
-            </dataField>
-            <dataField dataType="Long" name="SortLnu">
-              <value>1</value>
-            </dataField>
-            <dataField name="DetailsTxt">
-              <value>{name}</value>
-            </dataField>
-          </repeatableGroupItem>
-        </repeatableGroup>
+        <repeatableGroup {NS} name="ObjGeograficGrp"/>
     """)
+
+    namesL = [item.strip() for item in name.split(";")]
+    print(f"{namesL}")
+
+    for idx, item in enumerate(namesL):
+        idx = idx * 5
+        itemN = etree.fromstring(f"""
+            <repeatableGroupItem {NS}>
+                <dataField name="SourceTxt">
+                  <value>{source}</value>
+                </dataField>
+                <dataField name="NotesClb">
+                  <value>{notes}</value>
+                </dataField>
+                <dataField dataType="Long" name="SortLnu">
+                  <value>{idx}</value>
+                </dataField>
+                <dataField name="DetailsTxt">
+                  <value>{item}</value>
+                </dataField>
+            </repeatableGroupItem>""")
+        newN.append(itemN)
+
     _new_or_replace(
         record=recordM,
         xpath="//m:repeatableGroup[@name = 'ObjGeograficGrp']",
