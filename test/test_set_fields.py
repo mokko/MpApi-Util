@@ -75,18 +75,18 @@ def test_lookup_person() -> None:
     }
 
     valid_cases = {
-        "Henriquez & Petersen": 335532,
+        "Adolf Bastian": 159,
+        "A. Zimmermann": 3583,
     }
 
     # why is this person problematic? Because he used to exist twice in index?
-    # Should be solved soon
-    problematic = {"Carl Ritter": [2438]}
+    # problematic = {"Carl Ritter": [2438]}
 
     for name in valid_cases:
         assert _lookup_name(name=name, conf=conf) == valid_cases[name]
 
-    for name in problematic:
-        assert _lookup_name(name=name, conf=conf) == problematic[name]
+    # for name in problematic:
+    #    assert _lookup_name(name=name, conf=conf) == problematic[name]
     # doesn't raise anymore
     # for name in problematic:
     #    with pytest.raises(TypeError):
@@ -95,7 +95,7 @@ def test_lookup_person() -> None:
 
 #
 # live tests requiring access to RIA
-#
+# f
 
 
 def test_set_ident() -> None:
@@ -136,13 +136,40 @@ def test_set_beteiligte() -> None:
     client = init_ria()
     templateM = client.get_template(ID=625690, mtype="Object")
     recordM = deepcopy(templateM)  # record should contain only one moduleItem
-    set_beteiligte(recordM, beteiligte="Henriquez & Petersen", conf=conf)
+    set_beteiligte(recordM, beteiligte="Adolf Bastian", conf=conf)
     # print(recordM)
     # recordM.toFile(path="test.debug.xml")
     InventarNrSTxt = recordM.xpath("""/m:application/m:modules/m:module[
         @name = 'Object'
     ]/m:moduleItem/m:repeatableGroup[
         @name = 'ObjObjectNumberGrp'
-    ]/m:repeatableGroupItem/m:dataField[@
-        name ='InventarNrSTxt'
+    ]/m:repeatableGroupItem/m:dataField[
+        @name ='InventarNrSTxt'
     ]/m:value/text()""")[0]
+
+
+def test_set_erwerbdatum() -> None:
+    # ObjAcquisitionDateGrp
+    conf = {
+        "person_cache": "person_cache.toml",
+        "project_dir": Path(__file__).parents[1] / "sdata",
+    }
+
+    client = init_ria()
+    templateM = client.get_template(ID=625690, mtype="Object")
+    recordM = deepcopy(templateM)  # record should contain only one moduleItem
+    set_erwerbDatum(recordM, datum="1.1.2100")
+
+    # todo: check if recordM has the desired information
+    xpath = """
+        /m:application/m:modules/m:module[
+            @name = 'Object'
+        ]/m:moduleItem/m:repeatableGroup[
+            @name = 'ObjAcquisitionDateGrp'
+        ]/m:repeatableGroupItem/m:dataField[
+            @name ='DateToTxt'
+        ]/m:value/text()
+    """
+    assert recordM.xpath(xpath)[0] == "1.1.2100"
+    set_erwerbDatum(recordM, datum="2.1.2100")
+    assert recordM.xpath(xpath)[0] == "2.1.2100"

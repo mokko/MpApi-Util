@@ -176,16 +176,21 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     )
 
 
-def set_erwerbDatum(recordM: Module, *, datum: str) -> None:
+def set_erwerbDatum(recordM: Module, *, datum: str | None) -> None:
     """
-    ObjAcquisitionDateGrp
+    ObjAcquisitionDateGrp. When datum is None, we write usual entry but with
+    empty string ("") for the actual date.
 
-    N.B. Whe I requested to use dataField[@name = 'ObjAcquisitionDateGrp'], RIA didnn't
-    delete old entries from the template.
+    New:
+    - When datum was None, we used to stringify that to None. We dont want
+    that.
+    - When datum was None, we used to do nothing, but instead, we should overwrite
+      the existing entry with empty string ("")
     """
 
-    if _is_space_etc(str(datum)):
-        return None
+    if _is_space_etc(datum):
+        # print(f"**is space** is space** {datum}")
+        datum = ""
 
     print(f"Erwerb.datum={datum}")
     quelle = "Hauptkatalog / #KP24"
@@ -704,7 +709,9 @@ def _is_space_etc(value: str | None) -> bool:
         raise TypeError(f"Value should be str|None, but it's not! {value}")
 
     match value:
-        case None | "":
+        case None:
+            return True
+        case "":
             return True
         case value if value.isspace():
             return True
