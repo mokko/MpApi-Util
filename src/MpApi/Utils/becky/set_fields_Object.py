@@ -126,7 +126,8 @@ NS = "xmlns='http://www.zetcom.com/ria/ws/module'"
 
 def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     """
-    setting ObjPerAssociationRef
+    setting ObjPerAssociationRef. the input parameter beteiligte is the string from
+    Excel. That string typically includes a date (in brackets) and a role.
     """
     if _is_space_etc(beteiligte):
         return None
@@ -152,8 +153,7 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
                 <value>{sort}</value>
               </dataField>"""
         # do we really need the None test?
-        if roleID == 0 or roleID is None:
-            # Untested ...
+        if role is None or roleID == 0:
             # at this point there is no objId yet, but we can use IdentNr instead
             identNr = _ident_from_record(recordM)
             logger = logging.getLogger(__name__)
@@ -293,7 +293,8 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
 
 
     """
-    if _is_space_etc(von):
+    # _is_space_etc doesn't accept numbers
+    if von is None or von == "":
         return None
 
     print(f"ErwerbungVon '{von}'")
@@ -619,13 +620,14 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
 #
 
 
-def _each_person(beteiligte: str) -> Iterator[tuple[str, str, str | None]]:
+def _each_person(beteiligte: str) -> Iterator[tuple[str, str | None, str | None]]:
     """
     - We split the string at ";"
     - We assume the role is the thing before the last comma
     - We ignore Zusätze in front of ":"
 
     New: We used to ignore Lebensdaten in brackets, now we extract them if they exist or return None if not.
+    If no role given, we return None.
     """
     exceptions = [  # name_roles with a comma, but no role
         "Erwähnung: Musée Ribauri - Art Primitif, Ethnographie, Haute Epoque, Curiosités (1964/1965)",
@@ -787,11 +789,11 @@ def _lookup_role(role: str | None) -> int | None:
     Use 0 oder 000000 instead if you want to keep the field empty in RIA.
     """
 
+    logger = logging.getLogger(__name__)
     if role is None:
         return None
 
     global roles
-    logger = logging.getLogger(__name__)
     try:
         return roles[role]
     except KeyError:
