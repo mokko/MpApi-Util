@@ -176,7 +176,7 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     )
 
 
-def set_erwerbDatum(recordM: Module, *, datum: str | None) -> None:
+def set_erwerbDatum(recordM: Module, *, datum: int | str | None) -> None:
     """
     ObjAcquisitionDateGrp. When datum is None, we write usual entry but with
     empty string ("") for the actual date.
@@ -186,8 +186,11 @@ def set_erwerbDatum(recordM: Module, *, datum: str | None) -> None:
     that.
     - When datum was None, we used to do nothing, but instead, we should overwrite
       the existing entry with empty string ("")
+    - Apprently, openpyxl returns int sometimes. Account for that.
     """
 
+    if isinstance(datum, int):
+        datum = str(datum)
     if _is_space_etc(datum):
         # print(f"**is space** is space** {datum}")
         datum = ""
@@ -463,10 +466,14 @@ def set_ident_sort(record: Module, *, nr: int) -> None:
     )
 
 
-def set_invNotiz(record: Module, bemerkung: str) -> None:
+def set_invNotiz(recordM: Module, bemerkung: str) -> None:
     """
-    UNTESTED
+    make a new entry in Notizen Inv. / Red. with type "Inventarnotiz" if none exists
+    or overwrite existing entry with string in bemerkung.
+
     z.B. "Kein geographischer Bezug genannt" (Zeile 16255 im Excel)
+    4407670 Redaktionelle Notiz
+    4407671 Inventarnotiz
 
     <repeatableGroup name="ObjEditorNotesGrp" size="1">
       <repeatableGroupItem id="42033280" uuid="0983f3b6-ecb5-4f5b-bba1-6d901ff766c8">
@@ -484,8 +491,8 @@ def set_invNotiz(record: Module, bemerkung: str) -> None:
         </vocabularyReference>
       </repeatableGroupItem>
     </repeatableGroup>
-    4407671 = InventarNotiz
     """
+    print(f"invNotiz='{bemerkung}'")
     if _is_space_etc(bemerkung):
         return None
 

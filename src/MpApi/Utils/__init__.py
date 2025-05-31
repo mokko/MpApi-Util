@@ -105,8 +105,14 @@ def becky():
         help="Stop after a number of rows in Excel file are processed.",
         type=int,
     )
+    parser.add_argument(
+        "-o",
+        "--offset",
+        help="Start only at this Excel row.",
+        type=int,
+    )
     args = parser.parse_args()
-    becky_main(conf_fn=args.conf, limit=args.limit, act=args.act)
+    becky_main(conf_fn=args.conf, limit=args.limit, act=args.act, offset=args.offset)
 
 
 def count():

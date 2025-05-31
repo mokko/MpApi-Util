@@ -58,7 +58,9 @@ import tomllib
 hits = 1  # global variable, 1-based
 
 
-def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
+def becky_main(
+    *, conf_fn: str, act: bool = False, limit: int = -1, offset: int = 2
+) -> None:
     conf = _load_conf(conf_fn)  # sets project_dir
     print(f">> Setting project_dir '{conf['project_dir']}'")
 
@@ -71,6 +73,8 @@ def becky_main(*, conf_fn: str, act: bool = False, limit: int = -1) -> None:
     conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
 
     for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
+        if idx < offset:
+            continue
         per_row(idx=idx, row=row, conf=conf, act=act)
         if limit == idx:
             print(">> Limit reached")
@@ -100,9 +104,8 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     set_erwerbNr(recordM, nr=row[6].value)
     set_erwerbVon(recordM, von=row[7].value)
     set_geogrBezug(recordM, name=row[8].value)
-
     set_objRefA(recordM, Vorgang=row[9].value, conf=conf)
-    set_invNotiz(recordM, bemerkung=row[10].value)  # Spalte L rarely filled-in
+    set_invNotiz(recordM, bemerkung=row[11].value)  # Spalte L rarely filled-in
 
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
