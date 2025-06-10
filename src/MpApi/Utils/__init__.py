@@ -110,6 +110,7 @@ def becky():
         "--offset",
         help="Start only at this Excel row.",
         type=int,
+        default=0,
     )
     args = parser.parse_args()
     becky_main(conf_fn=args.conf, limit=args.limit, act=args.act, offset=args.offset)
