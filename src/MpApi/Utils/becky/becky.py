@@ -114,10 +114,9 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     recordM.toFile(path=p)
     if act:
         objId = conf["RIA"].create_item(item=recordM)
-        print(f">> Created record {objId} in RIA '{row[0].value}'")
+        log_print_info(f">> Created record {objId} in RIA '{row[0].value}'")
     else:
         print(f">> Not creating record in RIA '{row[0].value}' (since no act)")
-
         # p2 = conf["project_dir"] / f"debug.object{objId}.xml"
         # print(f">> Writing to '{p2}'")
         # recordM.toFile(path=p2)
@@ -164,8 +163,8 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
         print(f"***[{hits}]{idx}: {ident}")
         if m := record_exists2(ident=ident, conf=conf):
             # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
-            # nicht eingetragen wurden?
-            log_print_info(f"Record '{ident}' exists already")
+            # nicht eingetragen wurden? Nein. Nur loggen, wenn etwas in RIA verändert wird
+            print(f"INFO Record '{ident}' exists already")
         else:
             create_record(row=row, conf=conf, act=act)
             if m > 1:
