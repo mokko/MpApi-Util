@@ -147,7 +147,15 @@ def mk_grp():
     parser = argparse.ArgumentParser(
         description="Create (make) a ObjectGroup in RIA based on an *.xlsx with objIds"
     )
-    parser.add_argument("-c", "--col", help="column as 0-based integer", required=True)
+    parser.add_argument(
+        "-a",
+        "--act",
+        help="actually do something instead of dry-run",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-c", "--col", help="column as 0-based integer", type=int, required=True
+    )
     parser.add_argument("-f", "--file", help="location of excel file", required=True)
     parser.add_argument(
         "-l",
@@ -155,12 +163,17 @@ def mk_grp():
         help="line in excel file at which tasks are interrupted",
         default=-1,
     )
-    parser.add_argument("-s", "--sheet", help="Title of sheet to use", required=True)
-    parser.add_argument(
-        "-v", "--version", help="display version information", action="store_true"
-    )
+    parser.add_argument("-s", "--sheet", help="Title of sheet to use", default="Blatt1")
+    parser.add_argument("cmd", help="Command", choices=["run", "lookup"])
     args = parser.parse_args()
-    maker = MakeGroup(col=args.col, file=args.file, sheet=args.sheet, limit=args.limit)
+    maker = MakeGroup(
+        cmd=args.cmd,
+        act=args.act,
+        col=args.col,
+        file=args.file,
+        sheet=args.sheet,
+        limit=args.limit,
+    )
 
 
 def move():

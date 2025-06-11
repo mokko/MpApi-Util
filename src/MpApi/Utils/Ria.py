@@ -283,6 +283,7 @@ class RIA:
             q.addCriterion(operator="equalsField", field="__orgUnit", value=orgUnit)
         q.addField(field="ObjObjectNumberTxt")
         q.addField(field="ObjObjectNumberVrt")  # dont know what's the difference
+        # q.toFile(path="debug.query.xml")
         q.validate(mode="search")  # raises if not valid
         m = self.mpapi.search2(query=q)
         objIds = {}
