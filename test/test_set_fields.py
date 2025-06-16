@@ -68,6 +68,35 @@ def test_each_person2() -> None:
                 assert date == "1801 - 1873"
 
 
+def test_each_person3() -> None:
+    from openpyxl import Workbook, load_workbook, worksheet
+
+    wb = load_workbook(
+        "../sdata/Bis_35834_Abschrift_HK_Afrika_III_C_Teil_2.xlsx", data_only=True
+    )
+    ws = wb["Sheet1"]  # sheet exists already
+    conf = {"project_dir": Path("../sdata"), "person_cache": "person_cache.toml"}
+    person_data = open_person_cache(conf)
+
+    for idx, row in enumerate(ws.iter_rows(min_row=2), start=2):
+        beteiligte = row[3].value
+        if beteiligte is not None:
+            beteiligtL = beteiligte.split(";")
+            beteiligtL = [pk.strip() for pk in beteiligtL]
+            for beteiligt in beteiligtL:
+                if not beteiligt.isspace():
+                    # print(f"{idx}:{beteiligt}")
+                    for name, role, date in _each_person(beteiligt):
+                        try:
+                            pkIdL = person_data[name][date]
+                        except:
+                            print(f"{name} {date}")
+                        if not pkIdL:  # list is empty
+                            print(f"{idx}: {name}{pkIdL}|{role}|{date}")
+    # for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
+    #    print(f"{count}: {name} {role} {date}")
+
+
 def test_lookup_person() -> None:
     conf = {
         "person_cache": "person_cache.toml",

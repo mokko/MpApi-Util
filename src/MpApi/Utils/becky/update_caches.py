@@ -23,7 +23,7 @@ from pathlib import Path
 def main(conf_fn: str, mode: str, limit: int = -1) -> None:
     conf = _load_conf(conf_fn)
 
-    print(">> Reading workbook")
+    print(f">> Reading workbook '{conf['excel_fn']}'")
     wb = load_workbook(conf["excel_fn"], data_only=True)
     ws = wb[conf["sheet_title"]]  # sheet exists already
     match mode:
@@ -46,8 +46,11 @@ def process_names(*, beteiligte: str, cache: dict) -> dict:
         # print(f"{count}:{name} [{role}]")
         # if role not in roles:
         #    roles.add(role)
+        if date is None:
+            date = "None"
+            # raise TypeError(f"Date is None! {name}")
         if name not in cache:
-            print(f">> Name not yet in cache '{name}'")
+            print(f">> Name not yet in cache '{name}' ({date=})")
             # cache[name] = {}
             cache[name] = {date: []}
             set_change()
@@ -123,10 +126,10 @@ def update_archive(*, conf: dict, sheet: worksheet, limit: int) -> None:
     print(">> Looping thru excel looking for archival documents' idents")
     client = init_ria()
     for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
-        # print(f"Line {idx}")
+        print(f"Line {idx}")
         font_color = row[9].font.color  # relying on red font
         if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
-            _per_red_cell(row[9].value, data=archive_data, client=client)
+            _archive_per_red_cell(row[9].value, data=archive_data, client=client)
         if idx % 500 == 0:
             save_archive_cache(data=archive_data, conf=conf)
         if limit == idx:
@@ -177,13 +180,14 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
 #
 # private
 #
-def _per_red_cell(cell: str, *, data: dict, client: RIA) -> None:
+def _archive_per_red_cell(cell: str, *, data: dict, client: RIA) -> None:
     # may contain multiple values separated by ;
     if cell is not None:
         identL = cell.split(";")  #
         identL = [element.strip() for element in identL]
 
         for ident in identL:
+            print(f"***{cell} -> {ident=}")
             if ident in data:
                 if len(data[ident]) == 0:
                     # Do we want to re-check empty lists?
@@ -194,15 +198,11 @@ def _per_red_cell(cell: str, *, data: dict, client: RIA) -> None:
                 if ident is None:
                     data[ident] = list()
                 else:
-                    _query_archives(ident, client, data)
-
-
-def _query_archives(ident: str, client: RIA, data: dict) -> None:
-    print(f">> querying archives '{ident}'")
-    idL = query_archives(ident=ident, client=client)
-    set_change()
-    print(f"{idL=}")
-    data[ident] = idL  # may be empty list
+                    print(f">> querying archives '{ident}'")
+                    idL = query_archives(ident=ident, client=client)
+                    set_change()
+                    print(f"{idL=}")
+                    data[ident] = idL  # may be empty list
 
 
 #

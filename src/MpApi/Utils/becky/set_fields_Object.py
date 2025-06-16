@@ -528,46 +528,60 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
 
     4399791 Vorgang
     4399760 Object
-    """
-    if _is_space_etc(Vorgang):
-        return None
 
+    NEW: splits string at ;
+    Example
+    Objektbezug: III A 2610, Tabakpfeifenkopf, Karl Richard Lepsius (1810 - 1884);
+    Objektbezug: VIII A 11666, Positiv, SW, Palmöl-Lampe, Kurt Grunst (*04.04.1921);
+    """
     Vorgang = Vorgang.strip()
-    print(f"objRefA {Vorgang=}")
+    Liste = Vorgang.split(";")
     global archive_data
     if not archive_data:
         archive_data = open_archive_cache(conf)
-    if Vorgang not in archive_data:
-        raise TypeError(f"Archival document not in cache '{Vorgang}'")
 
-    rel_objId = archive_data[Vorgang][0]
-
-    newN = etree.fromstring(f"""
+    header = f"""
         <composite {NS} name="ObjObjectCre">
-          <compositeItem >
-            <moduleReference name="ObjObjectARef" targetModule="Object">
-              <moduleReferenceItem moduleItemId="{rel_objId}">
-                <vocabularyReference name="TypeAVoc" id="30413">
-                  <vocabularyReferenceItem id="4399791"/>
-                </vocabularyReference>
-                <vocabularyReference name="TypeBVoc" id="30413">
-                  <vocabularyReferenceItem id="4399760"/>
-                </vocabularyReference>
-                <vocabularyReference name="PreselectTypeAVoc">
-                  <vocabularyReferenceItem id="4399760"/>
-                </vocabularyReference>
-                <vocabularyReference name="PreselectTypeBVoc">
-                  <vocabularyReferenceItem id="4399791"/>
-                </vocabularyReference>
-              </moduleReferenceItem>
-            </moduleReference>
-          </compositeItem>
-        </composite>
-    """)
+          <compositeItem>
+            <moduleReference name="ObjObjectARef" targetModule="Object">"""
+    footer = """
+                </moduleReference>
+              </compositeItem>
+            </composite>"""
+
+    xml = header
+
+    for each in Liste:
+        if _is_space_etc(Vorgang):
+            continue
+        print(f"objRefA {Vorgang=}")
+        if each not in archive_data:
+            raise TypeError(f"Archival document not in cache '{Vorgang}'")
+
+        rel_objId = archive_data[Vorgang][0]
+
+        xml += f"""
+          <moduleReferenceItem moduleItemId="{rel_objId}">
+            <vocabularyReference name="TypeAVoc" id="30413">
+              <vocabularyReferenceItem id="4399791"/>
+            </vocabularyReference>
+            <vocabularyReference name="TypeBVoc" id="30413">
+              <vocabularyReferenceItem id="4399760"/>
+            </vocabularyReference>
+            <vocabularyReference name="PreselectTypeAVoc">
+              <vocabularyReferenceItem id="4399760"/>
+            </vocabularyReference>
+            <vocabularyReference name="PreselectTypeBVoc">
+              <vocabularyReferenceItem id="4399791"/>
+            </vocabularyReference>
+          </moduleReferenceItem>"""
+
+    xml += footer
+
     _new_or_replace(
         record=recordM,
         xpath="//m:composite[@name = 'ObjObjectCre']",
-        newN=newN,
+        newN=etree.fromstring(xml),
     )
 
 
@@ -667,7 +681,7 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str | None, str | None]
                 0
             ].strip()  # returns list with orignal item if not split
 
-            # cut off the remarks in the beginning
+            # cut off leading remarks if they exist
             try:
                 name = name.split(":")[1].strip()
             except IndexError:
@@ -739,9 +753,8 @@ def _lookup_name(*, name: str, conf: dict) -> int:
     raise TypeError and log. (We used to silently take the first name record.)
 
     Raises TypeError if name not in cache.
-    May return 0 if a name known to the cache has no valid equivalent in RIA.
 
-
+    TODO: Test. Doesn't seem to raise error when I expect it to raise.
     """
     global person_data
     logger = logging.getLogger(__name__)
