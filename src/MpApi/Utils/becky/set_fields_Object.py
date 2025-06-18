@@ -144,7 +144,9 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         elif count > 1:
             sort = (count - 1) * 5
 
-        nameID = _lookup_name(name=name, conf=conf)  # raises if unknown
+        nameID = _lookup_name(
+            name=name, conf=conf
+        )  # raises if no kueId or name not in cache
         roleID = _lookup_role(role)  # raises if not part of index
         print(f"{count} {sort} {name} [{role}] {nameID=} {roleID=}")
         xml = f"""
@@ -650,43 +652,13 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str | None, str | None]
     New: We used to ignore Lebensdaten in brackets, now we extract them if they exist or return None if not.
     If no role given, we return None.
     """
-    exceptions = [  # name_roles with a comma, but no role
-        "Erwähnung: Musée Ribauri - Art Primitif, Ethnographie, Haute Epoque, Curiosités (1964/1965)",
-        "Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873)",
-    ]
-
     if beteiligte is not None:
         beteiligteL = beteiligte.split(";")
-        for name_role in beteiligteL:
-            name_role = name_role.strip()
-            if name_role in exceptions:
-                name = name_role
-                role = None
-            elif "," in name_role:
-                partsL = name_role.split(",")
-                name = ",".join(partsL[:-1]).strip()
-                role = partsL[-1].strip()
-            else:
-                name = name_role
-                role = None
-            # cut off the dates in brackets
-            match = re.search(r"\(([^)]*)\)", name)
-            if match:
-                date = match.group(1)
-            else:
-                # it's perfectly possible that person has no date
-                # raise TypeError(f"No date found! {name}")
-                date = None
-            name = name.split("(")[
-                0
-            ].strip()  # returns list with orignal item if not split
-
-            # cut off leading remarks if they exist
-            try:
-                name = name.split(":")[1].strip()
-            except IndexError:
-                pass
-            yield (name, role, date)
+        for name_role_date in beteiligteL:
+            print(f"{name_role_date=}")
+            if name_role_date is not None:
+                name, role, date = _triple_split2(name_role_date)
+                yield (name, role, date)
 
 
 def _ident_from_record(recordM: Module) -> str:
@@ -752,7 +724,8 @@ def _lookup_name(*, name: str, conf: dict) -> int:
     For cases where there are  multiple records for one name,
     raise TypeError and log. (We used to silently take the first name record.)
 
-    Raises TypeError if name not in cache.
+    Raises KeyError if name not in cache.
+    Raises IndexError when there is no int to report back
 
     TODO: Test. Doesn't seem to raise error when I expect it to raise.
     """
@@ -836,3 +809,168 @@ def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
         parentN.append(newN)
     else:  # replace
         oldN.getparent().replace(oldN, newN)
+
+
+def _triple_split(name_role_date: str) -> tuple[str, str, str]:
+    exceptions = [  # name_roles with a comma, but no role
+        "Erwähnung: Musée Ribauri - Art Primitif, Ethnographie, Haute Epoque, Curiosités (1964/1965)",
+        "Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873)",
+    ]
+
+    if name_role_date in exceptions:
+        name = name_role_date
+        role = None
+    elif "," in name_role_date:
+        partsL = name_role_date.split(",")
+        name = ",".join(partsL[:-1]).strip()
+        role = partsL[-1].strip()
+    else:
+        name = name_role_date
+        role = None
+    # cut off the dates in brackets
+    match = re.search(r"\(([^)]*)\)", name)
+    if match:
+        date = match.group(1)
+    else:
+        # it's perfectly possible that person has no date
+        # raise TypeError(f"No date found! {name}")
+        date = None
+    name = name.split("(")[0].strip()  # returns list with orignal item if not split
+
+    # cut off leading remarks if they exist
+    try:
+        name = name.split(":")[1].strip()
+    except IndexError:
+        pass
+    return name, role, date
+
+
+def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
+    """
+    H. Halleur (1849), Sammler*in
+    Prefix: Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
+    """
+    exceptions = {
+        'Augusta Kell ("Gulla") Pfeffer (1887 - 1967), Veräußerung': {
+            "name": 'Augusta Kell ("Gulla") Pfeffer',
+            "date": "1887 - 1967",
+            "role": "Veräußerung",
+        },
+        "A. Palamidessi (?) (1939), Veräußerung": {
+            "name": "A. Palamidessi (?)",
+            "date": "1939",
+            "role": "Veräußerung",
+        },
+        "Deutsche Armee-, Marine- und Kolonialausstellung (D.A.M.U.K.A.) (1907), Vorbesitzer*in": {
+            "name": "Deutsche Armee-, Marine- und Kolonialausstellung (D.A.M.U.K.A.)",
+            "date": "1907",
+            "role": "Vorbesitzer*in",
+        },
+        "Frau Stange (geb. Dominik) (1956), Veräußerung": {
+            "name": "Frau Stange (geb. Dominik)",
+            "date": "1956",
+            "role": "Veräußerung",
+        },
+        "Galerie Carrefour (M. Pierre Vérité) (1964/1956), Verbesitzer*in": {
+            "name": "Galerie Carrefour (M. Pierre Vérité)",
+            "date": "1964/1956",
+            "role": "Vorbesitzer*in",
+        },
+        "Galerie Carrefour (M. Pierre Vérité) (1964/1956), Veräußerung": {
+            "name": "Galerie Carrefour (M. Pierre Vérité)",
+            "date": "1964/1956",
+            "role": "Veräußerung",
+        },
+        "Idrissou (Majesté) Njoya (2020), Maler*in des Originals": {
+            "name": "Idrissou (Majesté) Njoya",
+            "date": "2020",
+            "role": "Maler*in des Originals",
+        },
+        "Jean Keller (Castans Panoptikum)": {
+            "name": "Jean Keller (Castans Panoptikum)",
+            "date": "1887",
+            "role": "Vorbesitzer*in",
+        },
+        "José António de Oliveira (António Ole) (2013), Objektkünstler*in": {
+            "name": "José António de Oliveira (António Ole)",
+            "date": "2013",
+            "role": "Objektkünstler*in",
+        },
+        "J. Condt (?) (1875 (um)), Vorbesitzer*in": {
+            "name": "Serdu (?)",
+            "date": "1875 (um)",
+            "role": None,
+        },
+        "Kolonialzentralverwaltung (Reichsministerium für Wiederaufbau) (1921), Veräußerung": {
+            "name": "Kolonialzentralverwaltung (Reichsministerium für Wiederaufbau)",
+            "date": "1921",
+            "role": "Veräußerung",
+        },
+        "Nome Mokua (?) (1907), Vorbesitzer*in": {
+            "name": "Nome Mokua (?)",
+            "date": "1907",
+            "role": "Vorbesitzer*in",
+        },
+        "Rautenstrauch-Joest-Museum (Städtisches Museum für Völkerkunde Köln) (1901), Veräußerung": {
+            "name": "Rautenstrauch-Joest-Museum (Städtisches Museum für Völkerkunde Köln)",
+            "date": "1901",
+            "role": "Veräußerung",
+        },
+        "Serdu (?) (1875 (um)), Veräußerung": {
+            "name": "Serdu (?)",
+            "date": "1875 (um)",
+            "role": "Veräußerung",
+        },
+        "Unbekannt, Veräußerung": {
+            "name": None,
+            "date": None,
+            "role": "Veräußerung",
+        },
+        "Unbekannt, Sammler*in": {
+            "name": None,
+            "date": None,
+            "role": "Sammler*in",
+        },
+    }
+
+    if name_date_role in exceptions:
+        name = exceptions[name_date_role]["name"]
+        date = exceptions[name_date_role]["date"]
+        role = exceptions[name_date_role]["role"]
+        return name, role, date
+
+    import re
+
+    name = None
+    role = None
+    date = None
+    if "(" in name_date_role:
+        name = name_date_role.split("(")[0]
+    elif "," in name_date_role:
+        name = name_date_role.split(",")[0]
+    else:
+        name = name_date_role
+
+    if ":" in name:
+        name = name.split(":")[1]
+    name = name.strip()
+
+    # match = re.search(r"^(?:[^:]+:\s*)?\s*([\wÄÖÜäöüßë&\" .'-,\[\]]+)\s+\(", name_date_role)
+    # if match:
+    #    name = match.group(1)
+    #
+    # if name is:
+    #    raise NameError(f"No Name! {name_date_role}")
+    match = re.search(r"\(([^)]+)\)", name_date_role)
+    if match:
+        date = match.group(1)
+        # it's possible that left out a closing bracket )
+        if "(" in date and not date.endswith(")"):
+            date += ")"
+
+    match = re.search(r", ([\w\& \*]+)\s*$", name_date_role)
+    if match:
+        role = match.group(1)
+        # print(f"**************{role}")
+    print(f"*************{name=} {date=} {role=}")
+    return name, role, date

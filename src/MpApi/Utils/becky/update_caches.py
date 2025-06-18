@@ -148,8 +148,10 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
     # distinct entries.
     for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
         # print(f"Line {idx}")
-        person_data = process_names(beteiligte=row[3].value, cache=person_data)
-        if idx % 200 == 0:
+        font_color = row[0].font.color
+        if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
+            person_data = process_names(beteiligte=row[3].value, cache=person_data)
+        if idx % 1 == 0:
             save_person_cache(data=person_data, conf=conf)
         if limit == idx:
             print(">> Limit reached")

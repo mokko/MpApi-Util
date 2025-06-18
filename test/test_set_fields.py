@@ -25,25 +25,6 @@ import pytest
 # conf_fn = Path(__file__).parents[1] / "sdata" / "becky_conf.toml"
 
 
-def test_lookup_name() -> None:
-    """
-    _lookup_name looks up if a name exists in the cache and typically returns an int
-    """
-    conf = {"project_dir": Path("../sdata"), "person_cache": "person_cache.toml"}
-    cases = {"Bruno von Rauchhaupt": 3269}
-    for name in cases:
-        pkId = _lookup_name(name=name, conf=conf)
-        assert pkId == cases[name]
-
-    # doesnt exist, should raise
-    with pytest.raises(KeyError):
-        pkId = _lookup_name(name="doesnt exist", conf=conf)
-
-    # Serdu has no pkId in cache at the moment
-    with pytest.raises(IndexError):
-        pkId = _lookup_name(name="Serdu", conf=conf)
-
-
 def test_each_person1() -> None:
     beteiligte = """
         Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in; 
@@ -107,11 +88,31 @@ def test_each_person3() -> None:
                         try:
                             pkIdL = person_data[name][date]
                         except:
-                            print(f"{name} {date}")
+                            print(f"test_each_person3 ERROR {name} {date}")
                         if not pkIdL:  # list is empty
                             print(f"{idx}: {name}{pkIdL}|{role}|{date}")
     # for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
     #    print(f"{count}: {name} {role} {date}")
+
+
+def test_lookup_name() -> None:
+    """
+    test this later
+    _lookup_name looks up if a name exists in the cache and typically returns an int
+    """
+    conf = {"project_dir": Path("../sdata"), "person_cache": "person_cache.toml"}
+    cases = {"Bruno von Rauchhaupt": 3269}
+    for name in cases:
+        pkId = _lookup_name(name=name, conf=conf)
+        assert pkId == cases[name]
+
+    # doesnt exist, should raise
+    with pytest.raises(KeyError):
+        pkId = _lookup_name(name="doesnt exist", conf=conf)
+
+    # Serdu has no pkId in cache at the moment
+    with pytest.raises(IndexError):
+        pkId = _lookup_name(name="Serdu", conf=conf)
 
 
 def test_lookup_person() -> None:

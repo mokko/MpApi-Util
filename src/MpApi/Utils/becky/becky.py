@@ -97,7 +97,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     )  # from Excel as str
     set_ident_sort(recordM, nr=int(row[1].value))
     set_sachbegriff(recordM, sachbegriff=row[2].value)
-    # problems
+    # set_beteiligte may encounter a case where there is no kueId
     set_beteiligte(recordM, beteiligte=row[3].value, conf=conf)
     set_erwerbDatum(recordM, datum=row[4].value)
     set_erwerbungsart(recordM, art=row[5].value)
