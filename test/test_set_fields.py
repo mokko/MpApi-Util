@@ -25,6 +25,25 @@ import pytest
 # conf_fn = Path(__file__).parents[1] / "sdata" / "becky_conf.toml"
 
 
+def test_lookup_name() -> None:
+    """
+    _lookup_name looks up if a name exists in the cache and typically returns an int
+    """
+    conf = {"project_dir": Path("../sdata"), "person_cache": "person_cache.toml"}
+    cases = {"Bruno von Rauchhaupt": 3269}
+    for name in cases:
+        pkId = _lookup_name(name=name, conf=conf)
+        assert pkId == cases[name]
+
+    # doesnt exist, should raise
+    with pytest.raises(KeyError):
+        pkId = _lookup_name(name="doesnt exist", conf=conf)
+
+    # Serdu has no pkId in cache at the moment
+    with pytest.raises(IndexError):
+        pkId = _lookup_name(name="Serdu", conf=conf)
+
+
 def test_each_person1() -> None:
     beteiligte = """
         Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in; 
@@ -71,9 +90,7 @@ def test_each_person2() -> None:
 def test_each_person3() -> None:
     from openpyxl import Workbook, load_workbook, worksheet
 
-    wb = load_workbook(
-        "../sdata/Bis_35834_Abschrift_HK_Afrika_III_C_Teil_2.xlsx", data_only=True
-    )
+    wb = load_workbook("../sdata/Abschrift_HK_Afrika_III_C_Final.xlsx", data_only=True)
     ws = wb["Sheet1"]  # sheet exists already
     conf = {"project_dir": Path("../sdata"), "person_cache": "person_cache.toml"}
     person_data = open_person_cache(conf)
