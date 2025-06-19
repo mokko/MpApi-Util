@@ -47,6 +47,7 @@ from MpApi.Utils.becky.cache_ops import (
 )
 from pathlib import Path
 import re
+import xml.sax.saxutils as saxutils
 import tomllib
 from typing import Iterator
 
@@ -306,6 +307,7 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
     # _is_space_etc doesn't accept numbers
     if von is None or von == "":
         return None
+    von = saxutils.escape(von) # escape things like &
 
     print(f"ErwerbungVon '{von}'")
     newN = etree.fromstring(f"""
