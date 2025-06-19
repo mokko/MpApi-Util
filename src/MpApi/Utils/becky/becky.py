@@ -157,8 +157,8 @@ def log_print_info(msg: str) -> None:
 
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     ident = row[0].value  # from Excel as str
-    font_color = row[0].font.color
     global hits
+    font_color = row[0].font.color
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
         print(f"***[{hits}]{idx}: {ident}")
         if m := record_exists2(ident=ident, conf=conf):

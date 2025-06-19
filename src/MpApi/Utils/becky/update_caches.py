@@ -38,14 +38,18 @@ def main(conf_fn: str, mode: str, limit: int = -1) -> None:
 def process_names(*, beteiligte: str, cache: dict) -> dict:
     """
     Gets called when looping through Excel, so no info from RIA yet.
+    If necessary we write name, datethe info in cache.
     """
     if beteiligte is None:
         return cache  # it's perfectly possible that a cell is empty...
+
     for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
         # we're counting the names in one cell here, not the lines
         # print(f"{count}:{name} [{role}]")
         # if role not in roles:
         #    roles.add(role)
+        if name is None:
+            continue
         if date is None:
             date = "None"
             # raise TypeError(f"Date is None! {name}")

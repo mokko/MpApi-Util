@@ -139,14 +139,20 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     )
 
     for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
+        logger = logging.getLogger(__name__)
         if count == 1:
             sort = 1
         elif count > 1:
             sort = (count - 1) * 5
-
-        nameID = _lookup_name(
-            name=name, conf=conf
-        )  # raises if no kueId or name not in cache
+        # should raise if no kueId or name not in cache
+        try:
+            nameID = _lookup_name(
+                name=name, conf=conf
+            )  
+        except KeyError:
+            logger.warning(f"no ID for pk {name}")
+            # no new beteiligte*r for this entry
+            continue
         roleID = _lookup_role(role)  # raises if not part of index
         print(f"{count} {sort} {name} [{role}] {nameID=} {roleID=}")
         xml = f"""
@@ -158,7 +164,6 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         if role is None or roleID == 0:
             # at this point there is no objId yet, but we can use IdentNr instead
             identNr = _ident_from_record(recordM)
-            logger = logging.getLogger(__name__)
             logger.warning(f"null role for {identNr=} with {beteiligte=}")
         else:
             xml += f"""
@@ -375,7 +380,7 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     """)
 
     namesL = [item.strip() for item in name.split(";")]
-    print(f"{namesL}")
+    #print(f"{namesL}")
 
     for idx, item in enumerate(namesL):
         idx = idx * 5
@@ -536,8 +541,9 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     Objektbezug: III A 2610, Tabakpfeifenkopf, Karl Richard Lepsius (1810 - 1884);
     Objektbezug: VIII A 11666, Positiv, SW, Palmöl-Lampe, Kurt Grunst (*04.04.1921);
     """
+    if Vorgang is None:
+        return
     Vorgang = Vorgang.strip()
-    Liste = Vorgang.split(";")
     global archive_data
     if not archive_data:
         archive_data = open_archive_cache(conf)
@@ -553,14 +559,16 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
 
     xml = header
 
-    for each in Liste:
-        if _is_space_etc(Vorgang):
+    Liste = Vorgang.split(";")
+    for vorgang2 in Liste:
+        if _is_space_etc(vorgang2):
             continue
-        print(f"objRefA {Vorgang=}")
-        if each not in archive_data:
+        vorgang2 = vorgang2.strip()
+        print(f"objRefA {vorgang2=}")
+        if vorgang2 not in archive_data:
             raise TypeError(f"Archival document not in cache '{Vorgang}'")
 
-        rel_objId = archive_data[Vorgang][0]
+        rel_objId = archive_data[vorgang2][0]
 
         xml += f"""
           <moduleReferenceItem moduleItemId="{rel_objId}">
@@ -643,7 +651,7 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
 #
 
 
-def _each_person(beteiligte: str) -> Iterator[tuple[str, str | None, str | None]]:
+def _each_person(beteiligte: str) -> Iterator[tuple[str|None, str | None, str | None]]:
     """
     - We split the string at ";"
     - We assume the role is the thing before the last comma
@@ -655,7 +663,7 @@ def _each_person(beteiligte: str) -> Iterator[tuple[str, str | None, str | None]
     if beteiligte is not None:
         beteiligteL = beteiligte.split(";")
         for name_role_date in beteiligteL:
-            print(f"{name_role_date=}")
+            #print(f"{name_role_date=}")
             if name_role_date is not None:
                 name, role, date = _triple_split2(name_role_date)
                 yield (name, role, date)
@@ -911,6 +919,11 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
             "date": "1907",
             "role": "Vorbesitzer*in",
         },
+        "Ph(il).. Engelhardt (1903), Sammler*in": {
+            "name": "Ph(il). Engelhardt",
+            "date": "1903",
+            "role": "Sammler*in",
+        },
         "Rautenstrauch-Joest-Museum (Städtisches Museum für Völkerkunde Köln) (1901), Veräußerung": {
             "name": "Rautenstrauch-Joest-Museum (Städtisches Museum für Völkerkunde Köln)",
             "date": "1901",
@@ -972,5 +985,5 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
     if match:
         role = match.group(1)
         # print(f"**************{role}")
-    print(f"*************{name=} {date=} {role=}")
+    #print(f"*************{name=} {date=} {role=}")
     return name, role, date
