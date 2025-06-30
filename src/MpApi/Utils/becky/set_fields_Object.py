@@ -130,16 +130,19 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     setting ObjPerAssociationRef. the input parameter beteiligte is the string from
     Excel. That string typically includes a date (in brackets) and a role.
     """
-    if _is_space_etc(beteiligte):
+    try:
+        beteiligteL = _sanitize_multi(beteiligte)
+    except (ValueError, TypeError):
         return None
 
-    print(f"{beteiligte=}")
+    print(f"{beteiligteL=}")
 
     mRefN = etree.fromstring(
         f"<moduleReference {NS} name='ObjPerAssociationRef' targetModule='Person'/>"
     )
 
-    for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
+    for count, name_role_date in enumerate(beteiligteL, start=1):
+        name, role, date = _triple_split2(name_role_date)
         logger = logging.getLogger(__name__)
         if count == 1:
             sort = 1
@@ -147,9 +150,7 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
             sort = (count - 1) * 5
         # should raise if no kueId or name not in cache
         try:
-            nameID = _lookup_name(
-                name=name, conf=conf
-            )  
+            nameID = _lookup_name(name=name, conf=conf)
         except KeyError:
             logger.warning(f"no ID for pk {name}")
             # no new beteiligte*r for this entry
@@ -199,9 +200,10 @@ def set_erwerbDatum(recordM: Module, *, datum: int | str | None) -> None:
 
     if isinstance(datum, int):
         datum = str(datum)
-    if _is_space_etc(datum):
-        # print(f"**is space** is space** {datum}")
-        datum = ""
+    try:
+        datum = _sanitize(datum)
+    except (TypeError, ValueError):
+        return None
 
     print(f"Erwerb.datum={datum}")
     quelle = "Hauptkatalog / #KP24"
@@ -234,7 +236,9 @@ def set_erwerbNr(recordM: Module, *, nr: str) -> None:
     """
     set ObjAcquisitionReferenceNrTxt
     """
-    if _is_space_etc(nr):
+    try:
+        nr = _sanitize(nr)
+    except (TypeError, ValueError):
         return None
 
     print(f"erwerbNr='{nr}'")
@@ -256,7 +260,9 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
 
     instanceName="ObjAcquisitionMethodVgr"
     """
-    if _is_space_etc(art):
+    try:
+        art = _santize(art)
+    except (TypeError, ValueError):
         return None
 
     global erwerbungsarten
@@ -304,10 +310,10 @@ def set_erwerbVon(recordM: Module, *, von: str) -> None:
 
 
     """
-    # _is_space_etc doesn't accept numbers
-    if von is None or von == "":
+    try:
+        von = _sanitize(von)
+    except (TypeError, ValueError):
         return None
-    von = saxutils.escape(von) # escape things like &
 
     print(f"ErwerbungVon '{von}'")
     newN = etree.fromstring(f"""
@@ -352,7 +358,9 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
       </repeatableGroupItem>
     </repeatableGroup>
     """
-    if _is_space_etc(name):
+    try:
+        namesL = _santize_multi(name)
+    except (TypeError, ValueError):
         return None
 
     print(f"geogrBezug {name=}")  # can be multiple names; names
@@ -380,9 +388,6 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     newN = etree.fromstring(f"""
         <repeatableGroup {NS} name="ObjGeograficGrp"/>
     """)
-
-    namesL = [item.strip() for item in name.split(";")]
-    #print(f"{namesL}")
 
     for idx, item in enumerate(namesL):
         idx = idx * 5
@@ -430,8 +435,8 @@ def set_ident(record: Module, *, ident: str, institution: str) -> None:
     Why dont I need to set the namespace? Doing that now. See if RIA likes it.
     """
     # ObjObjectNumberGrp
-    if _is_space_etc(ident):
-        return None
+    ident = _sanitize(ident)
+    # let's not catch errors here because ident is essential
 
     ident = ident.strip()
     iFac = IdentNrFactory()
@@ -458,7 +463,9 @@ def set_ident_sort(record: Module, *, nr: int) -> None:
     """
     Setting ObjObjectNumberSortedTxt
     """
-    if not _is_int(nr):
+    try:
+        nr = _santize(nr)
+    except (TypeError, ValueError):
         return None
 
     print(f"{nr=}")
@@ -501,9 +508,11 @@ def set_invNotiz(recordM: Module, bemerkung: str) -> None:
       </repeatableGroupItem>
     </repeatableGroup>
     """
-    print(f"invNotiz='{bemerkung}'")
-    if _is_space_etc(bemerkung):
+    try:
+        bemerkung = _sanitize(bemerkung)
+    except (TypeError, ValueError):
         return None
+    print(f"invNotiz='{bemerkung}'")
 
     newN = etree.fromstring(f"""
     <repeatableGroup {NS} name="ObjEditorNotesGrp">
@@ -543,9 +552,8 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     Objektbezug: III A 2610, Tabakpfeifenkopf, Karl Richard Lepsius (1810 - 1884);
     Objektbezug: VIII A 11666, Positiv, SW, Palmöl-Lampe, Kurt Grunst (*04.04.1921);
     """
-    if Vorgang is None:
-        return
-    Vorgang = Vorgang.strip()
+    VorgangsL = _santize_multi(Vorgang)
+
     global archive_data
     if not archive_data:
         archive_data = open_archive_cache(conf)
@@ -561,9 +569,8 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
 
     xml = header
 
-    Liste = Vorgang.split(";")
-    for vorgang2 in Liste:
-        if _is_space_etc(vorgang2):
+    for vorgang2 in VorgangsL:
+        if vorgang2.isspace:
             continue
         vorgang2 = vorgang2.strip()
         print(f"objRefA {vorgang2=}")
@@ -608,7 +615,9 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
       <value>1234567, Pfeile, Testdatensatz für #KP24 (Template/Vorlage)</value>
     </virtualField>
     """
-    if _is_space_etc(sachbegriff):
+    try:
+        sachbegriff = _sanitize(sachbegriff)
+    except (TypeError, ValueError):
         return None
 
     print(f"{sachbegriff=}")
@@ -653,24 +662,6 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
 #
 
 
-def _each_person(beteiligte: str) -> Iterator[tuple[str|None, str | None, str | None]]:
-    """
-    - We split the string at ";"
-    - We assume the role is the thing before the last comma
-    - We ignore Zusätze in front of ":"
-
-    New: We used to ignore Lebensdaten in brackets, now we extract them if they exist or return None if not.
-    If no role given, we return None.
-    """
-    if beteiligte is not None:
-        beteiligteL = beteiligte.split(";")
-        for name_role_date in beteiligteL:
-            #print(f"{name_role_date=}")
-            if name_role_date is not None:
-                name, role, date = _triple_split2(name_role_date)
-                yield (name, role, date)
-
-
 def _ident_from_record(recordM: Module) -> str:
     return recordM.xpath("""/m:application/m:modules/m:module[
         @name = 'Object'
@@ -679,49 +670,6 @@ def _ident_from_record(recordM: Module) -> str:
     ]/m:repeatableGroupItem/m:dataField[@
         name ='InventarNrSTxt'
     ]/m:value/text()""")[0]
-
-
-def _is_int(value: int | None) -> bool:
-    """
-    Expects int or None. Returns True if is an integer or False otherwise.
-
-    TODO: Test if it dies on error.
-    """
-    if not isinstance(value, int) and not value is None:
-        raise TypeError(f"Value should be int|None, but it's not! {value}")
-
-    match value:
-        case None:
-            return False
-        case int():
-            return True
-        case _:
-            return False
-
-
-def _is_space_etc(value: str | None) -> bool:
-    """
-    Expects a string or None. Returns True if value is None or an empty string ('') or
-    an de facto empty string (e.g. ' '). Otherwise return False.
-
-    Currently, dies if you pass in an int instead of an str which is good behavior since it
-    points to a problem we should be aware of.
-
-    TODO: tests
-    """
-
-    if not isinstance(value, str) and not value is None:
-        raise TypeError(f"Value should be str|None, but it's not! {value}")
-
-    match value:
-        case None:
-            return True
-        case "":
-            return True
-        case value if value.isspace():
-            return True
-        case _:
-            return False
 
 
 def _lookup_name(*, name: str, conf: dict) -> int:
@@ -819,6 +767,40 @@ def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
         parentN.append(newN)
     else:  # replace
         oldN.getparent().replace(oldN, newN)
+
+
+def _sanitize(value: str) -> None | str:
+    """
+    value is the value from an Excel cell. It's probably a string, but it can be None or
+    an int.
+
+    We test for different "empty" values (None, "", isspace) and raise exception in those cases.
+
+    Also we mask & and other things.
+    """
+
+    if value is None:
+        raise TypeError("value is None")
+
+    if not isinstance(value, str):
+        raise TypeError(f"Value should be str, but it's not! {value}")
+
+    astr = value.strip()
+
+    if astr == "":
+        return ValueError(f"{value=}")
+
+    astr = saxutils.escape(astr)  # escape things like &
+    return astr
+
+
+def _sanitize_multi(astr: str) -> None | list:
+    """
+    First sanitize conventionally and split multi entries into pieces with another
+    strip. Raises if _sanitize raises.
+    """
+    astr = _sanitize(astr)
+    return [item.strip() for item in astr.split(";")]
 
 
 def _triple_split(name_role_date: str) -> tuple[str, str, str]:
@@ -987,5 +969,5 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
     if match:
         role = match.group(1)
         # print(f"**************{role}")
-    #print(f"*************{name=} {date=} {role=}")
+    # print(f"*************{name=} {date=} {role=}")
     return name, role, date

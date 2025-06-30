@@ -14,7 +14,6 @@ from MpApi.Utils.becky.cache_ops import (
     save_archive_cache,
     set_change,
 )
-from MpApi.Utils.becky.set_fields_Object import _each_person
 from MpApi.Utils.Ria import RIA, init_ria
 from openpyxl import Workbook, load_workbook, worksheet
 from pathlib import Path
