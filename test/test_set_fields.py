@@ -109,7 +109,7 @@ def test_lookup_name() -> None:
     with pytest.raises(KeyError):
         pkId = _lookup_name(name="doesnt exist", conf=conf)
 
-    # Serdu has no pkId in cache at the moment
+    # Serdu has no pkId in cache at the moment, see Serdu (?)
     with pytest.raises(KeyError):
         pkId = _lookup_name(name="Serdu", conf=conf)
 

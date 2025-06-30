@@ -405,6 +405,10 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
                 <dataField name="DetailsTxt">
                   <value>{item}</value>
                 </dataField>
+                <vocabularyReference name="TypeVoc" id="52617" instanceName="ObjGeographicTypeVgr">
+                  <vocabularyReferenceItem id="4366951">
+                  </vocabularyReferenceItem>
+                </vocabularyReference>
             </repeatableGroupItem>""")
         newN.append(itemN)
 
