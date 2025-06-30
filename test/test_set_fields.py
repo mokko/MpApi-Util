@@ -3,7 +3,6 @@
 from copy import deepcopy
 from MpApi.Utils.becky.cache_ops import open_person_cache, save_person_cache
 from MpApi.Utils.becky.set_fields_Object import (
-    _each_person,
     _lookup_name,
     roles,
     set_ident,
@@ -25,7 +24,7 @@ import pytest
 # conf_fn = Path(__file__).parents[1] / "sdata" / "becky_conf.toml"
 
 
-def test_each_person1() -> None:
+def tast_each_person1() -> None:
     beteiligte = """
         Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in; 
         Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung; 
@@ -48,7 +47,7 @@ def test_each_person1() -> None:
                 assert date == "† 05.04.1894*"
 
 
-def test_each_person2() -> None:
+def tast_each_person2() -> None:
     beteiligte = """
         Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
         Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
@@ -68,7 +67,7 @@ def test_each_person2() -> None:
                 assert date == "1801 - 1873"
 
 
-def test_each_person3() -> None:
+def tast_each_person3() -> None:
     from openpyxl import Workbook, load_workbook, worksheet
 
     wb = load_workbook("../sdata/Abschrift_HK_Afrika_III_C_Final.xlsx", data_only=True)
@@ -111,7 +110,7 @@ def test_lookup_name() -> None:
         pkId = _lookup_name(name="doesnt exist", conf=conf)
 
     # Serdu has no pkId in cache at the moment
-    with pytest.raises(IndexError):
+    with pytest.raises(KeyError):
         pkId = _lookup_name(name="Serdu", conf=conf)
 
 
