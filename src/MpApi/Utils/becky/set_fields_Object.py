@@ -792,7 +792,7 @@ def _sanitize(value: str) -> None | str:
     astr = value.strip()
 
     if astr == "":
-        return ValueError(f"{value=}")
+        raise ValueError(f"{value=}")
 
     astr = saxutils.escape(astr)  # escape things like &
     return astr
@@ -804,7 +804,13 @@ def _sanitize_multi(astr: str) -> None | list:
     strip. Raises if _sanitize raises.
     """
     astr = _sanitize(astr)
-    return [item.strip() for item in astr.split(";")]
+    astrL = astr.split(";")
+    astrL2 = list()
+    for item in astrL:
+        item = item.strip()
+        if item != "":
+            astrL2.append(item)
+    return astrL2
 
 
 def _triple_split(name_role_date: str) -> tuple[str, str, str]:

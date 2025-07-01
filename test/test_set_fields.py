@@ -4,6 +4,8 @@ from copy import deepcopy
 from MpApi.Utils.becky.cache_ops import open_person_cache, save_person_cache
 from MpApi.Utils.becky.set_fields_Object import (
     _lookup_name,
+    _sanitize,
+    _sanitize_multi,
     roles,
     set_ident,
     set_ident_sort,
@@ -219,3 +221,28 @@ def test_set_erwerbdatum() -> None:
     assert recordM.xpath(xpath)[0] == "1.1.2100"
     set_erwerbDatum(recordM, datum="2.1.2100")
     assert recordM.xpath(xpath)[0] == "2.1.2100"
+
+
+def test_sanitize() -> None:
+    cases = {  # working cases
+        "AKG & Co": "AKG &amp; Co",
+    }
+    for case in cases:
+        res = _sanitize(case)
+        assert res == cases[case]
+
+    # raises
+    with pytest.raises(TypeError):
+        res = _sanitize(None)
+
+    cases = ["", " ", " \n "]
+    with pytest.raises(ValueError):
+        for case in cases:
+            res = _sanitize(case)
+
+
+def test_sanitize_multi() -> None:
+    cases = {"Bafo": 1, "Bafo; Baffalo": 2, "Bafo;": 1}
+    for case in cases:
+        alist = _sanitize_multi(case)
+        assert len(alist) == cases[case]
