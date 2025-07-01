@@ -169,7 +169,7 @@ class IdentNrFactory:
         iNr.text = text
 
         m = re.match(
-            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\.\,\-<>() ]*)", text
+            r"([XVI]+)( [a-zA-Z]{1,2} *[a-zA-Z]*) (\d+)( *[a-z0-9\.\,\-<>()\? ]*)", text
         )
 
         if m is None:

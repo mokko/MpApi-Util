@@ -71,6 +71,13 @@ cases = {
         3: "1005",
         4: "12",
     },
+    # Hendryk möchte diesen Fall für Kamerun 24 Projekt
+    "III C 1234 a-?": {
+        1: "III",
+        2: " C",
+        3: "1234",
+        4: "a-?",
+    },
 }
 
 
@@ -103,3 +110,4 @@ def test_cases_AKu():
     assert iNr.part1 == "IV"
     assert iNr.part2 == "AKu"
     assert iNr.part3 == "000059"
+    assert iNr.part4 == ""
