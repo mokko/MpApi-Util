@@ -143,7 +143,7 @@ def test_lookup_person() -> None:
 
 #
 # live tests requiring access to RIA
-# f
+#
 
 
 def test_set_ident() -> None:

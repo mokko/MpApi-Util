@@ -261,7 +261,7 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
     instanceName="ObjAcquisitionMethodVgr"
     """
     try:
-        art = _santize(art)
+        art = _sanitize(art)
     except (TypeError, ValueError):
         return None
 
@@ -359,7 +359,7 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     </repeatableGroup>
     """
     try:
-        namesL = _santize_multi(name)
+        namesL = _sanitize_multi(name)
     except (TypeError, ValueError):
         return None
 
@@ -468,7 +468,7 @@ def set_ident_sort(record: Module, *, nr: int) -> None:
     Setting ObjObjectNumberSortedTxt
     """
     try:
-        nr = _santize(nr)
+        nr = _sanitize(nr)
     except (TypeError, ValueError):
         return None
 
@@ -556,7 +556,9 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     Objektbezug: III A 2610, Tabakpfeifenkopf, Karl Richard Lepsius (1810 - 1884);
     Objektbezug: VIII A 11666, Positiv, SW, Palmöl-Lampe, Kurt Grunst (*04.04.1921);
     """
-    VorgangsL = _santize_multi(Vorgang)
+    if Vorgang is None:
+        return
+    VorgangsL = _sanitize_multi(Vorgang)
 
     global archive_data
     if not archive_data:
@@ -705,8 +707,8 @@ def _lookup_name(*, name: str, conf: dict) -> int:
 
     if len(adict) > 1:
         # break early especially during dry-runs
-        msg = f"Ambiguous date for person in cache! '{name}'"
         # this has never happened so far, so die when it does
+        msg = f"Ambiguous date for person in cache! '{name}' {adict}"
         logger.error(msg)
         raise TypeError(msg)
 
