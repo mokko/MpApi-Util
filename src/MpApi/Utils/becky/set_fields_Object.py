@@ -556,6 +556,7 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     Objektbezug: III A 2610, Tabakpfeifenkopf, Karl Richard Lepsius (1810 - 1884);
     Objektbezug: VIII A 11666, Positiv, SW, Palmöl-Lampe, Kurt Grunst (*04.04.1921);
     """
+
     if Vorgang is None:
         return
     VorgangsL = _sanitize_multi(Vorgang)
@@ -576,15 +577,12 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     xml = header
 
     for vorgang2 in VorgangsL:
-        if vorgang2.isspace:
-            continue
         vorgang2 = vorgang2.strip()
         print(f"objRefA {vorgang2=}")
         if vorgang2 not in archive_data:
             raise TypeError(f"Archival document not in cache '{Vorgang}'")
 
         rel_objId = archive_data[vorgang2][0]
-
         xml += f"""
           <moduleReferenceItem moduleItemId="{rel_objId}">
             <vocabularyReference name="TypeAVoc" id="30413">
