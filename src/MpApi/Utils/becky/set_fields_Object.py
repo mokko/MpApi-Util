@@ -739,7 +739,7 @@ def _lookup_place(*, name: str, conf: dict) -> int:
 
 def _lookup_role(role: str | None) -> int | None:
     """
-    Updae: returns None if that role is None.
+    Update: returns None if that role is None.
 
     Use 0 oder 000000 instead if you want to keep the field empty in RIA.
     """
@@ -773,12 +773,12 @@ def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
         oldN.getparent().replace(oldN, newN)
 
 
-def _sanitize(value: str) -> None | str:
+def _sanitize(value: str) -> str:
     """
-    value is the value from an Excel cell. It's probably a string, but it can be None or
+    value comes from an Excel cell. It's probably a string, but it can be None or
     an int.
 
-    We test for different "empty" values (None, "", isspace) and raise exception in those cases.
+    Eliminating leading and trailing whitespace. We test for different "empty" values (None, "", isspace) and raise exception in those cases.
 
     Also we mask & and other things.
     """
@@ -792,20 +792,21 @@ def _sanitize(value: str) -> None | str:
     astr = value.strip()
 
     if astr == "":
-        raise ValueError(f"{value=}")
+        raise ValueError(f"Empty string {value=}")
 
-    astr = saxutils.escape(astr)  # escape things like &
-    return astr
+    return saxutils.escape(astr)  # escape things like &
 
 
-def _sanitize_multi(astr: str) -> None | list:
+def _sanitize_multi(astr: str) -> list:
     """
-    First sanitize conventionally and split multi entries into pieces with another
-    strip. Raises if _sanitize raises.
+    First sanitize conventionally, then split into individual entries.
+    Ignore empty entries. Raises if _sanitize raises, if astr is None
+    or empty. Empty individual entries are silently ignored.
     """
     astr = _sanitize(astr)
     astrL = astr.split(";")
     astrL2 = list()
+    # filter out empty strings etc.
     for item in astrL:
         item = item.strip()
         if item != "":
