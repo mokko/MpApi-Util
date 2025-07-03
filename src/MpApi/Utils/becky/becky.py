@@ -68,7 +68,7 @@ def becky_main(
     ws = wb[conf["sheet_title"]]  # sheet exists already
 
     conf["RIA"] = init_ria()  # mpApi.util.Ria's client
-    init_log(act=act, conf=conf, conf_fn=conf_fn, limit=limit)
+    init_log(act=act, conf=conf, conf_fn=conf_fn, limit=limit, offset=offset)
     print(f">> Getting template from RIA Object {conf['template_id']}")
     conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
 
@@ -110,8 +110,8 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
     p = conf["project_dir"] / "debug.object.xml"
-    print(f">> Writing record to file '{p}'")
-    recordM.toFile(path=p)
+    # print(f">> Writing record to file '{p}'")
+    # recordM.toFile(path=p)
     if act:
         objId = conf["RIA"].create_item(item=recordM)
         log_print_info(f">> Created record {objId} in RIA '{row[0].value}'")
@@ -122,7 +122,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         # recordM.toFile(path=p2)
 
 
-def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int) -> None:
+def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int, offset: int) -> None:
     """
     Create a simple logger at file becky20250510-0956.log
     """
@@ -139,7 +139,7 @@ def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int) -> None:
         )
         # - %(name)s is currently not necessary
         logger = logging.getLogger(__name__)
-        logger.info(f"becky started with {act=} and {limit=}")
+        logger.info(f"becky started with {act=}, {offset=} and {limit=}")
         logger.info(f"loading Excel file '{conf['excel_fn']}'")
     else:
         logger = logging.getLogger(__name__)

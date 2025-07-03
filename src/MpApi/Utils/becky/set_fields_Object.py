@@ -564,25 +564,32 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     global archive_data
     if not archive_data:
         archive_data = open_archive_cache(conf)
-
     header = f"""
         <composite {NS} name="ObjObjectCre">
           <compositeItem>
             <moduleReference name="ObjObjectARef" targetModule="Object">"""
     footer = """
-                </moduleReference>
-              </compositeItem>
-            </composite>"""
+            </moduleReference>
+          </compositeItem>
+        </composite>"""
 
     xml = header
+    logger = logging.getLogger(__name__)
 
     for vorgang2 in VorgangsL:
         vorgang2 = vorgang2.strip()
         print(f"objRefA {vorgang2=}")
-        if vorgang2 not in archive_data:
+        # one test is not enough (if key is there), also if key has truthy value
+        if vorgang2 not in archive_data and archive_data[vorgang2]:
             raise TypeError(f"Archival document not in cache '{Vorgang}'")
 
         rel_objId = archive_data[vorgang2][0]
+
+        # try:
+        # rel_objId = archive_data[vorgang2][0]
+        # except IndexError:
+        # logging.warning(f"item not in archive cache: {vorgang2} (not adding the reference in RIA)")
+        # continue
         xml += f"""
           <moduleReferenceItem moduleItemId="{rel_objId}">
             <vocabularyReference name="TypeAVoc" id="30413">
