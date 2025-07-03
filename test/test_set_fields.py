@@ -6,6 +6,7 @@ from MpApi.Utils.becky.set_fields_Object import (
     _lookup_name,
     _sanitize,
     _sanitize_multi,
+    _triple_split2,
     roles,
     set_ident,
     set_ident_sort,
@@ -24,76 +25,6 @@ from pathlib import Path
 import pytest
 
 # conf_fn = Path(__file__).parents[1] / "sdata" / "becky_conf.toml"
-
-
-def tast_each_person1() -> None:
-    beteiligte = """
-        Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in; 
-        Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung; 
-        Bezug unklar: Paul Grade († 05.04.1894*)
-    """
-    for idx, (name, role, date) in enumerate(_each_person(beteiligte=beteiligte)):
-        print(f"[{role}] {name}")
-        match idx:
-            case 0:
-                assert name == "Joachim Pfeil"
-                assert role == "Sammler*in"
-                assert date == "30.12.1857 - 12.3.1924"
-            case 1:
-                assert name == "Kaiserliches Auswärtiges Amt des Deutschen Reiches"
-                assert role == "Veräußerung"
-                assert date == "1875"
-            case 2:
-                assert name == "Paul Grade"
-                assert role is None
-                assert date == "† 05.04.1894*"
-
-
-def tast_each_person2() -> None:
-    beteiligte = """
-        Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
-        Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
-    """
-    for idx, (name, role, date) in enumerate(_each_person(beteiligte=beteiligte)):
-        match idx:
-            case 0:
-                assert name == "Heinrich Barth"
-                assert role == "Sammler*in"
-                assert date == "16.2.1821 - 25.11.1865"
-            case 1:
-                assert (
-                    name
-                    == "Königliche Preußische Kunstkammer, Ethnografische Abteilung"
-                )
-                assert role == "Vorbesitzer*in"
-                assert date == "1801 - 1873"
-
-
-def tast_each_person3() -> None:
-    from openpyxl import Workbook, load_workbook, worksheet
-
-    wb = load_workbook("../sdata/Abschrift_HK_Afrika_III_C_Final.xlsx", data_only=True)
-    ws = wb["Sheet1"]  # sheet exists already
-    conf = {"project_dir": Path("../sdata"), "person_cache": "person_cache.toml"}
-    person_data = open_person_cache(conf)
-
-    for idx, row in enumerate(ws.iter_rows(min_row=2), start=2):
-        beteiligte = row[3].value
-        if beteiligte is not None:
-            beteiligtL = beteiligte.split(";")
-            beteiligtL = [pk.strip() for pk in beteiligtL]
-            for beteiligt in beteiligtL:
-                if not beteiligt.isspace():
-                    # print(f"{idx}:{beteiligt}")
-                    for name, role, date in _each_person(beteiligt):
-                        try:
-                            pkIdL = person_data[name][date]
-                        except:
-                            print(f"test_each_person3 ERROR {name} {date}")
-                        if not pkIdL:  # list is empty
-                            print(f"{idx}: {name}{pkIdL}|{role}|{date}")
-    # for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
-    #    print(f"{count}: {name} {role} {date}")
 
 
 def test_lookup_name() -> None:
@@ -246,3 +177,82 @@ def test_sanitize_multi() -> None:
     for case in cases:
         alist = _sanitize_multi(case)
         assert len(alist) == cases[case]
+
+
+def test_triple_split() -> None:
+    cases = [
+        "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in",
+        "Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in",
+        "Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung",
+        "Bezug unklar: Paul Grade († 05.04.1894*)",
+    ]
+
+    for idx, case in enumerate(cases):
+        name, role, date = _triple_split2(case)
+        match idx:
+            case 0:
+                assert name == "Claus Schilling"
+                assert role == "Sammler*in"
+                assert date == "5.7.1871 (?) - 1946"
+            case 1:
+                assert name == "Joachim Pfeil"
+                assert role == "Sammler*in"
+                assert date == "30.12.1857 - 12.3.1924"
+            case 2:
+                assert name == "Kaiserliches Auswärtiges Amt des Deutschen Reiches"
+                assert role == "Veräußerung"
+                assert date == "1875"
+            case 3:
+                assert name == "Paul Grade"
+                assert role == None
+                assert date == "† 05.04.1894*"
+
+
+def test_triple_split_multi() -> None:
+    beteiligte = """
+        Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
+        Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
+    """
+    beteiligteL = _sanitize_multi(beteiligte)
+    for idx, beteiligte2 in enumerate(beteiligteL):
+        # print(f"{_triple_split2(beteiligte2)}")
+        name, role, date = _triple_split2(beteiligte2)
+        match idx:
+            case 0:
+                assert name == "Heinrich Barth"
+                assert role == "Sammler*in"
+                assert date == "16.2.1821 - 25.11.1865"
+            case 1:
+                assert (
+                    name
+                    == "Königliche Preußische Kunstkammer, Ethnografische Abteilung"
+                )
+                assert role == "Vorbesitzer*in"
+                assert date == "1801 - 1873"
+
+
+def tast_each_person3() -> None:
+    from openpyxl import Workbook, load_workbook, worksheet
+
+    wb = load_workbook("../sdata/Abschrift_HK_Afrika_III_C_Final.xlsx", data_only=True)
+    ws = wb["Sheet1"]  # sheet exists already
+    conf = {"project_dir": Path("../sdata"), "person_cache": "person_cache.toml"}
+    person_data = open_person_cache(conf)
+
+    for idx, row in enumerate(ws.iter_rows(min_row=2), start=2):
+        beteiligte = row[3].value
+        if beteiligte is not None:
+            beteiligtL = beteiligte.split(";")
+            beteiligtL = [pk.strip() for pk in beteiligtL]
+            for beteiligt in beteiligtL:
+                if not beteiligt.isspace():
+                    # print(f"{idx}:{beteiligt}")
+                    for name, role, date in _each_person(beteiligt):
+                        try:
+                            pkIdL = person_data[name][date]
+                        except:
+                            print(f"test_each_person3 ERROR {name} {date}")
+                        if not pkIdL:  # list is empty
+                            print(f"{idx}: {name}{pkIdL}|{role}|{date}")
+    # for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
+    #    print(f"{count}: {name} {role} {date}")

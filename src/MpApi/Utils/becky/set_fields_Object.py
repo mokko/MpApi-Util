@@ -770,6 +770,8 @@ def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
 
     Here we assume that there will be only one such node. So if there are multiple titles
     what happens?
+
+    N.B. Order here is non-deterministic and does often not validate. use m.sort_elements()
     """
     try:
         oldN = record.xpath(xpath)[0]
@@ -946,6 +948,11 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
             "date": None,
             "role": "Sammler*in",
         },
+        "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in": {
+            "name": "Claus Schilling",
+            "date": "5.7.1871 (?) - 1946",
+            "role": "Sammler*in",
+        },
     }
 
     if name_date_role in exceptions:
@@ -954,8 +961,7 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
         role = exceptions[name_date_role]["role"]
         return name, role, date
 
-    import re
-
+    # defaults
     name = None
     role = None
     date = None
@@ -979,7 +985,7 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
     match = re.search(r"\(([^)]+)\)", name_date_role)
     if match:
         date = match.group(1)
-        # it's possible that left out a closing bracket )
+        # it's possible that we left out a closing bracket )
         if "(" in date and not date.endswith(")"):
             date += ")"
 

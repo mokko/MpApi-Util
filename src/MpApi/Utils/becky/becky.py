@@ -98,20 +98,24 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     set_ident_sort(recordM, nr=int(row[1].value))
     set_sachbegriff(recordM, sachbegriff=row[2].value)
     # set_beteiligte may encounter a case where there is no kueId
-    set_beteiligte(recordM, beteiligte=row[3].value, conf=conf)
     set_erwerbDatum(recordM, datum=row[4].value)
     set_erwerbungsart(recordM, art=row[5].value)
     set_erwerbNr(recordM, nr=row[6].value)
     set_erwerbVon(recordM, von=row[7].value)
     set_geogrBezug(recordM, name=row[8].value)
-    set_objRefA(recordM, Vorgang=row[9].value, conf=conf)
+    set_beteiligte(recordM, beteiligte=row[3].value, conf=conf)
     set_invNotiz(recordM, bemerkung=row[11].value)  # Spalte L rarely filled-in
+    set_objRefA(recordM, Vorgang=row[9].value, conf=conf)
 
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
+    recordM.sort_elements()
     p = conf["project_dir"] / "debug.object.xml"
-    # print(f">> Writing record to file '{p}'")
-    # recordM.toFile(path=p)
+    print(f">> Writing record to file '{p}'")
+    recordM.toFile(path=p)
+    print(">> Validating xml...")
+    recordM.validate()
+    print(">> Ok")
     if act:
         objId = conf["RIA"].create_item(item=recordM)
         log_print_info(f">> Created record {objId} in RIA '{row[0].value}'")
