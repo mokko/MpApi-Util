@@ -93,6 +93,7 @@ roles = {
     "Sammler*in des Originals": 4378428,
     "Schnitzer*in": 4378432,
     "Treuhänder*in": 4378446,
+    "Übernahme": 4378452,  # fake entry. id of veräußerung
     "Veräußerung": 4378452,
     "Vermittler*in": 4378460,
     "Vorbesitzer*in": 4378466,
@@ -115,6 +116,7 @@ erwerbungsarten = {
     "Schenkung": 1630994,
     "Tausch": 1630995,
     "Übertrag ": 000000,
+    "Übernahme": 1805388,  # this is red, not sure this is working
     "Übereignung": 4129997,
     "Überweisung": 1630996,
     "Zugang ungeklärt": 1631000,
@@ -580,15 +582,18 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
         vorgang2 = vorgang2.strip()
         print(f"objRefA {vorgang2=}")
         # one test is not enough (if key is there), also if key has truthy value
-        if vorgang2 not in archive_data and archive_data[vorgang2]:
-            raise TypeError(f"Archival document not in cache '{Vorgang}'")
-
+        if vorgang2 not in archive_data or not archive_data[vorgang2]:
+            # raise TypeError(f"Archival document not in cache '{vorgang2}'")
+            logging.warning(
+                f"item not in archive cache: {vorgang2} (not adding the reference to RIA)"
+            )
+            continue
         rel_objId = archive_data[vorgang2][0]
 
         # try:
         # rel_objId = archive_data[vorgang2][0]
         # except IndexError:
-        # logging.warning(f"item not in archive cache: {vorgang2} (not adding the reference in RIA)")
+        #
         # continue
         xml += f"""
           <moduleReferenceItem moduleItemId="{rel_objId}">
@@ -719,14 +724,18 @@ def _lookup_name(*, name: str, conf: dict) -> int:
 
     for date in person_data[name]:
         print(f"{person_data[name][date]=}")
-        atuple = person_data[name][date]
+        IDs = person_data[name][date]
 
-        if len(atuple) > 1:
+        if len(IDs) > 1:
             # break early especially during dry-runs
             msg = f"Ambiguous person name in cache! '{name}'"
             logger.error(msg)
             raise TypeError(msg)
-    return atuple[0]
+        elif len(IDs) == 0:
+            msg = f"Person has no ID {name}"
+            logger.error(msg)
+            raise KeyError(msg)
+    return IDs[0]
 
 
 def _lookup_place(*, name: str, conf: dict) -> int:
@@ -760,7 +769,7 @@ def _lookup_role(role: str | None) -> int | None:
         return roles[role]
     except KeyError:
         logger.error(f"Unbekannte Rolle: '{role}'")
-        raise KeyError(f"Unbekannte Rolle: '{role}'!")
+        raise KeyError(f"Unbekannte Rolle: '{role}'")
 
 
 def _new_or_replace(*, record: Module, xpath: str, newN: _Element) -> None:
@@ -873,10 +882,25 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
             "date": "1939",
             "role": "Veräußerung",
         },
+        "British Museum (Dep. of Ethnography) (1893), Veräußerung": {
+            "name": "British Museum (Dep. of Ethnography)",
+            "date": "1893",
+            "role": "Veräußerung",
+        },
+        "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in": {
+            "name": "Claus Schilling",
+            "date": "5.7.1871 (?) - 1946",
+            "role": "Sammler*in",
+        },
         "Deutsche Armee-, Marine- und Kolonialausstellung (D.A.M.U.K.A.) (1907), Vorbesitzer*in": {
             "name": "Deutsche Armee-, Marine- und Kolonialausstellung (D.A.M.U.K.A.)",
             "date": "1907",
             "role": "Vorbesitzer*in",
+        },
+        "Forschungsreise Prof. Bernhard Struck & Dr. Hugo Bernatzik (1930 - 1931), Sammler*in": {
+            "name": "Forschungsreise Prof. Bernhard Struck & Dr. Hugo Bernatzik",
+            "date": "1930 - 1931",
+            "role": "Sammler*in",
         },
         "Frau Stange (geb. Dominik) (1956), Veräußerung": {
             "name": "Frau Stange (geb. Dominik)",
@@ -939,18 +963,13 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
             "role": "Veräußerung",
         },
         "Unbekannt, Veräußerung": {
-            "name": None,
+            "name": "Unbekannt",
             "date": None,
             "role": "Veräußerung",
         },
         "Unbekannt, Sammler*in": {
-            "name": None,
+            "name": "Unbekannt",
             "date": None,
-            "role": "Sammler*in",
-        },
-        "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in": {
-            "name": "Claus Schilling",
-            "date": "5.7.1871 (?) - 1946",
             "role": "Sammler*in",
         },
     }

@@ -14,6 +14,11 @@ from MpApi.Utils.becky.cache_ops import (
     save_archive_cache,
     set_change,
 )
+from MpApi.Utils.becky.set_fields_Object import (
+    _sanitize_multi,
+    _triple_split2,
+)
+
 from MpApi.Utils.Ria import RIA, init_ria
 from openpyxl import Workbook, load_workbook, worksheet
 from pathlib import Path
@@ -37,12 +42,15 @@ def main(conf_fn: str, mode: str, limit: int = -1) -> None:
 def process_names(*, beteiligte: str, cache: dict) -> dict:
     """
     Gets called when looping through Excel, so no info from RIA yet.
-    If necessary we write name, datethe info in cache.
+    If necessary we write name, date the info in cache.
     """
     if beteiligte is None:
         return cache  # it's perfectly possible that a cell is empty...
 
-    for count, (name, role, date) in enumerate(_each_person(beteiligte), start=1):
+    beteiligteL = _sanitize_multi(beteiligte)
+
+    for count, beteiligte2 in enumerate(beteiligteL, start=1):
+        name, role, date = _triple_split2(beteiligte)
         # we're counting the names in one cell here, not the lines
         # print(f"{count}:{name} [{role}]")
         # if role not in roles:

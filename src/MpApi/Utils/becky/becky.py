@@ -97,12 +97,12 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     )  # from Excel as str
     set_ident_sort(recordM, nr=int(row[1].value))
     set_sachbegriff(recordM, sachbegriff=row[2].value)
-    # set_beteiligte may encounter a case where there is no kueId
     set_erwerbDatum(recordM, datum=row[4].value)
     set_erwerbungsart(recordM, art=row[5].value)
     set_erwerbNr(recordM, nr=row[6].value)
     set_erwerbVon(recordM, von=row[7].value)
     set_geogrBezug(recordM, name=row[8].value)
+    # set_beteiligte may encounter a case where there is no kueId
     set_beteiligte(recordM, beteiligte=row[3].value, conf=conf)
     set_invNotiz(recordM, bemerkung=row[11].value)  # Spalte L rarely filled-in
     set_objRefA(recordM, Vorgang=row[9].value, conf=conf)
@@ -161,6 +161,9 @@ def log_print_info(msg: str) -> None:
 
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     ident = row[0].value  # from Excel as str
+    if ident is None:
+        logging.warning(f"IdentNr is None {idx}; not processing this line")
+        return
     global hits
     font_color = row[0].font.color
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
