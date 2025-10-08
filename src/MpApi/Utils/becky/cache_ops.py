@@ -56,6 +56,7 @@ def set_change():
 
 
 def _open(cache_fn: Path, name: str) -> dict:
+    # read only to save memory?
     if not cache_fn.exists():
         print(f">> Starting new {name} ({cache_fn})")
         return {}

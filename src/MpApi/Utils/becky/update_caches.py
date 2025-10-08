@@ -28,7 +28,7 @@ def main(conf_fn: str, mode: str, limit: int = -1) -> None:
     conf = _load_conf(conf_fn)
 
     print(f">> Reading workbook '{conf['excel_fn']}'")
-    wb = load_workbook(conf["excel_fn"], data_only=True)
+    wb = load_workbook(conf["excel_fn"], read_only=True)
     ws = wb[conf["sheet_title"]]  # sheet exists already
     match mode:
         case "person":
@@ -36,7 +36,9 @@ def main(conf_fn: str, mode: str, limit: int = -1) -> None:
         case "archive":
             update_archive(conf=conf, sheet=ws, limit=limit)
         case _:
+            wb.close()
             raise SyntaxError(f"Unknown mode '{mode}'")
+    wb.close()
 
 
 def process_names(*, beteiligte: str, cache: dict) -> dict:
@@ -70,7 +72,6 @@ def process_names(*, beteiligte: str, cache: dict) -> dict:
                 print(f">> Date not yet in cache '{name}' '{date}'")
                 cache[name][date] = []
                 set_change()
-
     return cache
 
 
@@ -138,6 +139,10 @@ def update_archive(*, conf: dict, sheet: worksheet, limit: int) -> None:
     client = init_ria()
     for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
         print(f"Line {idx}")
+        if row[9].font is None:
+            print(f"...ignoring line since no color {idx}")
+            continue
+
         font_color = row[9].font.color  # relying on red font
         if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
             _archive_per_red_cell(row[9].value, data=archive_data, client=client)
@@ -147,6 +152,7 @@ def update_archive(*, conf: dict, sheet: worksheet, limit: int) -> None:
             save_archive_cache(data=archive_data, conf=conf)
             print(">> Limit reached")
             break
+    print(f"Saving archive cache: {len(archive_data)}")
     save_archive_cache(data=archive_data, conf=conf)
 
 
@@ -154,39 +160,10 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
     print(f">> Loading person cache '{conf['person_cache']}'")
     person_data = open_person_cache(conf)
 
-    print(">> Looping thru excel looking for names")
-    # many rows repeat the same name, so we first make an index with
-    # distinct entries.
-    for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
-        # print(f"Line {idx}")
-        font_color = row[0].font.color
-        if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
-            person_data = process_names(beteiligte=row[3].value, cache=person_data)
-        if idx % 1 == 0:
-            save_person_cache(data=person_data, conf=conf)
-        if limit == idx:
-            print(">> Limit reached")
-            break
-
-    # set_change()
-    save_person_cache(data=person_data, conf=conf)
-
-    client = init_ria()
-    print(">> Unidentified names?")
-    for idx, name in enumerate(person_data, start=1):
-        for date in person_data[name]:
-            # print (f"**{date=}")
-            if not person_data[name][date]:  # if tuple is empty
-                # where do we get date from? _each_person
-                idL = query_persons(client=client, name=name, date=date)
-                person_data[name][date] = idL
-                set_change()
-                print(f"{idL}")
-            if idx % 25 == 0:
-                save_person_cache(data=person_data, conf=conf)
-            if limit == idx:
-                print(">> Limit reached")
-                break
+    person_data = _scan_excel(
+        sheet=sheet, person_data=person_data, conf=conf, limit=limit
+    )
+    person_data = _lookup_pk_ids(person_data=person_data, conf=conf, limit=limit)
     save_person_cache(data=person_data, conf=conf)
 
 
@@ -216,6 +193,53 @@ def _archive_per_red_cell(cell: str, *, data: dict, client: RIA) -> None:
                     set_change()
                     print(f"{idL=}")
                     data[ident] = idL  # may be empty list
+
+
+def _lookup_pk_ids(*, person_data: dict, conf: dict, limit: int) -> dict:
+    client = init_ria()
+    print(">> Unidentified names?")
+    for idx, name in enumerate(person_data, start=1):
+        for date in person_data[name]:
+            # print (f"**{date=}")
+            if not person_data[name][date]:  # if tuple is empty
+                # where do we get date from? _each_person
+                idL = query_persons(client=client, name=name, date=date)
+                person_data[name][date] = idL
+                set_change()
+                print(f"{idL}")
+            if idx % 25 == 0:
+                save_person_cache(data=person_data, conf=conf)
+            if limit == idx:
+                print(">> Limit reached")
+                break
+    return person_data
+
+
+def _scan_excel(*, sheet: worksheet, person_data: dict, conf: dict, limit: int) -> dict:
+    """
+    Many rows repeat the same name, so we first make an index with distinct entries.
+    """
+    print(">> Looping thru excel looking for names")
+    for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
+        if idx % 100 == 0:
+            print(f"Line {idx} -- {len(person_data)} distinct names found")
+        if row[0].font is None:
+            print(f"...ignoring line since no color {idx}")
+            continue
+        font_color = row[0].font.color
+        if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
+            person_data = process_names(beteiligte=row[3].value, cache=person_data)
+        if idx % 1000 == 0:
+            print("Saving cache")
+            save_person_cache(data=person_data, conf=conf)
+        if limit == idx:
+            print(">> Limit reached")
+            break
+    # set_change()
+    print("Saving cache")
+    save_person_cache(data=person_data, conf=conf)
+    print(f"Initial excel scan done: {len(person_data)} distinct names found")
+    return person_data
 
 
 #

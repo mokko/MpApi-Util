@@ -391,7 +391,8 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
         <repeatableGroup {NS} name="ObjGeograficGrp"/>
     """)
 
-    for idx, item in enumerate(namesL):
+    for idx, name2 in enumerate(namesL):
+        name3 = saxutils.escape(name2)
         idx = idx * 5
         itemN = etree.fromstring(f"""
             <repeatableGroupItem {NS}>
@@ -405,7 +406,7 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
                   <value>{idx}</value>
                 </dataField>
                 <dataField name="DetailsTxt">
-                  <value>{item}</value>
+                  <value>{name3}</value>
                 </dataField>
                 <vocabularyReference name="TypeVoc" id="52617" instanceName="ObjGeographicTypeVgr">
                   <vocabularyReferenceItem id="4366951">
@@ -579,7 +580,6 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     logger = logging.getLogger(__name__)
 
     for vorgang2 in VorgangsL:
-        vorgang2 = vorgang2.strip()
         print(f"objRefA {vorgang2=}")
         # one test is not enough (if key is there), also if key has truthy value
         if vorgang2 not in archive_data or not archive_data[vorgang2]:
@@ -800,7 +800,15 @@ def _sanitize(value: str) -> str:
 
     Also we mask & and other things.
     """
+    value = _sanitize2(value)
+    return saxutils.escape(value)  # escape things like &
 
+
+def _sanitize2(value: str) -> str:
+    """
+    A version of _sanitize that doesn't mask anything. I need
+    that b/c masked char often include a colon (&amp;)
+    """
     if value is None:
         raise TypeError("value is None")
 
@@ -811,23 +819,23 @@ def _sanitize(value: str) -> str:
 
     if astr == "":
         raise ValueError(f"Empty string {value=}")
-
-    return saxutils.escape(astr)  # escape things like &
+    return astr
 
 
 def _sanitize_multi(astr: str) -> list:
     """
     First sanitize conventionally, then split into individual entries.
-    Ignore empty entries. Raises if _sanitize raises, if astr is None
-    or empty. Empty individual entries are silently ignored.
+    Ignore empty entries. Raises if _sanitize2 raises, i.e. if astr is
+    None or empty. Empty individual entries are silently ignored.
     """
-    astr = _sanitize(astr)
+    astr = _sanitize2(astr)
     astrL = astr.split(";")
     astrL2 = list()
     # filter out empty strings etc.
     for item in astrL:
         item = item.strip()
         if item != "":
+            # item = saxutils.escape(item)
             astrL2.append(item)
     return astrL2
 
