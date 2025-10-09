@@ -208,7 +208,7 @@ def set_erwerbDatum(recordM: Module, *, datum: int | str | None) -> None:
         return None
 
     print(f"Erwerb.datum={datum}")
-    quelle = "Hauptkatalog / #KP24"
+    quelle = "Hauptkatalog / #ETB04"
     newN = etree.fromstring(f"""
         <repeatableGroup {NS} name="ObjAcquisitionDateGrp">
           <repeatableGroupItem>
@@ -274,7 +274,7 @@ def set_erwerbungsart(recordM: Module, *, art: str) -> None:
         # raise KeyError(f"Erwerbungsart unbekannt: '{art}'")
         logging.warning(f"KeyError: Erwerbungsart unbekannt: '{art}'")
     print(f"Erwerbungsart='{art}' {artID=}")
-    bemerkung = "#KP24"
+    bemerkung = "#ETB04"
 
     xml = f"""
         <repeatableGroup {NS} name="ObjAcquisitionMethodGrp">
@@ -383,7 +383,7 @@ def set_geogrBezug(recordM: Module, *, name: str) -> None:
     )
 
     source = "Hauptkatalog"
-    notes = "Eintrag erstellt im Projekt #KP24"
+    notes = "Eintrag erstellt im Projekt #ETB04"
     # placeID = _lookup_place(name)
     # we used to assume that there is only one item in the Excel always
     # instanceName="GenPlaceVgr"
@@ -531,7 +531,7 @@ def set_invNotiz(recordM: Module, bemerkung: str) -> None:
           <value>5</value>
         </dataField>
         <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
-          <vocabularyReferenceItem id="4407671"/> 
+          <vocabularyReferenceItem id="4407670"/> 
         </vocabularyReference>
       </repeatableGroupItem>
     </repeatableGroup>
@@ -658,7 +658,7 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
               <value>true</value>
             </dataField>
             <dataField name="NotesClb">
-              <value>vereinfachter Sachbegriff aus Hauptkatalog (#KB24)</value>
+              <value>vereinfachter Sachbegriff aus Hauptkatalog</value>
             </dataField>
             <dataField name="SortLnu">
               <value>1</value>

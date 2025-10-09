@@ -84,7 +84,7 @@ def becky_main(
 def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
     global hits
-    hits += 1  # we're counting the records that have or would be created
+    hits += 1  # we're counting the records that will be or would be created
 
     if len(conf["templateM"]) != 1:
         raise TypeError("Template does not have a single record")
@@ -164,9 +164,9 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     if ident is None:
         logging.warning(f"IdentNr is None {idx}; not processing this line")
         return
-    global hits
     font_color = row[0].font.color
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
+        global hits
         print(f"***[{hits}]{idx}: {ident}")
         if m := record_exists2(ident=ident, conf=conf):
             # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
