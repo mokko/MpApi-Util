@@ -738,9 +738,15 @@ def record_exists(*, ident: str, conf: dict) -> bool:
 
 def record_exists2(*, ident: str, conf: dict) -> int:
     """
-    Hendryk wants a different check (Dublettencheck).
+    Hendryk wants a different Dublettencheck, where we search for
+    laufendeNr from identNr and invNumberScheme.
+    conf={
+        "InvNumberScheme": 91,
+        "org_unit": "EMOstundNordasien",
+        "RIA": init_ria()  # mpApi.util.Ria's client
+    }
 
-    Here is Signaturbereich III C baked in, could also be parameter, of course.
+    New: Signaturbereich (e.g. III C) used to be baked in, now parameterized.
 
     Ignores parts "a-c" etc.
 
@@ -756,7 +762,7 @@ def record_exists2(*, ident: str, conf: dict) -> int:
     q.addCriterion(
         field="ObjObjectNumberGrp.InvNumberSchemeRef",
         operator="equalsField",
-        value="51",
+        value=str(conf["InvNumberScheme"]),
     )
     q.addCriterion(
         field="ObjObjectNumberGrp.Part3Txt",

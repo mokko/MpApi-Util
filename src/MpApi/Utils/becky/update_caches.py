@@ -217,7 +217,7 @@ def _lookup_pk_ids(*, person_data: dict, conf: dict, limit: int) -> dict:
 
 def _scan_excel(*, sheet: worksheet, person_data: dict, conf: dict, limit: int) -> dict:
     """
-    Many rows repeat the same name, so we first make an index person_data with distinct 
+    Many rows repeat the same name, so we first make an index person_data with distinct
     entries and return that.
     """
     print(">> Looping thru excel looking for names")
@@ -239,7 +239,9 @@ def _scan_excel(*, sheet: worksheet, person_data: dict, conf: dict, limit: int) 
     # set_change()
     print("Saving cache")
     save_person_cache(data=person_data, conf=conf)
-    print(f"Initial excel scan done: {len(person_data)} distinct name|date combinations found")
+    print(
+        f"Initial excel scan done: {len(person_data)} distinct name|date combinations found"
+    )
     return person_data
 
 
