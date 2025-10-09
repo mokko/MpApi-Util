@@ -64,7 +64,7 @@ def becky_main(
     conf = _load_conf(conf_fn)  # sets project_dir
     print(f">> Setting project_dir '{conf['project_dir']}'")
 
-    wb = load_workbook(conf["excel_fn"], data_only=True)
+    wb = load_workbook(conf["excel_fn"], read_only=True)
     ws = wb[conf["sheet_title"]]  # sheet exists already
 
     conf["RIA"] = init_ria()  # mpApi.util.Ria's client
