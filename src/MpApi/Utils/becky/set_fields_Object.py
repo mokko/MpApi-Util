@@ -439,7 +439,7 @@ def set_ident(record: Module, *, ident: str, institution: str) -> None:
           <value>III C 192</value>
         </dataField>
 
-    Why dont I need to set the namespace? Doing that now. See if RIA likes it.
+    Note: We are setting namespace now. Works better.
     """
     # ObjObjectNumberGrp
     ident = _sanitize(ident)
@@ -497,51 +497,53 @@ def set_invNotiz(recordM: Module, bemerkung: str) -> None:
     z.B. "Kein geographischer Bezug genannt" (Zeile 16255 im Excel)
     4407670 Redaktionelle Notiz
     4407671 Inventarnotiz
-
-    <repeatableGroup name="ObjEditorNotesGrp" size="1">
-      <repeatableGroupItem id="42033280" uuid="0983f3b6-ecb5-4f5b-bba1-6d901ff766c8">
-        <dataField dataType="Clob" name="NotesClb">
-          <value>GeoBezug, Ansetzung angepasst</value>
-        </dataField>
-        <dataField dataType="Long" name="SortLnu">
-          <value>5</value>
-          <formattedValue language="de">5</formattedValue>
-        </dataField>
-        <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
-          <vocabularyReferenceItem id="4407670" name="Redaktionelle Notiz">
-            <formattedValue language="de">Redaktionelle Notiz</formattedValue>
-          </vocabularyReferenceItem>
-        </vocabularyReference>
-      </repeatableGroupItem>
-    </repeatableGroup>
     """
+    # one hardcoded redakt. Notiz in any case
+    xml = f"""
+    <repeatableGroup {NS} name="ObjEditorNotesGrp">
+          <repeatableGroupItem>
+            <dataField dataType="Clob" name="NotesClb">
+              <value>Dieser Datensatz wurde im Projekt #ErfassungsturboB04 erstellt.</value>
+            </dataField>
+            <dataField dataType="Long" name="SortLnu">
+              <value>5</value>
+            </dataField>
+            <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
+              <vocabularyReferenceItem id="4407670"/> 
+            </vocabularyReference>
+          </repeatableGroupItem>
+    """
+
     try:
         bemerkung = _sanitize(bemerkung)
     except (TypeError, ValueError):
-        return None
-    print(f"invNotiz='{bemerkung}'")
+        pass
+        # return None
+    else:  # if try succeeds
+        print(f"invNotiz='{bemerkung}'")
 
-    newN = etree.fromstring(f"""
-    <repeatableGroup {NS} name="ObjEditorNotesGrp">
-      <repeatableGroupItem>
-        <dataField dataType="Clob" name="NotesClb">
-          <value>{bemerkung}</value>
-        </dataField>
-        <dataField dataType="Long" name="SortLnu">
-          <value>5</value>
-        </dataField>
-        <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
-          <vocabularyReferenceItem id="4407670"/> 
-        </vocabularyReference>
-      </repeatableGroupItem>
-    </repeatableGroup>
-    """)
+        xml += f"""
+          <repeatableGroupItem>
+            <dataField dataType="Clob" name="NotesClb">
+              <value>{bemerkung}</value>
+            </dataField>
+            <dataField dataType="Long" name="SortLnu">
+              <value>5</value>
+            </dataField>
+            <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
+              <vocabularyReferenceItem id="4407670"/> 
+            </vocabularyReference>
+          </repeatableGroupItem>"""
 
-    _new_or_replace(
-        record=recordM,
-        xpath="//m:repeatableGroup[@name = 'ObjEditorNotesGrp']",
-        newN=newN,
-    )
+    finally:  # in any case
+        xml += """
+        </repeatableGroup>
+        """
+        _new_or_replace(
+            record=recordM,
+            xpath="//m:repeatableGroup[@name = 'ObjEditorNotesGrp']",
+            newN=etree.fromstring(xml),
+        )
 
 
 def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
