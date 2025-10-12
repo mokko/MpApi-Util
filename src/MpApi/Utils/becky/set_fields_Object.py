@@ -531,7 +531,7 @@ def set_invNotiz(recordM: Module, bemerkung: str) -> None:
               <value>5</value>
             </dataField>
             <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
-              <vocabularyReferenceItem id="4407670"/> 
+              <vocabularyReferenceItem id="44076701"/> 
             </vocabularyReference>
           </repeatableGroupItem>"""
 
@@ -660,7 +660,7 @@ def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
               <value>true</value>
             </dataField>
             <dataField name="NotesClb">
-              <value>vereinfachter Sachbegriff aus Hauptkatalog</value>
+              <value>vereinfachter Sachbegriff aus Hauptkatalog  (#ETB04)</value>
             </dataField>
             <dataField name="SortLnu">
               <value>1</value>
