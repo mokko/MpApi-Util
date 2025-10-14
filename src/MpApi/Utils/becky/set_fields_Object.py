@@ -154,9 +154,10 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         try:
             nameID = _lookup_name(name=name, conf=conf)
         except KeyError:
-            logger.warning(f"no ID for pk {name}")
+            logger.exception(f"no ID for pk '{name}'")
+            raise SyntaxError(f"no ID for pk '{name}'")
             # no new beteiligte*r for this entry
-            continue
+            # continue
         roleID = _lookup_role(role)  # raises if not part of index
         print(f"{count} {sort} {name} [{role}] {nameID=} {roleID=}")
         xml = f"""
@@ -713,8 +714,8 @@ def _lookup_name(*, name: str, conf: dict) -> int:
     try:
         adict = person_data[name]
     except KeyError:
-        msg = f"Person not in cache! '{name}'"
-        logger.error(msg)
+        msg = f"!!Person not in cache! '{name}'"
+        logger.exception(msg)
         raise KeyError(msg)
 
     if len(adict) > 1:
