@@ -508,7 +508,7 @@ def set_invNotiz(recordM: Module, bemerkung: str) -> None:
             <dataField dataType="Long" name="SortLnu">
               <value>5</value>
             </dataField>
-            <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
+            <vocabularyReference name="TypeVoc" instanceName="ObjEditorNotesTypeVgr">
               <vocabularyReferenceItem id="4407670"/> 
             </vocabularyReference>
           </repeatableGroupItem>
@@ -528,10 +528,10 @@ def set_invNotiz(recordM: Module, bemerkung: str) -> None:
               <value>{bemerkung}</value>
             </dataField>
             <dataField dataType="Long" name="SortLnu">
-              <value>5</value>
+              <value>10</value>
             </dataField>
-            <vocabularyReference name="TypeVoc" id="61661" instanceName="ObjEditorNotesTypeVgr">
-              <vocabularyReferenceItem id="44076701"/> 
+            <vocabularyReference name="TypeVoc" instanceName="ObjEditorNotesTypeVgr">
+              <vocabularyReferenceItem id="4407671"/> 
             </vocabularyReference>
           </repeatableGroupItem>"""
 
