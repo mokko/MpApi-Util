@@ -76,6 +76,7 @@ roles = {
     "ehemalige*r Eigentümer*in": 4378304,
     "ehemalige*r Leihgeber*in": 4378305,
     "Eigentümer*in": 4378308,
+    "Empfänger*in": 4378309,
     "Entwerfer*in": 4378312,
     "Expedition": 4378317,
     "Expeditionsleiter*in": 4378319,
@@ -586,11 +587,11 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
         print(f"objRefA {vorgang2=}")
         # one test is not enough (if key is there), also if key has truthy value
         if vorgang2 not in archive_data or not archive_data[vorgang2]:
-            # raise TypeError(f"Archival document not in cache '{vorgang2}'")
-            logging.warning(
-                f"item not in archive cache: {vorgang2} (not adding the reference to RIA)"
+            logging.error(
+                f"item not in archive cache: '{vorgang2}' (not adding the reference to RIA)"
             )
-            continue
+            raise TypeError(f"Archival document not in cache '{vorgang2}'")
+            # continue
         rel_objId = archive_data[vorgang2][0]
 
         # try:
