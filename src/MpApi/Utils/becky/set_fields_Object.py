@@ -67,6 +67,7 @@ Für alle manuellen Indexe gilt:
 
 roles = {
     "Absender*in": 4378273,
+    "Aktenvermerk": 4378276,
     "Auftraggeber*in": 4378279,
     "Auktionator*in": 4378280,
     "Aussteller*in": 4378283,
@@ -89,6 +90,7 @@ roles = {
     "Maler*in des Originals": 4378397,
     "Mäzen*atin": 4378399,
     "Nachlasser*in": 4378407,
+    "Notiz": 4378408,
     "Objektkünstler*in": 4378410,
     "Sammler*in": 4378427,
     "Sammler*in des Originals": 4378428,
@@ -158,7 +160,7 @@ def set_beteiligte(
             nameID = _lookup_name(name=name, conf=conf)
         except KeyError:
             missing_info = True
-            logger.exception(f"no ID for pk '{name}'")
+            logger.error(f"no ID for pk '{name}'")
             # raise SyntaxError(f"no ID for pk '{name}'")
             # no new beteiligte*r for this entry
             # continue
@@ -596,8 +598,9 @@ def set_objRefA(
             msg = f"item not in archive cache: '{vorgang2}'"
             print(f"!!!{msg}")
             logging.error(msg)
+            continue
             # raise TypeError(f"Archival document not in cache '{vorgang2}'")
-            # continue
+            #
         try:
             rel_objId = archive_data[vorgang2][0]
         except IndexError:
@@ -728,7 +731,7 @@ def _lookup_name(*, name: str, conf: dict) -> int:
         adict = person_data[name]
     except KeyError:
         msg = f"!!Person not in cache! '{name}'"
-        logger.exception(msg)
+        logger.error(msg)
         raise KeyError(msg)
 
     if len(adict) > 1:

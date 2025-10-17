@@ -77,7 +77,7 @@ def becky_main(
             continue
         per_row(idx=idx, row=row, conf=conf, act=act)
         if limit == idx:
-            print(">> Limit reached")
+            print(f">> Limit reached {limit}")
             break
 
 
@@ -120,17 +120,17 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     print(">> Validating xml...")
     recordM.validate()
     print(">> Ok")
-    print(f"{missing_info=}")
+    print(f">> {missing_info=}")
     if missing_info:
-        msg = f">> Not creating record in RIA '{row[0].value}' since missing info"
+        msg = f"Not creating record in RIA '{row[0].value}' since missing info"
         logging.error(msg)
-        print(msg)
+        print(f">> {msg}")
         return missing_info
     if act:
         objId = conf["RIA"].create_item(item=recordM)
-        msg = f">> Created record {objId} in RIA '{row[0].value}'"
+        msg = f"Created record {objId} in RIA '{row[0].value}'"
         logging.error(msg)
-        print(msg)
+        print(f">> {msg}")
     else:
         print(f">> Not creating record in RIA '{row[0].value}' (since no act)")
         # p2 = conf["project_dir"] / f"debug.object{objId}.xml"
