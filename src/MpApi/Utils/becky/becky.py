@@ -15,9 +15,9 @@ fraglich
 - Obj. Referenz B
 - Inventarnotiz
 
-Todo:
-- Why dont we need to provide a namespace?
-- Put the template record into a group ("Kamerun 2024"), so all created records are in a group
+New:
+Workflow where we log errors and dont create record with missing info, but run through
+
 """
 
 import argparse
@@ -85,6 +85,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
     global hits
     hits += 1  # we're counting the records that will be or would be created
+    missing_info = False
 
     if len(conf["templateM"]) != 1:
         raise TypeError("Template does not have a single record")
@@ -102,10 +103,13 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     set_erwerbNr(recordM, nr=row[6].value)
     set_erwerbVon(recordM, von=row[7].value)
     set_geogrBezug(recordM, name=row[8].value)
-    # set_beteiligte may encounter a case where there is no kueId
-    set_beteiligte(recordM, beteiligte=row[3].value, conf=conf)
+    missing_info = set_beteiligte(
+        recordM, beteiligte=row[3].value, conf=conf, missing_info=missing_info
+    )
     set_invNotiz(recordM, bemerkung=row[11].value)  # Spalte L rarely filled-in
-    set_objRefA(recordM, Vorgang=row[9].value, conf=conf)
+    missing_info = set_objRefA(
+        recordM, Vorgang=row[9].value, conf=conf, missing_info=missing_info
+    )
 
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
@@ -116,9 +120,17 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     print(">> Validating xml...")
     recordM.validate()
     print(">> Ok")
+    print(f"{missing_info=}")
+    if missing_info:
+        msg = f">> Not creating record in RIA '{row[0].value}' since missing info"
+        logging.error(msg)
+        print(msg)
+        return missing_info
     if act:
         objId = conf["RIA"].create_item(item=recordM)
-        log_print_info(f">> Created record {objId} in RIA '{row[0].value}'")
+        msg = f">> Created record {objId} in RIA '{row[0].value}'"
+        logging.error(msg)
+        print(msg)
     else:
         print(f">> Not creating record in RIA '{row[0].value}' (since no act)")
         # p2 = conf["project_dir"] / f"debug.object{objId}.xml"

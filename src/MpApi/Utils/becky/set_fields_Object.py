@@ -128,7 +128,9 @@ erwerbungsarten = {
 NS = "xmlns='http://www.zetcom.com/ria/ws/module'"
 
 
-def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
+def set_beteiligte(
+    recordM: Module, *, beteiligte: str, conf: dict, missing_info: bool
+) -> bool:
     """
     setting ObjPerAssociationRef. the input parameter beteiligte is the string from
     Excel. That string typically includes a date (in brackets) and a role.
@@ -136,7 +138,7 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
     try:
         beteiligteL = _sanitize_multi(beteiligte)
     except (ValueError, TypeError):
-        return None
+        return missing_info
 
     print(f"{beteiligteL=}")
 
@@ -155,8 +157,9 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         try:
             nameID = _lookup_name(name=name, conf=conf)
         except KeyError:
+            missing_info = True
             logger.exception(f"no ID for pk '{name}'")
-            raise SyntaxError(f"no ID for pk '{name}'")
+            # raise SyntaxError(f"no ID for pk '{name}'")
             # no new beteiligte*r for this entry
             # continue
         roleID = _lookup_role(role)  # raises if not part of index
@@ -187,6 +190,7 @@ def set_beteiligte(recordM: Module, *, beteiligte: str, conf: dict) -> None:
         xpath="//m:moduleReference[@name = 'ObjPerAssociationRef']",
         newN=mRefN,
     )
+    return missing_info
 
 
 def set_erwerbDatum(recordM: Module, *, datum: int | str | None) -> None:
@@ -548,7 +552,9 @@ def set_invNotiz(recordM: Module, bemerkung: str) -> None:
         )
 
 
-def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
+def set_objRefA(
+    recordM: Module, *, Vorgang: str, conf: dict, missing_info: bool
+) -> bool:
     """
     seqNo="0"
     <formattedValue language="de">Vorgang: E 362/1844, Erwerbung: III/8/1909: III A 2667, 2668, Dolch, Axt, (Kordofan), Schenkung Werne (übertragen von III B 2 + 3 -- eigentl. betr. EJ Kunstkammer: Nr. 2105: III A [12-183 203, 204], III E [1-2] -- General Secret. Dielitz vom 23.02.1844,über die durch den Prof. Lepsius angekaufte Wernesch(e) Sammlung ethnographischer Gegenstände aus dem oberen Nil Stromgebiete., 1844, Ferdinand Werne (3.8.1800 - 2.9.1874)</formattedValue>
@@ -565,9 +571,8 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
     """
 
     if Vorgang is None:
-        return
+        return missing_info
     VorgangsL = _sanitize_multi(Vorgang)
-
     global archive_data
     if not archive_data:
         archive_data = open_archive_cache(conf)
@@ -587,16 +592,22 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
         print(f"objRefA {vorgang2=}")
         # one test is not enough (if key is there), also if key has truthy value
         if vorgang2 not in archive_data or not archive_data[vorgang2]:
-            logging.error(
-                f"item not in archive cache: '{vorgang2}' (not adding the reference to RIA)"
-            )
-            raise TypeError(f"Archival document not in cache '{vorgang2}'")
+            missing_info = True
+            msg = f"item not in archive cache: '{vorgang2}'"
+            print(f"!!!{msg}")
+            logging.error(msg)
+            # raise TypeError(f"Archival document not in cache '{vorgang2}'")
             # continue
-        rel_objId = archive_data[vorgang2][0]
+        try:
+            rel_objId = archive_data[vorgang2][0]
+        except IndexError:
+            missing_info = True
+            msg = f"archive cache: no ID: '{vorgang2}'"
+            print(f"!!!{msg}")
+            logging.error(msg)
 
         # try:
         # rel_objId = archive_data[vorgang2][0]
-        # except IndexError:
         #
         # continue
         xml += f"""
@@ -622,6 +633,7 @@ def set_objRefA(recordM: Module, *, Vorgang: str, conf: dict) -> None:
         xpath="//m:composite[@name = 'ObjObjectCre']",
         newN=etree.fromstring(xml),
     )
+    return missing_info
 
 
 def set_sachbegriff(record: Module, *, sachbegriff: str) -> None:
@@ -884,6 +896,11 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
     Prefix: Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
     """
     exceptions = {
+        "Alex(ander) Siebold (1872), Veräußerung": {
+            "name": "Alex(ander) Siebold",
+            "date": "1872",
+            "role": "Veräußerung",
+        },
         'Augusta Kell ("Gulla") Pfeffer (1887 - 1967), Veräußerung': {
             "name": 'Augusta Kell ("Gulla") Pfeffer',
             "date": "1887 - 1967",
