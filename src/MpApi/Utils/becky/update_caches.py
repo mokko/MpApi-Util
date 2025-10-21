@@ -52,7 +52,7 @@ def process_names(*, beteiligte: str, cache: dict) -> dict:
     beteiligteL = _sanitize_multi(beteiligte)
 
     for count, beteiligte2 in enumerate(beteiligteL, start=1):
-        name, role, date = _triple_split2(beteiligte)
+        prefix, name, role, date = _triple_split2(beteiligte)
         # we're counting the names in one cell here, not the lines
         # print(f"{count}:{name} [{role}]")
         # if role not in roles:
@@ -133,6 +133,13 @@ def query_persons(*, name: str, date: str, client: RIA) -> list:
 
 
 def update_archive(*, conf: dict, sheet: worksheet, limit: int) -> None:
+    """
+    For red arichve cells (row[9]) only. The other lines have a long messy string.
+    e.g.
+        Vorgang: E 786/1898, Erwerbung: I/137/1898: I D 16395-16397, Visitenkarten,
+        Fächer, Ring im Etui (China), Schenkung Frl. Berger, Berlin, 1898, Frl.
+        Berger (1898)
+    """
     print(f">> Loading archive cache '{conf['archive_cache']}'")
     archive_data = open_archive_cache(conf)
     print(">> Looping thru excel looking for archival documents' idents")
@@ -142,10 +149,9 @@ def update_archive(*, conf: dict, sheet: worksheet, limit: int) -> None:
         if row[9].font is None:
             print(f"...ignoring line since no color {idx}")
             continue
-
         font_color = row[9].font.color  # relying on red font
         if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
-            _archive_per_red_cell(row[9].value, data=archive_data, client=client)
+            _archive_per_cell(row[9].value, data=archive_data, client=client)
         if idx % 500 == 0:
             save_archive_cache(data=archive_data, conf=conf)
         if limit == idx:
@@ -160,7 +166,7 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
     print(f">> Loading person cache '{conf['person_cache']}'")
     person_data = open_person_cache(conf)
 
-    person_data = _scan_excel(
+    person_data = _scan_excel_pk(
         sheet=sheet, person_data=person_data, conf=conf, limit=limit
     )
     person_data = _lookup_pk_ids(person_data=person_data, conf=conf, limit=limit)
@@ -170,7 +176,11 @@ def update_persons(*, conf: dict, sheet: worksheet, limit: int) -> None:
 #
 # private
 #
-def _archive_per_red_cell(cell: str, *, data: dict, client: RIA) -> None:
+def _archive_per_cell(cell: str, *, data: dict, client: RIA) -> None:
+    """
+    New: We used to only get here when line was red, but now we are checking if we want
+    to be more thorough and check every line. See if that is better workflow.
+    """
     # may contain multiple values separated by ;
     if cell is not None:
         identL = cell.split(";")  #
@@ -215,22 +225,24 @@ def _lookup_pk_ids(*, person_data: dict, conf: dict, limit: int) -> dict:
     return person_data
 
 
-def _scan_excel(*, sheet: worksheet, person_data: dict, conf: dict, limit: int) -> dict:
+def _scan_excel_pk(
+    *, sheet: worksheet, person_data: dict, conf: dict, limit: int
+) -> dict:
     """
     Many rows repeat the same name, so we first make an index person_data with distinct
     entries and return that.
     """
     print(">> Looping thru excel looking for names")
     for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2):
-        if idx % 100 == 0:
-            print(f"Line {idx} -- {len(person_data)} distinct names found")
-        if row[0].font is None:
-            print(f"...ignoring line since no color {idx}")
-            continue
-        font_color = row[0].font.color
-        if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
-            person_data = process_names(beteiligte=row[3].value, cache=person_data)
+        # if idx % 100 == 0:
+        # if row[0].font is None:
+        #    print(f"...ignoring line since no color {idx}")
+        #    continue
+        # font_color = row[0].font.color
+        # if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
+        person_data = process_names(beteiligte=row[3].value, cache=person_data)
         if idx % 1000 == 0:
+            print(f"Line {idx} -- {len(person_data)} distinct names found")
             print("Saving cache")
             save_person_cache(data=person_data, conf=conf)
         if limit == idx:

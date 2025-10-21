@@ -127,6 +127,10 @@ erwerbungsarten = {
 }
 
 
+prefix_cache = {
+    "Zuordnung unsicher": 4399923,
+}
+
 NS = "xmlns='http://www.zetcom.com/ria/ws/module'"
 
 
@@ -149,7 +153,7 @@ def set_beteiligte(
     )
 
     for count, name_role_date in enumerate(beteiligteL, start=1):
-        name, role, date = _triple_split2(name_role_date)
+        prefix, name, role, date = _triple_split2(name_role_date)
         logger = logging.getLogger(__name__)
         if count == 1:
             sort = 1
@@ -160,7 +164,10 @@ def set_beteiligte(
             nameID = _lookup_name(name=name, conf=conf)
         except KeyError:
             missing_info = True
-            logger.error(f"no ID for pk '{name}'")
+            msg = f"no ID for pk '{name}'"
+            logger.error(msg)
+            print(msg)
+            nameID = None
             # raise SyntaxError(f"no ID for pk '{name}'")
             # no new beteiligte*r for this entry
             # continue
@@ -181,6 +188,14 @@ def set_beteiligte(
               <vocabularyReference name="RoleVoc" id="30423" instanceName="ObjPerAssociationRoleVgr">
                 <vocabularyReferenceItem id="{roleID}"/>
               </vocabularyReference>"""
+        if prefix is not None:
+            prefixID = prefix_cache[prefix]
+            xml += f"""
+              <vocabularyReference name="AttributionVoc" id="30422" instanceName="ObjPerAssociationAttributionVgr">
+                <vocabularyReferenceItem id="{prefixID}"/>
+              </vocabularyReference>  
+            """
+
         xml += """
             </moduleReferenceItem>"""
 
@@ -893,10 +908,14 @@ def _triple_split(name_role_date: str) -> tuple[str, str, str]:
     return name, role, date
 
 
-def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
+def _triple_split2(name_date_role: str) -> tuple[str, str, str, str]:
     """
+    We used to split str in three substrings, hence the name. Now we split
+    into four: prefix: name (date), role
     H. Halleur (1849), Sammler*in
     Prefix: Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
+
+
     """
     exceptions = {
         "Alex(ander) Siebold (1872), Veräußerung": {
@@ -914,6 +933,11 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
             "date": "1939",
             "role": "Veräußerung",
         },
+        "Baboo Mukharji (Muckharjee) (1892), Veräußerung": {
+            "name": "Baboo Mukharji (Muckharjee)",
+            "date": "1892",
+            "role": "Veräußerung",
+        },
         "British Museum (Dep. of Ethnography) (1893), Veräußerung": {
             "name": "British Museum (Dep. of Ethnography)",
             "date": "1893",
@@ -928,6 +952,11 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
             "name": "Deutsche Armee-, Marine- und Kolonialausstellung (D.A.M.U.K.A.)",
             "date": "1907",
             "role": "Vorbesitzer*in",
+        },
+        "Enrico Hillyer (Henry) Giglioli (1845 - 1909), Veräußerung": {
+            "name": "Enrico Hillyer (Henry) Giglioli",
+            "date": "1845 - 1909",
+            "role": "Veräußerung",
         },
         "Forschungsreise Prof. Bernhard Struck & Dr. Hugo Bernatzik (1930 - 1931), Sammler*in": {
             "name": "Forschungsreise Prof. Bernhard Struck & Dr. Hugo Bernatzik",
@@ -1005,17 +1034,22 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
             "role": "Sammler*in",
         },
     }
+    # defaults
+    prefix = None
+    name = None
+    role = None
+    date = None
+
+    if ":" in name_date_role:
+        prefix, name_date_role = name_date_role.split(": ", 1)
+        prefix = prefix.strip()
 
     if name_date_role in exceptions:
         name = exceptions[name_date_role]["name"]
         date = exceptions[name_date_role]["date"]
         role = exceptions[name_date_role]["role"]
-        return name, role, date
+        return prefix, name, role, date
 
-    # defaults
-    name = None
-    role = None
-    date = None
     if "(" in name_date_role:
         name = name_date_role.split("(")[0]
     elif "," in name_date_role:
@@ -1045,4 +1079,4 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str]:
         role = match.group(1)
         # print(f"**************{role}")
     # print(f"*************{name=} {date=} {role=}")
-    return name, role, date
+    return prefix, name, role, date
