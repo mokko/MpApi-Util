@@ -129,6 +129,8 @@ erwerbungsarten = {
 
 prefix_cache = {
     "Zuordnung unsicher": 4399923,
+    "zugeschrieben": 4399922,
+    "Erwähnung": 4399883,
 }
 
 NS = "xmlns='http://www.zetcom.com/ria/ws/module'"

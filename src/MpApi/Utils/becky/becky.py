@@ -55,7 +55,7 @@ import tomllib
 # CONFIGURATION
 #
 
-hits = 1  # global variable, 1-based
+no_records_created = 0
 
 
 def becky_main(
@@ -83,8 +83,6 @@ def becky_main(
 
 def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
-    global hits
-    hits += 1  # we're counting the records that will be or would be created
     missing_info = False
 
     if len(conf["templateM"]) != 1:
@@ -127,6 +125,9 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         print(f">> {msg}")
         return missing_info
     if act:
+        # we used to count also would-be created records without act
+        global no_records_created
+        no_records_created += 1
         objId = conf["RIA"].create_item(item=recordM)
         msg = f"Created record {objId} in RIA '{row[0].value}'"
         logging.error(msg)
@@ -178,8 +179,8 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
         return
     font_color = row[0].font.color
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
-        global hits
-        print(f"***[{hits}]{idx}: {ident}")
+        global no_records_created
+        print(f"***[{no_records_created}]{idx}: {ident}")
         if m := record_exists2(ident=ident, conf=conf):
             # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
             # nicht eingetragen wurden? Nein. Nur loggen, wenn etwas in RIA verändert wird
