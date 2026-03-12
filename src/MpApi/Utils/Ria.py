@@ -307,6 +307,11 @@ class RIA:
         return objIds
 
     def get_photographerID(self, *, name) -> Optional[list]:
+        """
+        Look up a photographer by name in self.photographer.cache.
+
+        Returns a single ID or multiple or None
+        """
         if name is None:
             print("   WARNING: Photographer name is None!")
             return None
@@ -389,7 +394,7 @@ class RIA:
         """
         Returns a list of tuples containing objIds and identNr.
 
-        What happens if no item found. We return an empty list.
+        If no item found, we return an empty list.
 
         Who wants such a complicated return value?
         """
@@ -428,8 +433,10 @@ class RIA:
 
     def identNr_exists3(self, *, ident: str, orgUnit: Optional[str] = None) -> set[int]:
         """
-        Another version that for a given identNr returns objIds as a set or empty set
-        if no record is found. Uses equalsExact.
+        Another version that for a given identNr returns objId(s) as a set or an
+        empty set if no record is found. Always uses equalsExact for the RIA query.
+
+        orgUnit is optional.
         """
         q = Search(module="Object", limit=-1, offset=0)
         if orgUnit is not None:
@@ -681,7 +688,10 @@ class RIA:
     # more private
     #
 
-    def _get_photographerID(self, *, name) -> Optional[list]:
+    def _get_photographerID(self, *, name) -> Optional[list[int]]:
+        """
+        Returns a list of IDs as str or None if photographer was not found.
+        """
         q = Search(module="Person")
         q.addCriterion(operator="equalsField", field="PerNennformTxt", value=name)
         q.addField(field="__id")
@@ -750,7 +760,7 @@ def record_exists2(*, ident: str, conf: dict) -> int:
 
     Ignores parts "a-c" etc.
 
-    Returns int 0 for false, or number of hits
+    Returns the number of hits as int; 0 if none have been found.
     """
     fortlaufendeNr = ident.split(" ")[2]
     # print(f"***exist2: {ident}***")
@@ -776,6 +786,33 @@ def record_exists2(*, ident: str, conf: dict) -> int:
     # if len(m) > 1:
     #    print(f"WARN: multiple results in record_exists2 {ident}")
     #    #raise TypeError("Warning! More than one result in record_exists2")
+    if m:
+        return len(m)
+    else:
+        return 0
+
+
+def record_exists3(*, ident: str, conf: dict) -> int:
+    """
+    A more simple version of the record test (without conf parameter) and with exact
+    search(equalsExact).
+
+    Returns number of matching records which may be 0.
+    """
+    if ident is None:
+        raise ValueError("ident may not be None")
+    q = Search(module="Object", limit=-1, offset=0)
+    # q.AND()
+    q.addCriterion(
+        field="ObjObjectNumberVrt",
+        operator="equalsExact",
+        value=str(ident),
+    )
+    # q.addCriterion(field="__orgUnit", operator="equalsField", value=conf["org_unit"])
+    q.addField(field="__id")
+    q.validate(mode="search")  # raises if not valid
+    m = conf["RIA"].mpapi.search2(query=q)
+
     if m:
         return len(m)
     else:

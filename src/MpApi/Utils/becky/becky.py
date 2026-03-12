@@ -30,7 +30,7 @@ from mpapi.constants import get_credentials
 from mpapi.module import Module
 from mpapi.search import Search
 
-from MpApi.Utils.Ria import RIA, init_ria, record_exists2
+from MpApi.Utils.Ria import RIA, init_ria, record_exists2, record_exists3
 from MpApi.Utils.becky.set_fields_Object import (
     set_ident,
     set_ident_sort,
@@ -56,6 +56,14 @@ import tomllib
 #
 
 no_records_created = 0
+verbose = 0  # false for off, true for on.
+
+
+def dd(msg: str) -> None:
+    """Debugging print messages"""
+
+    if verbose:
+        print(msg)
 
 
 def becky_main(
@@ -73,6 +81,7 @@ def becky_main(
     conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
 
     for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
+        dd(f"{idx=} {offset=}")
         if idx < offset:
             continue
         per_row(idx=idx, row=row, conf=conf, act=act)
@@ -174,6 +183,7 @@ def log_print_info(msg: str) -> None:
 
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     ident = row[0].value  # from Excel as str
+
     if ident is None:
         logging.warning(f"IdentNr is None {idx}; not processing this line")
         return
@@ -181,7 +191,10 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
         global no_records_created
         print(f"***[{no_records_created}]{idx}: {ident}")
-        if m := record_exists2(ident=ident, conf=conf):
+        # record_exists2 is Hendryk's algorithm that uses schemata and fortlaufende Nummer
+        # if m := record_exists2(ident=ident, conf=conf):
+        # record_exists3 omits Bereich and simply uses IdentNr and exact match.
+        if m := record_exists3(ident=ident, conf=conf):
             # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
             # nicht eingetragen wurden? Nein. Nur loggen, wenn etwas in RIA verändert wird
             print(f"INFO Record '{ident}' exists already")

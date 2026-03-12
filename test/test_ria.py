@@ -9,17 +9,42 @@ assert c
 
 
 def test_identNr_exists3():
-    cases = {"V A 1934": {2165}}
+    # identNr_exists returns sets, may be empty set
+    # curley braces creates a set
+    cases = {
+        "V A 1934": {2165},
+        "I D 31949 (002 a)": {3825631},
+        "I D 31949 (003)": set(),
+    }
 
     for ident in cases:
         result = c.identNr_exists3(ident=ident)
         assert result == cases[ident]
 
 
+def test_record_exists3():
+    # record_exists2 returns numbers of matches, but not the ID
+    cases = {
+        "V A 1934": 1,
+        "I D 31949 (002 a)": 1,
+        "I D 31949 (003)": 1,
+    }
+    for ident in cases:
+        result = c.record_exists3(ident=ident)
+        assert result == cases[ident]
+
+
+# todo: write test for record.exists2
+
+
 def test_get_photographerID():
+    # looks up photographer by name in self.photographer_cache.
+    # If cache is empty, RIA runs _get_photographerID to fill it.
+    # c.photographer_cache.update({"Claudia Obrocki": 3597}) not sure this is correct
+    # get_photographerID returns list of int
     idL = c.get_photographerID(name="Claudia Obrocki")
     # print(f"{idL}")
-    assert idL == ["3597"]
+    assert idL == [3597]
 
 
 def test_get_photographerID_None():
