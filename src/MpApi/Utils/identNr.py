@@ -158,6 +158,19 @@ class IdentNrFactory:
         iNr.schema = f"{partsL[0]}/{partsL[1]}"
         return iNr
 
+    def _parser_AKu2(self, text: str) -> IdentNr:
+        """
+        Schema 45 Standard alles in einem Feld.
+        """
+        iNr = IdentNr()
+        iNr.text = text
+        iNr.part1 = text
+        iNr.part2 = ""
+        iNr.part3 = ""
+        iNr.part4 = ""
+        iNr.schema = "Album"
+        return iNr
+
     def _parser_EM(self, text: str) -> IdentNr:
         """
         Parse identNr as string into four parts.
@@ -238,6 +251,8 @@ class IdentNrFactory:
                 iNr = self._parser_EM(text)  #  eg. V A Dlg 1234 a,b
             case "AKu":
                 iNr = self._parser_AKu(text)
+            case "AKu2":
+                iNr = self._parser_AKu2(text)
             case other:
                 raise TypeError(f"Unknown institution: {institution}")
 

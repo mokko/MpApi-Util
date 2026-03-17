@@ -111,3 +111,10 @@ def test_cases_AKu():
     assert iNr.part2 == "AKu"
     assert iNr.part3 == "000059"
     assert iNr.part4 == ""
+
+
+def test_cases_AKu2():
+    f = IdentNrFactory()
+    iNr = f.new_from_str(text="6165-43.234", institution="AKu2")
+    assert iNr.part1 == "6165-43.234"
+    assert iNr.schema == "Album"

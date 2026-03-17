@@ -10,6 +10,7 @@ from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.attach2 import Attacher2
 from MpApi.Utils.becky.becky import becky_main
+from MpApi.Utils.becky.uta import uta_main
 from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.count import counter
 from MpApi.Utils.mover import Mover
@@ -97,7 +98,7 @@ def attacher2():
 
 def becky():
     parser = argparse.ArgumentParser()
-    parser.add_argument("conf", help="Location of becky_conf.toml")
+    parser.add_argument("conf", help="Location of conf.toml file")
     parser.add_argument("-a", "--act", help="Actually change RIA", action="store_true")
     parser.add_argument(
         "-l",
@@ -473,3 +474,24 @@ def update_schemas():
         sys.exit(0)
     else:
         raise ValueError("Nothing to do!")
+
+
+def uta():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("conf", help="Location of conf.toml file")
+    parser.add_argument("-a", "--act", help="Actually change RIA", action="store_true")
+    parser.add_argument(
+        "-l",
+        "--limit",
+        help="Stop after a number of rows in Excel file are processed.",
+        type=int,
+    )
+    parser.add_argument(
+        "-o",
+        "--offset",
+        help="Start only at this Excel row.",
+        type=int,
+        default=0,
+    )
+    args = parser.parse_args()
+    uta_main(conf_fn=args.conf, limit=args.limit, act=args.act, offset=args.offset)

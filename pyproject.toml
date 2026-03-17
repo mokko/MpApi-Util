@@ -47,3 +47,4 @@ restart = 'MpApi.Utils:restart'
 sren = 'MpApi.Utils:sren'
 update_schemas = 'MpApi.Utils:update_schemas'
 up = 'MpApi.Utils:upload' # asset uploader
+uta = 'MpApi.Utils:uta'
