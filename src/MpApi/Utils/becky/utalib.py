@@ -31,24 +31,13 @@ from mpapi.module import Module
 from mpapi.search import Search
 
 from MpApi.Utils.Ria import RIA, init_ria, record_exists2, record_exists3
-from MpApi.Utils.becky.set_fields_Object import (
-    set_ident,
-    set_ident_sort,
-    set_sachbegriff,
-    set_beteiligte,
-    set_erwerbDatum,
-    set_erwerbungsart,
-    set_erwerbNr,
-    set_erwerbVon,
-    set_geogrBezug,
-    set_invNotiz,
-    set_objRefA,
-)
+from MpApi.Utils.becky.write_xml import create_record
 from MpApi.Utils.Xls import Xls
 from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.cell.cell import Cell
 from openpyxl.styles.colors import Color
 from pathlib import Path
+import re
 import tomllib
 
 #
@@ -66,30 +55,6 @@ def dd(msg: str) -> None:
         print(msg)
 
 
-def uta_main(
-    *, conf_fn: str, act: bool = False, limit: int = -1, offset: int = 2
-) -> None:
-    conf = _load_conf(conf_fn)  # sets project_dir
-    print(f">> Setting project_dir '{conf['project_dir']}'")
-
-    wb = load_workbook(conf["excel_fn"], read_only=True)
-    ws = wb[conf["sheet_title"]]  # sheet exists already
-
-    conf["RIA"] = init_ria()  # mpApi.util.Ria's client
-    init_log(act=act, conf=conf, conf_fn=conf_fn, limit=limit, offset=offset)
-    print(f">> Getting template from RIA Object {conf['template_id']}")
-    conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
-
-    for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
-        dd(f"{idx=} {offset=}")
-        if idx < offset:
-            continue
-        per_row(idx=idx, row=row, conf=conf, act=act)
-        if limit == idx:
-            print(f">> Limit reached {limit}")
-            break
-
-
 def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
     missing_info = False
@@ -99,12 +64,11 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         raise TypeError("Template does not have a single record")
 
     recordM = deepcopy(conf["templateM"])  # so we dont change the original template
-    recordM._dropFieldsByName(element="systemField", name="__uuid")
-    recordM._dropAttribs(xpath="//m:moduleItem", attrib="id")
+    recordM = create_xml(recordM, conf[fields], row)
     print(f"DDD: {row[ident_row].value}")
-    set_ident(
-        recordM, ident=row[ident_row].value, institution=conf["institution"]
-    )  # from Excel as str
+    # set_ident(
+    #    recordM, ident=row[ident_row].value, institution=conf["institution"]
+    # )  # from Excel as str
     # set_ident_sort(recordM, nr=int(row[1].value))
     # set_sachbegriff(recordM, sachbegriff=row[2].value)
     # set_erwerbDatum(recordM, datum=row[4].value)
@@ -121,8 +85,6 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # )
 
     # print(recordM)
-    recordM.uploadForm()  # we need that to delete ID
-    recordM.sort_elements()
     p = conf["project_dir"] / "debug.object.xml"
     print(f">> Writing record to file '{p}'")
     recordM.toFile(path=p)
@@ -148,6 +110,45 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         # p2 = conf["project_dir"] / f"debug.object{objId}.xml"
         # print(f">> Writing to '{p2}'")
         # recordM.toFile(path=p2)
+
+
+def go_display_record(line_number: int, *, conf: dict, ws: worksheet):
+    import sys
+    from rich.console import Console
+
+    console = Console()
+    print(f">> Display record {line_number}")
+    for field in conf["fields"]:
+        console.print(f"[blue]{field}[reset]:")
+        for subfield in conf["fields"][field]:
+            value = conf["fields"][field][subfield]
+            if is_excel_column(value):
+                column = value
+                coord = f"{column}{line_number}"
+                if ws[coord].value is not None:
+                    excel = ws[coord].value
+                    console.print(
+                        f"   [green]{subfield}[reset]: [yellow]{excel}[reset] [red]{column}[reset]"
+                    )
+                else:
+                    console.print(
+                        f"   [green]{subfield}[reset] [red]{column}[reset] empty cell"
+                    )
+            else:
+                console.print(f'   [green]{subfield}[reset]: "{value}" constant')
+
+    sys.exit(0)
+    # raise Exception("Stop here")
+
+
+def is_excel_column(s: str) -> bool:
+    # Must be 1–3 uppercase letters only; highest column XFD.
+    if not isinstance(s, str) or len(s) == 0 or len(s) > 3:
+        return False
+    if not s.isalpha() or not s.isupper():
+        return False
+    # Limit to valid Excel columns (A–XFD)
+    return len(s) < 3 or s <= "XFD"
 
 
 def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int, offset: int) -> None:
@@ -207,6 +208,40 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
             logging.warning(
                 f"Multiple identNr: More than one IdentNr exists already with this number {ident}"
             )
+
+
+def uta_main(
+    *,
+    conf_fn: str,
+    act: bool = False,
+    limit: int = -1,
+    offset: int = 2,
+    display_record: int | None,
+) -> None:
+    conf = _load_conf(conf_fn)  # sets project_dir
+    print(f">> Setting project_dir '{conf['project_dir']}'")
+
+    wb = load_workbook(conf["excel_fn"], read_only=True)
+    ws = wb[conf["sheet_title"]]  # sheet exists already
+
+    if display_record:
+        go_display_record(display_record, conf=conf, ws=ws)
+
+    conf["RIA"] = init_ria()  # mpApi.util.Ria's client
+    init_log(act=act, conf=conf, conf_fn=conf_fn, limit=limit, offset=offset)
+    print(f">> Getting template from RIA Object {conf['template_id']}")
+    conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
+    conf["templateM"]._dropFieldsByName(element="systemField", name="__uuid")
+    conf["templateM"]._dropAttribs(xpath="//m:moduleItem", attrib="id")
+
+    for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
+        dd(f"{idx=} {offset=}")
+        if idx < offset:
+            continue
+        per_row(idx=idx, row=row, conf=conf, act=act)
+        if limit == idx:
+            print(f">> Limit reached {limit}")
+            break
 
 
 #

@@ -10,7 +10,7 @@ from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.Attacher import Attacher
 from MpApi.Utils.attach2 import Attacher2
 from MpApi.Utils.becky.becky import becky_main
-from MpApi.Utils.becky.uta import uta_main
+from MpApi.Utils.becky.utalib import uta_main
 from MpApi.Utils.identNr import IdentNrFactory
 from MpApi.Utils.count import counter
 from MpApi.Utils.mover import Mover
@@ -481,6 +481,12 @@ def uta():
     parser.add_argument("conf", help="Location of conf.toml file")
     parser.add_argument("-a", "--act", help="Actually change RIA", action="store_true")
     parser.add_argument(
+        "-d",
+        "--display_record",
+        help="Display a record by providing a line number from the excel file",
+        type=int,
+    )
+    parser.add_argument(
         "-l",
         "--limit",
         help="Stop after a number of rows in Excel file are processed.",
@@ -494,4 +500,10 @@ def uta():
         default=0,
     )
     args = parser.parse_args()
-    uta_main(conf_fn=args.conf, limit=args.limit, act=args.act, offset=args.offset)
+    uta_main(
+        conf_fn=args.conf,
+        limit=args.limit,
+        act=args.act,
+        offset=args.offset,
+        display_record=args.display_record,
+    )
