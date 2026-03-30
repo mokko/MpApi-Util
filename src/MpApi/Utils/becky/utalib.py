@@ -21,7 +21,6 @@ Workflow where we log errors and dont create record with missing info, but run t
 """
 
 import argparse
-from copy import deepcopy
 from datetime import datetime
 import logging
 from lxml import etree  # t y p e : i g n o r e
@@ -31,13 +30,15 @@ from mpapi.module import Module
 from mpapi.search import Search
 
 from MpApi.Utils.Ria import RIA, init_ria, record_exists2, record_exists3
-from MpApi.Utils.becky.write_xml import create_record
+from MpApi.Utils.becky.write_xml import create_xml
 from MpApi.Utils.Xls import Xls
 from openpyxl import Workbook, load_workbook, worksheet
 from openpyxl.cell.cell import Cell
 from openpyxl.styles.colors import Color
+from openpyxl.utils import column_index_from_string
 from pathlib import Path
 import re
+from rich import print as rprint
 import tomllib
 
 #
@@ -48,41 +49,20 @@ no_records_created = 0
 verbose = 0  # false for off, true for on.
 
 
-def dd(msg: str) -> None:
-    """Debugging print messages"""
-
-    if verbose:
-        print(msg)
-
-
 def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
-    missing_info = False
-    ident_row = conf[fields]["identNr"]
+    # missing_info = False NOT HERE
+    # ident_col = conf["fields"]["identNr"]["identNr"]
 
-    if len(conf["templateM"]) != 1:
-        raise TypeError("Template does not have a single record")
+    recordM, missing_info = create_xml(
+        conf=conf, row=row
+    )  # tuple with values from excel row
+    ident = get_ident(conf, row)
+    print(f"DDD: {ident}")
 
-    recordM = deepcopy(conf["templateM"])  # so we dont change the original template
-    recordM = create_xml(recordM, conf[fields], row)
-    print(f"DDD: {row[ident_row].value}")
-    # set_ident(
-    #    recordM, ident=row[ident_row].value, institution=conf["institution"]
-    # )  # from Excel as str
-    # set_ident_sort(recordM, nr=int(row[1].value))
-    # set_sachbegriff(recordM, sachbegriff=row[2].value)
-    # set_erwerbDatum(recordM, datum=row[4].value)
-    # set_erwerbungsart(recordM, art=row[5].value)
-    # set_erwerbNr(recordM, nr=row[6].value)
-    # set_erwerbVon(recordM, von=row[7].value)
-    # set_geogrBezug(recordM, name=row[8].value)
-    # missing_info = set_beteiligte(
-    #    recordM, beteiligte=row[3].value, conf=conf, missing_info=missing_info
-    # )
-    # set_invNotiz(recordM, bemerkung=row[11].value)  # Spalte L rarely filled-in
-    # missing_info = set_objRefA(
-    #    recordM, Vorgang=row[9].value, conf=conf, missing_info=missing_info
-    # )
+    # We can make a cell/cluster object here
+    # cluster: label
+    # fields: label, column, type
 
     # print(recordM)
     p = conf["project_dir"] / "debug.object.xml"
@@ -112,43 +92,54 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         # recordM.toFile(path=p2)
 
 
+def dd(msg: str) -> None:
+    """Debugging print messages"""
+
+    if verbose:
+        print(msg)
+
+
+def get_ident(conf: dict, row: list) -> str:
+    """
+    Assuming you defined a cluser identNr with the field identNr, this returns the identNr
+    for the current row.
+    """
+    ident_col = column_index_from_string(conf["fields"]["identNr"]["identNr"]) - 1
+    ident = row[ident_col].value  # from Excel as str
+    # rprint(f"{ident_col=} {ident=}")
+    if ident is None:
+        logging.warning(f"IdentNr is None {idx}; not processing this line")
+        return None
+    return ident
+
+
 def go_display_record(line_number: int, *, conf: dict, ws: worksheet):
     import sys
     from rich.console import Console
 
     console = Console()
     print(f">> Display record {line_number}")
-    for field in conf["fields"]:
-        console.print(f"[blue]{field}[reset]:")
-        for subfield in conf["fields"][field]:
-            value = conf["fields"][field][subfield]
+    for cluster in conf["fields"]:
+        console.print(f"[blue]{cluster}[reset]:")
+        for field in conf["fields"][cluster]:
+            value = conf["fields"][cluster][field]
             if is_excel_column(value):
                 column = value
                 coord = f"{column}{line_number}"
                 if ws[coord].value is not None:
                     excel = ws[coord].value
                     console.print(
-                        f"   [green]{subfield}[reset]: [yellow]{excel}[reset] [red]{column}[reset]"
+                        f"   [green]{field}[reset]: [yellow]{excel}[reset] [red]{column}[reset]"
                     )
                 else:
                     console.print(
-                        f"   [green]{subfield}[reset] [red]{column}[reset] empty cell"
+                        f"   [green]{field}[reset] [red]{column}[reset] empty cell"
                     )
             else:
-                console.print(f'   [green]{subfield}[reset]: "{value}" constant')
+                console.print(f'   [green]{field}[reset]: "{value}" constant')
 
     sys.exit(0)
     # raise Exception("Stop here")
-
-
-def is_excel_column(s: str) -> bool:
-    # Must be 1–3 uppercase letters only; highest column XFD.
-    if not isinstance(s, str) or len(s) == 0 or len(s) > 3:
-        return False
-    if not s.isalpha() or not s.isupper():
-        return False
-    # Limit to valid Excel columns (A–XFD)
-    return len(s) < 3 or s <= "XFD"
 
 
 def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int, offset: int) -> None:
@@ -175,6 +166,18 @@ def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int, offset: int) ->
         logger.addHandler(logging.NullHandler())
 
 
+def is_excel_column(s: str) -> bool:
+    """
+    Test if a string is an Excel column (e.g. AAA) or just a regular string.
+    Columns must be 1–3 uppercase letters only; highest column XFD.
+    """
+    if not isinstance(s, str) or len(s) == 0 or len(s) > 3:
+        return False
+    if not s.isalpha() or not s.isupper():
+        return False
+    return len(s) < 3 or s <= "XFD"
+
+
 def log_print_info(msg: str) -> None:
     """
     log and print info message simultaneously
@@ -185,12 +188,9 @@ def log_print_info(msg: str) -> None:
 
 
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
-    ident_row = conf[fields]["identNr"]
-    ident = row[ident_row].value  # from Excel as str
+    # rprint(conf["fields"])
+    ident = get_ident(conf, row)  # should it die on no ident? Die early?
 
-    if ident is None:
-        logging.warning(f"IdentNr is None {idx}; not processing this line")
-        return
     # font_color = row[0].font.color
     # if font_color and font_color.rgb == "FFFF0000":  # includes the alpha channel
     global no_records_created
@@ -208,6 +208,71 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
             logging.warning(
                 f"Multiple identNr: More than one IdentNr exists already with this number {ident}"
             )
+
+
+def prepare_fields(conf: dict) -> None:
+    """
+    Rewrite the fields so we have less work later. I am not sure when to do this. At this point early in the game
+    It's efficient because we only have to do this part once. But then we will have to do the next part later.
+    If we only do it later, we can do it for indivdual cells and we only have to do it once.
+    """
+    conf["fields2"] = {}
+    for cluster in conf["fields"]:
+        print(f"c:{cluster}")
+        conf["fields2"][cluster] = {}
+        conf["fields2"][cluster]["_cb"] = create_callback(cluster)
+        for field in conf["fields"][cluster]:
+            print(f"    {field}")
+            conf["fields2"][cluster][field] = {}
+            if is_excel_column(conf["fields"][cluster][field]):
+                conf["fields2"][cluster][field]["col"] = conf["fields"][cluster][field]
+            else:
+                conf["fields2"][cluster][field]["constant"] = conf["fields"][cluster][
+                    field
+                ]
+    # rprint(conf["fields"])
+    rprint(conf["fields2"])
+
+    # raise Exception("Stop here!")
+
+
+def create_callback(name: str) -> str:
+    """
+    We receive the name of field from the configuration toml file and return the
+    name of the Python function we want to call.
+    """
+    (name2, no) = cluster_splitter(name)
+    print(f"{name2=}{no=}")
+    prefix = "set_"  # if no number, default to overwrite template values
+    if no == 1:
+        prefix = "set_"
+    if no > 1:
+        prefix = "add_"
+    new_name = f"{prefix}{name2}"
+    return new_name
+
+
+def cluster_splitter(field: str) -> tuple[str, int]:
+    """
+    Split off trailing number and return both separately. If number doesn't exist, return field name as is and a 0.
+    """
+    match = re.match(r"(.*?)(\d+)$", field)
+    if match:
+        field2, no = match.groups()
+        return field2, int(no)
+    else:
+        return field, 0
+
+
+def prepare_template(conf: dict) -> Module:
+    """
+    Get the template record from RIA and rewrite it to approximate upload form.
+    """
+    print(f">> Getting template from RIA Object {conf['template_id']}")
+    templateM = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
+    templateM._dropFieldsByName(element="systemField", name="__uuid")
+    templateM._dropAttribs(xpath="//m:moduleItem", attrib="id")
+    return templateM
 
 
 def uta_main(
@@ -229,10 +294,9 @@ def uta_main(
 
     conf["RIA"] = init_ria()  # mpApi.util.Ria's client
     init_log(act=act, conf=conf, conf_fn=conf_fn, limit=limit, offset=offset)
-    print(f">> Getting template from RIA Object {conf['template_id']}")
-    conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
-    conf["templateM"]._dropFieldsByName(element="systemField", name="__uuid")
-    conf["templateM"]._dropAttribs(xpath="//m:moduleItem", attrib="id")
+    conf["templateM"] = prepare_template(conf)
+
+    prepare_fields(conf)
 
     for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
         dd(f"{idx=} {offset=}")
