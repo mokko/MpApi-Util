@@ -29,14 +29,82 @@ from rich import print as rprint
 # )
 
 
-def set_beteiligte(record: Module, cell: str):
-    pass
+def add_Aufschrift(record: Module, cluster: dict, missing: bool) -> bool:
+    """
+    Assuming we can change missing here and dont need to return it explicitly
+    """
+    return missing
 
 
-def add_beteiligte(record: Module, cell: str):
-    pass
+def set_Aufschrift(record: Module, cluster: dict, missing: bool) -> bool:
+    rprint(f"XXXXXXXXXXx{cluster=}")
+    return missing
 
 
+def add_Beteiligte(record: Module, cluster: dict, missing: bool) -> bool:
+    """
+    Assuming we can change missing here and dont need to return it explicitly
+    """
+    return missing
+
+
+def set_Beteiligte(record: Module, cluster: dict, missing: bool) -> bool:
+    rprint(f"XXXXXXXXXXx{cluster=}")
+    return missing
+
+
+def add_Datierung(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_Datierung(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_identNr(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_identNr(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_MaterialTechnik(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_MaterialTechnik(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_weitereNr(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_weitereNr(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_Sachbegriff(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_Sachbegriff(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_Titel(recordM: Module, cluster: dict, missing: bool) -> bool:
+    missing = True
+    return missing
+
+
+def set_Titel(recordM: Module, cluster: dict, missing: bool):
+    return missing
+
+
+#
+#
+#
 def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
     """
     We expect a configuration and the current row from the Excel file
@@ -44,14 +112,15 @@ def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
     has to be at conf["templateM"].
     """
 
-    # this check should probably go somewhere else
     if len(conf["templateM"]) != 1:
         raise TypeError("Template does not have a single record")
 
     recordM = deepcopy(conf["templateM"])  # currently we always begin with a template
-    missing_info = (
-        False  # if obligatory info is missing, the record will not be created
-    )
+    missing = False  # if obligatory info is missing, the record will not be created
+
+    # We can make a cell/cluster object here
+    # cluster: label
+    # fields: label, column, type
 
     for cluster in conf["fields2"]:
         print(f"DEBUG create records: {cluster=}")
@@ -66,18 +135,20 @@ def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
             else:
                 value = conf["fields2"][cluster][field]["constant"]
             conf["fields2"][cluster][field]["value"] = value
-        rprint(f"{conf['fields2'][cluster]=}")
+        # rprint(f"{conf['fields2'][cluster]=}")
         cb = conf["fields2"][cluster]["_cb"]
         try:
             func = globals()[cb]
         except KeyError:
-            raise ValueError(f"Unknown caalback '{cb}'")
-        func(recordM, conf["fields2"][cluster], missing_info)
+            raise ValueError(f"Unknown callback '{cb}'")
+        missing = func(recordM, cluster=conf["fields2"][cluster], missing=missing)
     recordM.uploadForm()  # we need that to delete ID
     recordM.sort_elements()
-    raise Exception("Stop here!")
-    return recordM, missing_info
-
-
-def set_identNr(recordM: Module, cluster: dict, missing_info: bool) -> None:
-    pass
+    p = conf["project_dir"] / "debug.object.xml"
+    print(f">> Writing record to file '{p}'")
+    recordM.toFile(path=p)
+    print(">> Validating xml...")
+    recordM.validate()
+    print(">> Ok")
+    print(f">> {missing=}")
+    return recordM, missing

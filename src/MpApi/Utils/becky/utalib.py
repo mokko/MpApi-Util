@@ -54,42 +54,27 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # missing_info = False NOT HERE
     # ident_col = conf["fields"]["identNr"]["identNr"]
 
-    recordM, missing_info = create_xml(
-        conf=conf, row=row
-    )  # tuple with values from excel row
-    ident = get_ident(conf, row)
+    recordM, missing_info = create_xml(conf=conf, row=row)
+    ident = get_ident(conf, row)  # for messages
     print(f"DDD: {ident}")
 
-    # We can make a cell/cluster object here
-    # cluster: label
-    # fields: label, column, type
-
     # print(recordM)
-    p = conf["project_dir"] / "debug.object.xml"
-    print(f">> Writing record to file '{p}'")
-    recordM.toFile(path=p)
-    print(">> Validating xml...")
-    recordM.validate()
-    print(">> Ok")
-    print(f">> {missing_info=}")
     if missing_info:
-        msg = f"Not creating record in RIA '{row[ident_row].value}' since missing info"
+        msg = f"Not creating record in RIA '{ident}' since missing info"
         logging.error(msg)
         print(f">> {msg}")
-        return missing_info
-    if act:
+    elif act:
         # we used to count also would-be created records without act
         global no_records_created
         no_records_created += 1
         objId = conf["RIA"].create_item(item=recordM)
-        msg = f"Created record {objId} in RIA '{row[ident_row].value}'"
+        msg = f"Created record {objId} in RIA '{ident}'"
         logging.error(msg)
         print(f">> {msg}")
     else:
-        print(f">> Not creating record in RIA '{row[2].value}' (since no act)")
-        # p2 = conf["project_dir"] / f"debug.object{objId}.xml"
-        # print(f">> Writing to '{p2}'")
-        # recordM.toFile(path=p2)
+        print(f">> Not creating record in RIA '{ident}' (since no act)")
+
+    raise Exception("Stop here!")
 
 
 def dd(msg: str) -> None:
