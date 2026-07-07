@@ -155,8 +155,8 @@ def set_beteiligte(
         f"<moduleReference {NS} name='ObjPerAssociationRef' targetModule='Person'/>"
     )
 
-    for count, name_role_date in enumerate(beteiligteL, start=1):
-        prefix, name, role, date = _triple_split2(name_role_date)
+    for count, prefix_name_role_date in enumerate(beteiligteL, start=1):
+        prefix, name, role, date = _quad_split(prefix_name_role_date)
         logger = logging.getLogger(__name__)
         if count == 1:
             sort = 1
@@ -865,7 +865,9 @@ def _sanitize_multi(astr: str) -> list:
     Ignore empty entries. Raises if _sanitize2 raises, i.e. if astr is
     None or empty. Empty individual entries are silently ignored.
     """
+    # print(f"xxx:{astr}")
     astr = _sanitize2(astr)
+    # print(f"yyy:{astr}")
     astrL = astr.split(";")
     astrL2 = list()
     # filter out empty strings etc.
@@ -1298,3 +1300,117 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str, str]:
         # print(f"**************{role}")
     # print(f"*************{name=} {date=} {role=}")
     return prefix, name, role, date
+
+
+def _split_off_role(string_role: str) -> tuple[str | None, str | None]:
+    """
+    Role is something at the end of the string seaparated by a comma
+    this is a string, role
+
+    returns everything left of the comma and the role
+    Not sure what to do if there is no comma.
+    """
+    if string_role is None:
+        return None, None
+
+    string_role = string_role.strip()
+
+    if "," in string_role:
+        parts = string_role.rsplit(",", 1)
+        left = parts[0].strip()
+        role = parts[1].strip() or None
+    else:
+        # dont fail here
+        # raise SyntaxError("no comma, no role")
+        left = string_role
+        role = None
+
+    if left == "":
+        # treat an empty string as no input
+        left = None
+
+    return left, role
+
+
+def _split_off_prefix(string) -> tuple[str | None, str | None]:
+    """
+    some string start with a prefix. THese prefixes are separted with a colon
+    Prefix: rest of the string.
+    """
+    if string is None:
+        return None, None
+
+    string = string.strip()
+    if ":" in string:
+        parts = string.split(":", 1)
+        prefix = parts[0].strip()
+        right = parts[1].strip() or None
+    else:
+        # Let's not quite fail so early
+        # raise SyntaxError("no colon, no prefix")
+        prefix = None
+        right = string
+
+    if right == "":
+        # treat an empty string as no input
+        right = None
+
+    return prefix, right
+
+
+def _get_name_date(string: str) -> tuple[str | None, str | None]:
+
+    if string is None:
+        return None, None
+
+    # try to extract a date that is the final (...) group (allowing nested/other parentheses in name)
+    # take the last parenthesized block as the date
+    depth = 0
+    end = None
+    start = None
+
+    # find the last balanced (...) block
+    for i in range(len(string) - 1, -1, -1):
+        if string[i] == ")":
+            if end is None:
+                end = i
+            depth += 1
+        elif string[i] == "(":
+            depth -= 1
+            if depth == 0 and end is not None:
+                start = i
+                break
+
+    if start is not None and end is not None:
+        name = string[:start].rstrip()
+        date = string[start + 1 : end].strip()
+    else:
+        name = string
+        date = None
+
+    if name == "":
+        name = None
+
+    return name, date
+    # else:
+    #    print(f"{start=}{date=}")
+    #    raise SyntaxError("SUCCESS")
+
+
+def _quad_split(string: str) -> tuple[str | None, str | None, str | None, str | None]:
+    """
+    Parse a string of the form:
+      <name possibly with parentheses...> (<date or date-range>), <role>
+    Returns (name, date, role). date and role may be None if missing.
+    """
+
+    if string is None:
+        return None, None, None, None
+
+    string = string.strip()
+    left, role = _split_off_role(string)
+    prefix, right = _split_off_prefix(left)
+
+    name, date = _get_name_date(right)
+
+    return prefix, name, date, role

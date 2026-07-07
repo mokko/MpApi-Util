@@ -49,7 +49,10 @@ def process_names(*, beteiligte: str, cache: dict) -> dict:
     if beteiligte is None:
         return cache  # it's perfectly possible that a cell is empty...
 
-    beteiligteL = _sanitize_multi(beteiligte)
+    try:
+        beteiligteL = _sanitize_multi(beteiligte)
+    except (ValueError, TypeError):
+        return cache  # cell.value=" " or cell.value=""
 
     for count, beteiligte2 in enumerate(beteiligteL, start=1):
         prefix, name, role, date = _triple_split2(beteiligte)

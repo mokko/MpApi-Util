@@ -3,9 +3,13 @@
 from copy import deepcopy
 from MpApi.Utils.becky.cache_ops import open_person_cache, save_person_cache
 from MpApi.Utils.becky.set_fields_Object import (
+    _get_name_date,
     _lookup_name,
+    _quad_split,
     _sanitize,
     _sanitize_multi,
+    _split_off_prefix,
+    _split_off_role,
     _triple_split2,
     roles,
     set_ident,
@@ -53,9 +57,10 @@ def test_lookup_person() -> None:
         "project_dir": Path(__file__).parents[1] / "sdata",
     }
 
+    # bad test. It depends on the data currently in the person_cache.toml
     valid_cases = {
-        "Adolf Bastian": 159,
-        "A. Zimmermann": 3583,
+        "Ferdinand Werne": 3538,
+        "Christian Gottfried Ehrenberg": 2219,
     }
 
     # why is this person problematic? Because he used to exist twice in index?
@@ -115,7 +120,8 @@ def test_set_beteiligte() -> None:
     client = init_ria()
     templateM = client.get_template(ID=625690, mtype="Object")
     recordM = deepcopy(templateM)  # record should contain only one moduleItem
-    set_beteiligte(recordM, beteiligte="Adolf Bastian", conf=conf)
+    # bad test. Depends on data in current person_cache.toml
+    set_beteiligte(recordM, beteiligte="Ferdinand Werne", conf=conf, missing_info=False)
     # print(recordM)
     # recordM.toFile(path="test.debug.xml")
     InventarNrSTxt = recordM.xpath("""/m:application/m:modules/m:module[
@@ -188,7 +194,7 @@ def test_triple_split() -> None:
     ]
 
     for idx, case in enumerate(cases):
-        name, role, date = _triple_split2(case)
+        prefix, name, role, date = _triple_split2(case)
         match idx:
             case 0:
                 assert name == "Claus Schilling"
@@ -216,7 +222,7 @@ def test_triple_split_multi() -> None:
     beteiligteL = _sanitize_multi(beteiligte)
     for idx, beteiligte2 in enumerate(beteiligteL):
         # print(f"{_triple_split2(beteiligte2)}")
-        name, role, date = _triple_split2(beteiligte2)
+        prefix, name, role, date = _triple_split2(beteiligte2)
         match idx:
             case 0:
                 assert name == "Heinrich Barth"
@@ -229,6 +235,111 @@ def test_triple_split_multi() -> None:
                 )
                 assert role == "Vorbesitzer*in"
                 assert date == "1801 - 1873"
+
+
+def test_split_off_role() -> None:
+    cases = [
+        "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in",
+        "Claus Schilling (5.7.1871 (?) - 1946)",
+        "",
+    ]
+
+    for idx, case in enumerate(cases):
+        left, role = _split_off_role(case)
+        match idx:
+            case 0:
+                assert left == "Claus Schilling (5.7.1871 (?) - 1946)"
+                assert role == "Sammler*in"
+            case 1:
+                assert left == "Claus Schilling (5.7.1871 (?) - 1946)"
+                assert role is None
+            case 2:
+                assert left is None
+                assert role is None
+
+
+def test_split_off_prefix() -> None:
+    cases = [
+        "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in",
+        "Prefix: Claus Schilling (5.7.1871 (?) - 1946)",
+        "",
+    ]
+
+    for idx, case in enumerate(cases):
+        prefix, right = _split_off_prefix(case)
+        match idx:
+            case 0:
+                assert prefix is None
+                assert right == "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in"
+            case 1:
+                assert prefix == "Prefix"
+                assert right == "Claus Schilling (5.7.1871 (?) - 1946)"
+            case 2:
+                assert prefix is None
+                assert right is None
+
+
+def test_name_date() -> None:
+    cases = [
+        "Claus Schilling (5.7.1871 (?) - 1946)",
+        "Claus Schilling (geb. Schiller) (5.7.1871 (?) - 1946)",
+        "Claus Schilling",
+        "",
+    ]
+
+    for idx, case in enumerate(cases):
+        name, date = _get_name_date(case)
+        match idx:
+            case 0:
+                assert name == "Claus Schilling"
+                assert date == "5.7.1871 (?) - 1946"
+            case 1:
+                assert name == "Claus Schilling (geb. Schiller)"
+                assert date == "5.7.1871 (?) - 1946"
+
+            case 2:
+                assert name == "Claus Schilling"
+                assert date is None
+            case 3:
+                assert name is None
+                assert date is None
+
+
+def test_quad_split() -> None:
+    cases = [
+        "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in",
+        "Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in",
+        "Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung",
+        "Bezug unklar: Paul Grade († 05.04.1894*)",
+        """
+        Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
+        Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
+        """,
+    ]
+
+    for idx, case in enumerate(cases):
+        prefix, name, date, role = _quad_split(case)
+        match idx:
+            case 0:
+                assert prefix is None
+                assert name == "Claus Schilling"
+                assert date == "5.7.1871 (?) - 1946"
+                assert role == "Sammler*in"
+            case 1:
+                assert prefix is None
+                assert name == "Joachim Pfeil"
+                assert date == "30.12.1857 - 12.3.1924"
+                assert role == "Sammler*in"
+            case 2:
+                assert prefix is None
+                assert name == "Kaiserliches Auswärtiges Amt des Deutschen Reiches"
+                assert date == "1875"
+                assert role == "Veräußerung"
+            case 3:
+                assert prefix == "Bezug unklar"
+                assert name == "Paul Grade"
+                assert date == "† 05.04.1894*"
+                assert role == None
 
 
 def tast_each_person3() -> None:
