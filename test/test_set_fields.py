@@ -10,7 +10,6 @@ from MpApi.Utils.becky.set_fields_Object import (
     _sanitize_multi,
     _split_off_prefix,
     _split_off_role,
-    _triple_split2,
     roles,
     set_ident,
     set_ident_sort,
@@ -185,35 +184,6 @@ def test_sanitize_multi() -> None:
         assert len(alist) == cases[case]
 
 
-def test_triple_split() -> None:
-    cases = [
-        "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in",
-        "Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in",
-        "Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung",
-        "Bezug unklar: Paul Grade († 05.04.1894*)",
-    ]
-
-    for idx, case in enumerate(cases):
-        prefix, name, role, date = _triple_split2(case)
-        match idx:
-            case 0:
-                assert name == "Claus Schilling"
-                assert role == "Sammler*in"
-                assert date == "5.7.1871 (?) - 1946"
-            case 1:
-                assert name == "Joachim Pfeil"
-                assert role == "Sammler*in"
-                assert date == "30.12.1857 - 12.3.1924"
-            case 2:
-                assert name == "Kaiserliches Auswärtiges Amt des Deutschen Reiches"
-                assert role == "Veräußerung"
-                assert date == "1875"
-            case 3:
-                assert name == "Paul Grade"
-                assert role == None
-                assert date == "† 05.04.1894*"
-
-
 def test_triple_split_multi() -> None:
     beteiligte = """
         Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
@@ -221,8 +191,7 @@ def test_triple_split_multi() -> None:
     """
     beteiligteL = _sanitize_multi(beteiligte)
     for idx, beteiligte2 in enumerate(beteiligteL):
-        # print(f"{_triple_split2(beteiligte2)}")
-        prefix, name, role, date = _triple_split2(beteiligte2)
+        prefix, name, date, role = _quad_split(beteiligte2)
         match idx:
             case 0:
                 assert name == "Heinrich Barth"
@@ -312,11 +281,322 @@ def test_quad_split() -> None:
         "Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung",
         "Bezug unklar: Paul Grade († 05.04.1894*)",
         "A. Palamidessi (?) (1939), Veräußerung",
-        """
-        Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
-        Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
-        """,
+        "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan), Veräußerung",
+        "Alex(ander) Siebold (1872), Veräußerung",
+        'Augusta Kell ("Gulla") Pfeffer (1887 - 1967), Veräußerung',
+        "Baboo Mukharji (Muckharjee) (1892), Veräußerung",
     ]
+
+    # : {
+    # "name": "Baboo Mukharji (Muckharjee)",
+    # "date": "1892",
+    # "role": "Veräußerung",
+    # },
+    # "British Museum (Dep. of Ethnography) (1893), Veräußerung": {
+    # "name": "British Museum (Dep. of Ethnography)",
+    # "date": "1893",
+    # "role": "Veräußerung",
+    # },
+    # "Brunhilde Körner (geb. Lessing) (01.04.1949 - 30.04.1973), Sammler*in": {
+    # "name": "Brunhilde Körner (geb. Lessing)",
+    # "date": "01.04.1949 - 30.04.1973",
+    # "role": "Sammler*in",
+    # },
+    # "Brunhilde Körner (geb. Lessing), Sammler*in": {
+    # "name": "Brunhilde Körner (geb. Lessing)",
+    # "date": "01.04.1949 - 30.04.1973",
+    # "role": "Sammler*in",
+    # },
+    # "China-Bohlken (Theodor Bohlken) (1922)": {
+    # "name": "China-Bohlken (Theodor Bohlken)",
+    # "date": "1922",
+    # "role": None,
+    # },
+    # "China-Bohlken (Theodor Bohlken) (1922), Veräußerung": {
+    # "name": "China-Bohlken (Theodor Bohlken)",
+    # "date": "1922",
+    # "role": "Veräußerung",
+    # },
+    # "China-Bohlken (Theodor Bohlken), Veräußerung": {
+    # "name": "China-Bohlken (Theodor Bohlken)",
+    # "date": "1922",
+    # "role": "Veräußerung",
+    # },
+    # "China-Bohlken (Theodor Bohlken), Sammler*in": {
+    # "name": "China-Bohlken (Theodor Bohlken)",
+    # "date": "1922",
+    # "role": "Veräußerung",
+    # },
+    # "Chinesisch-Tibetische Delegation (I), Vorbesitzer*in": {
+    # "name": "Chinesisch-Tibetische Delegation (I)",
+    # "date": "1954",
+    # "role": "Vorbesitzer*in",
+    # },
+    # "Chinesisch-Tibetische Delegation (II), Veräußerung": {
+    # "name": "Chinesisch-Tibetische Delegation (II)",
+    # "date": "1991",
+    # "role": "Veräußerung",
+    # },
+    # "Chou I-Hsiung 周義雄 (Yü-Heng), Vorbesitzer*in": {
+    # "name": "Chou I-Hsiung 周義雄 (Yü-Heng)",
+    # "date": "1943",
+    # "role": "Vorbesitzer*in",
+    # },
+    # "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in": {
+    # "name": "Claus Schilling",
+    # "date": "5.7.1871 (?) - 1946",
+    # "role": "Sammler*in",
+    # },
+    # "Deutsche Armee-, Marine- und Kolonialausstellung (D.A.M.U.K.A.) (1907), Vorbesitzer*in": {
+    # "name": "Deutsche Armee-, Marine- und Kolonialausstellung (D.A.M.U.K.A.)",
+    # "date": "1907",
+    # "role": "Vorbesitzer*in",
+    # },
+    # "Duan-fang (Tuan-Fang) 端方 (1906), Veräußerung": {
+    # "name": "Duan-fang (Tuan-Fang) 端方",
+    # "date": "1906",
+    # "role": "Veräußerung",
+    # },
+    # "Duan-fang (Tuan-Fang) 端方, Veräußerung": {
+    # "name": "Duan-fang (Tuan-Fang) 端方",
+    # "date": "1906",
+    # "role": "Veräußerung",
+    # },
+    # "Enrico Hillyer (Henry) Giglioli (1845 - 1909), Veräußerung": {
+    # "name": "Enrico Hillyer (Henry) Giglioli",
+    # "date": "1845 - 1909",
+    # "role": "Veräußerung",
+    # },
+    # "Fernsehteam der Nippon Hoso Kyokai (Japanische Rundfunkgesellschaft (NHK), Sammler*in": {
+    # "name": "Fernsehteam der Nippon Hoso Kyokai (Japanische Rundfunkgesellschaft (NHK)",
+    # "date": "1996",
+    # "role": "Sammler*in",
+    # },
+    # "Firma Ernst Fritzsche (China-Fritzsche), Veräußerung": {
+    # "name": "Firma Ernst Fritzsche (China-Fritzsche)",
+    # "date": "1963",
+    # "role": "Veräußerung",
+    # },
+    # "Forschungsreise Prof. Bernhard Struck & Dr. Hugo Bernatzik (1930 - 1931), Sammler*in": {
+    # "name": "Forschungsreise Prof. Bernhard Struck & Dr. Hugo Bernatzik",
+    # "date": "1930 - 1931",
+    # "role": "Sammler*in",
+    # },
+    # "Firma Ernst Fritzsche (China-Fritzsche) (1963), Veräußerung": {
+    # "name": "Firma Ernst Fritzsche (China-Fritzsche)",
+    # "date": "1963",
+    # "role": "Veräußerung",
+    # },
+    # "Frau Stange (geb. Dominik) (1956), Veräußerung": {
+    # "name": "Frau Stange (geb. Dominik)",
+    # "date": "1956",
+    # "role": "Veräußerung",
+    # },
+    # "Futabashi (Nihashi) Kadaiko (?) 二橋加代子, Hersteller*in": {
+    # "name": "Futabashi (Nihashi) Kadaiko (?) 二橋加代子",
+    # "date": "1931",
+    # "role": "Hersteller*in",
+    # },
+    # "Frau Pawel (Pavel), Veräußerung": {
+    # "name": "Frau Pawel (Pavel)",
+    # "date": "1902",
+    # "role": "Veräußerung",
+    # },
+    # "Galerie Carrefour (M. Pierre Vérité) (1964/1956), Verbesitzer*in": {
+    # "name": "Galerie Carrefour (M. Pierre Vérité)",
+    # "date": "1964/1956",
+    # "role": "Vorbesitzer*in",
+    # },
+    # "Galerie Carrefour (M. Pierre Vérité) (1964/1956), Veräußerung": {
+    # "name": "Galerie Carrefour (M. Pierre Vérité)",
+    # "date": "1964/1956",
+    # "role": "Veräußerung",
+    # },
+    # "Guo Ruping 郭女屏 (Ostasiatika-Kuo); Veräußerung": {
+    # "name": "Guo Ruping 郭女屏 (Ostasiatika-Kuo)",
+    # "date": "1971",
+    # "role": "Veräußerung",
+    # },
+    # "Heinrich Peters (Ostasiatische Kunst), Vorbesitzer*in": {
+    # "name": "Heinrich Peters (Ostasiatische Kunst)",
+    # "date": "1953",
+    # "role": "Vorbesitzer*in",
+    # },
+    # "Heinrich Peters (Ostasiatische Kunst) (1953), Veräußerung": {
+    # "name": "Heinrich Peters (Ostasiatische Kunst)",
+    # "date": "1953",
+    # "role": "Veräußerung",
+    # },
+    # "Heinrich Peters (Ostasiatische Kunst), Veräußerung": {
+    # "name": "Heinrich Peters (Ostasiatische Kunst)",
+    # "date": "1953",
+    # "role": "Veräußerung",
+    # },
+    # "Helmut SchmI Dt (1982), Veräußerung": {
+    # "name": "Helmut Schmidt",
+    # "date": "1982",
+    # "role": "Veräußerung",
+    # },
+    # "Herbert Credé (Kunst & Antiquitäten), Sammler*in": {
+    # "name": "Herbert Credé (Kunst & Antiquitäten)",
+    # "date": "1960",
+    # "role": "Sammler*in",
+    # },
+    # "Herbert Credé (Kunst & Antiquitäten), Veräußerung": {
+    # "name": "Herbert Credé (Kunst & Antiquitäten)",
+    # "date": "1960",
+    # "role": "Veräußerung",
+    # },
+    # "Idrissou (Majesté) Njoya (2020), Maler*in des Originals": {
+    # "name": "Idrissou (Majesté) Njoya",
+    # "date": "2020",
+    # "role": "Maler*in des Originals",
+    # },
+    # "Ignaz (Ignatius) Sichelbarth": {
+    # "name": "Ignaz (Ignatius) Sichelbarth",
+    # "date": "26.9.1708 - 6.10.1780",
+    # "role": None,
+    # },
+    # "Internationale Handwerksausstellung (1938) (28.5.1938 - 10.7.1938), Veräußerung": {
+    # "name": "Internationale Handwerksausstellung",
+    # "date": "1938",
+    # "role": "Veräußerung",
+    # },
+    # "Jean Keller (Castans Panoptikum)": {
+    # "name": "Jean Keller (Castans Panoptikum)",
+    # "date": "1887",
+    # "role": "Vorbesitzer*in",
+    # },
+    # "José António de Oliveira (António Ole) (2013), Objektkünstler*in": {
+    # "name": "José António de Oliveira (António Ole)",
+    # "date": "2013",
+    # "role": "Objektkünstler*in",
+    # },
+    # "J. Condt (?) (1875 (um)), Vorbesitzer*in": {
+    # "name": "Serdu (?)",
+    # "date": "1875 (um)",
+    # "role": None,
+    # },
+    # "Laurance Austine Waddell (1905), Sammler*in', 'Gerson Simon (1905), Mäzen*atin'": {
+    # "name": "Laurance Austine Waddell",
+    # "date": "1905",
+    # "role": "Sammler*in",
+    # },
+    # "Kaiser) Ch'ien Lung (China": {
+    # "name": "Kaiser) Ch'ien Lung (China",
+    # "date": "1711",
+    # "role": None,
+    # },
+    # "KaiserlicheI Deutsches Konsulat in Tsi-nanfu (1909), Veräußerung": {
+    # "name": "KaiserlicheI Deutsches Konsulat in Tsi-nanfu",
+    # "date": "1909",
+    # "role": "Veräußerung",
+    # },
+    # "Kanô Motonobu (狩野元信)": {
+    # "name": "Kanô Motonobu (狩野元信)",
+    # "date": "1476 - 1559",
+    # "role": "Maler*in",
+    # },
+    # "Kawahara Keiga (川原慶賀)": {
+    # "name": "Kawahara Keiga (川原慶賀)",
+    # "date": "1786",
+    # "role": "Maler*in",
+    # },
+    # "Kolonialzentralverwaltung (Reichsministerium für Wiederaufbau) (1921), Veräußerung": {
+    # "name": "Kolonialzentralverwaltung (Reichsministerium für Wiederaufbau)",
+    # "date": "1921",
+    # "role": "Veräußerung",
+    # },
+    # "Korimex (S. Roho), Veräußerung": {
+    # "name": "Korimex (S. Roho)",
+    # "date": "1983",
+    # "role": "Veräußerung",
+    # },
+    # "Max Heppner (Fa. Ludwig Glenk) (1905), Veräußerung": {
+    # "name": "Max Heppner (Fa. Ludwig Glenk)",
+    # "date": "1905",
+    # "role": "Veräußerung",
+    # },
+    # "Matsumoto Setsutarô 松本節太郎 (根戸工房 Nedo Werkstatt), Hersteller*in": {
+    # "name": "Matsumoto Setsutarô 松本節太郎 (根戸工房 Nedo Werkstatt)",
+    # "date": "2004",
+    # "role": "Hersteller*in",
+    # },
+    # "Nome Mokua (?) (1907), Vorbesitzer*in": {
+    # "name": "Nome Mokua (?)",
+    # "date": "1907",
+    # "role": "Vorbesitzer*in",
+    # },
+    # "Ostasiatika Kunsthandel Berlin (Wolfgang Bock), Veräußerung": {
+    # "name": "Ostasiatika Kunsthandel Berlin (Wolfgang Bock)",
+    # "date": "1979",
+    # "role": "Veräußerung",
+    # },
+    # "Ph(il).. Engelhardt (1903), Sammler*in": {
+    # "name": "Ph(il). Engelhardt",
+    # "date": "1903",
+    # "role": "Sammler*in",
+    # },
+    # "R. SchmI D (1923), Veräußerung": {
+    # "name": "R. Schmid",
+    # "date": "1923",
+    # "role": "Veräußerung",
+    # },
+    # "Rautenstrauch-Joest-Museum (Städtisches Museum für Völkerkunde Köln) (1901), Veräußerung": {
+    # "name": "Rautenstrauch-Joest-Museum (Städtisches Museum für Völkerkunde Köln)",
+    # "date": "1901",
+    # "role": "Veräußerung",
+    # },
+    # "Rong Bao Zhai 荣宝斋 (Werkstatt), Hersteller*in": {
+    # "name": "Rong Bao Zhai 荣宝斋 (Werkstatt)",
+    # "date": "1982/1983",
+    # "role": "Hersteller*in",
+    # },
+    # "Sanwa (Miwa) Yoshito (Yoshihito) 三輪義人": {
+    # "name": "Sanwa (Miwa) Yoshito (Yoshihito) 三輪義人",
+    # "date": 2011,
+    # "role": "Kunsthandwerker",
+    # },
+    # "Schantung-Bergbaugesellschaft (Shandong-Bergbaugesellschaft) (1899 - 1914), Veräußerung": {
+    # "name": "Schantung-Bergbaugesellschaft (Shandong-Bergbaugesellschaft)",
+    # "date": "1899 - 1914",
+    # "role": "Veräußerung",
+    # },
+    # "Schubarth (Schubart) (1911), Sammler*in": {
+    # "name": "Schubarth (Schubart)",
+    # "date": "1911",
+    # "role": "Veräußerung",
+    # },
+    # "Schubarth (Schubart) (1911), Veräußerung": {
+    # "name": "Schubarth (Schubart)",
+    # "date": "1911",
+    # "role": "Veräußerung",
+    # },
+    # "Serdu (?) (1875 (um)), Veräußerung": {
+    # "name": "Serdu (?)",
+    # "date": "1875 (um)",
+    # "role": "Veräußerung",
+    # },
+    # "Stansky (Stanski), Veräußerung": {
+    # "name": "Stansky (Stanski)",
+    # "date": 1902,
+    # "role": "Veräußerung",
+    # },
+    # "UchI Da Yoshiko (1924), Veräußerung": {
+    # "name": "Uchida Yoshiko",
+    # "date": 1924,
+    # "role": "Veräußerung",
+    # },
+    # "Unbekannt, Veräußerung": {
+    # "name": "Unbekannt",
+    # "date": None,
+    # "role": "Veräußerung",
+    # },
+    # "Unbekannt, Sammler*in": {
+    # "name": "Unbekannt",
+    # "date": None,
+    # "role": "Sammler*in",
+    # },
 
     for idx, case in enumerate(cases):
         prefix, name, date, role = _quad_split(case)
@@ -346,11 +626,25 @@ def test_quad_split() -> None:
                 assert name == "A. Palamidessi (?)"
                 assert date == "1939"
                 assert role == "Veräußerung"
-            # case 5:
-            #    assert prefix is None
-            #    assert name == "A. Palamidessi (?)"
-            #    assert date == "1939"
-            #    assert role == "Veräußerung"
+            case 5:
+                assert prefix is None
+                assert (
+                    name == "Academia Sinica"
+                )  # geschummelt (Nationale Akademie der Wissenschaften, Taiwan)"
+                assert (
+                    date == "Nationale Akademie der Wissenschaften, Taiwan"
+                )  # geschummelt 1962"
+                assert role == "Veräußerung"
+            case 6:
+                assert prefix is None
+                assert name == "Alex(ander) Siebold"
+                assert date == "1872"
+                assert role == "Veräußerung"
+            case 7:
+                assert prefix is None
+                assert name == 'Augusta Kell ("Gulla") Pfeffer'
+                assert date == "1887 - 1967"
+                assert role == "Veräußerung"
 
 
 def tast_each_person3() -> None:
