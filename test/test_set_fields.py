@@ -311,6 +311,7 @@ def test_quad_split() -> None:
         "Joachim Pfeil (30.12.1857 - 12.3.1924), Sammler*in",
         "Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung",
         "Bezug unklar: Paul Grade († 05.04.1894*)",
+        "A. Palamidessi (?) (1939), Veräußerung",
         """
         Heinrich Barth (16.2.1821 - 25.11.1865), Sammler*in; 
         Königliche Preußische Kunstkammer, Ethnografische Abteilung (1801 - 1873), Vorbesitzer*in
@@ -339,7 +340,17 @@ def test_quad_split() -> None:
                 assert prefix == "Bezug unklar"
                 assert name == "Paul Grade"
                 assert date == "† 05.04.1894*"
-                assert role == None
+                assert role is None
+            case 4:
+                assert prefix is None
+                assert name == "A. Palamidessi (?)"
+                assert date == "1939"
+                assert role == "Veräußerung"
+            # case 5:
+            #    assert prefix is None
+            #    assert name == "A. Palamidessi (?)"
+            #    assert date == "1939"
+            #    assert role == "Veräußerung"
 
 
 def tast_each_person3() -> None:

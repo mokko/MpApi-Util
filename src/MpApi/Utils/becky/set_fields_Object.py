@@ -155,8 +155,8 @@ def set_beteiligte(
         f"<moduleReference {NS} name='ObjPerAssociationRef' targetModule='Person'/>"
     )
 
-    for count, prefix_name_role_date in enumerate(beteiligteL, start=1):
-        prefix, name, role, date = _quad_split(prefix_name_role_date)
+    for count, beteiligte in enumerate(beteiligteL, start=1):
+        prefix, name, role, date = _triple_split2(beteiligte)
         logger = logging.getLogger(__name__)
         if count == 1:
             sort = 1
@@ -169,7 +169,7 @@ def set_beteiligte(
             missing_info = True
             msg = f"no ID for pk '{name}'"
             logger.error(msg)
-            print(msg)
+            # print(msg)
             nameID = None
             # raise SyntaxError(f"no ID for pk '{name}'")
             # no new beteiligte*r for this entry
@@ -626,7 +626,7 @@ def set_objRefA(
             msg = f"archive cache: no ID: '{vorgang2}'"
             print(f"!!!{msg}")
             logging.error(msg)
-
+        # print (f"xxxxxxxxxxxxxxx: {rel_objId=}")
         # try:
         # rel_objId = archive_data[vorgang2][0]
         #
@@ -913,7 +913,7 @@ def _triple_split(name_role_date: str) -> tuple[str, str, str]:
     return name, role, date
 
 
-def _triple_split2(name_date_role: str) -> tuple[str, str, str, str]:
+def _triple_split2(beteiligte: str) -> tuple[str, str, str, str]:
     """
     We used to split str in three substrings, hence the name. Now we split
     into four: prefix: name (date), role
@@ -1260,9 +1260,7 @@ def _triple_split2(name_date_role: str) -> tuple[str, str, str, str]:
     role = None
     date = None
 
-    if ":" in name_date_role:
-        prefix, name_date_role = name_date_role.split(": ", 1)
-        prefix = prefix.strip()
+    prefix, name_date_role = _split_off_prefix(beteiligte)
 
     if name_date_role in exceptions:
         name = exceptions[name_date_role]["name"]
@@ -1402,6 +1400,9 @@ def _quad_split(string: str) -> tuple[str | None, str | None, str | None, str | 
     Parse a string of the form:
       <name possibly with parentheses...> (<date or date-range>), <role>
     Returns (name, date, role). date and role may be None if missing.
+
+    This parser does NOT accept mutliple entries separated by semicolon. Split the string
+    at an earlier stage.
     """
 
     if string is None:

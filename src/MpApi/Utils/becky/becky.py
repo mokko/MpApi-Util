@@ -121,7 +121,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(recordM)
     recordM.uploadForm()  # we need that to delete ID
     recordM.sort_elements()
-    p = conf["project_dir"] / "debug.object.xml"
+    p = Path("debug.object.xml")
     print(f">> Writing record to file '{p}'")
     recordM.toFile(path=p)
     print(">> Validating xml...")
@@ -215,5 +215,5 @@ def _load_conf(conf_fn: str) -> dict:
     print(f">> Reading configuration '{conf_fn}'")
     with open(Path(conf_fn), "rb") as toml_file:
         conf = tomllib.load(toml_file)
-    conf["project_dir"] = Path(__file__).parents[4] / "sdata"  # project_dir
+    conf["project_dir"] = Path.cwd()  # new project_dir in pwd
     return conf
