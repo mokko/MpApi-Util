@@ -211,6 +211,7 @@ def test_split_off_role() -> None:
         "Claus Schilling (5.7.1871 (?) - 1946), Sammler*in",
         "Claus Schilling (5.7.1871 (?) - 1946)",
         "",
+        "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan), Veräußerung",
     ]
 
     for idx, case in enumerate(cases):
@@ -225,6 +226,12 @@ def test_split_off_role() -> None:
             case 2:
                 assert left is None
                 assert role is None
+            case 3:
+                assert (
+                    left
+                    == "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)"
+                )
+                assert role == "Veräußerung"
 
 
 def test_split_off_prefix() -> None:
@@ -254,6 +261,8 @@ def test_name_date() -> None:
         "Claus Schilling (geb. Schiller) (5.7.1871 (?) - 1946)",
         "Claus Schilling",
         "",
+        "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)",  # no date
+        "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)(1962)",  # no date
     ]
 
     for idx, case in enumerate(cases):
@@ -265,13 +274,24 @@ def test_name_date() -> None:
             case 1:
                 assert name == "Claus Schilling (geb. Schiller)"
                 assert date == "5.7.1871 (?) - 1946"
-
             case 2:
                 assert name == "Claus Schilling"
                 assert date is None
             case 3:
                 assert name is None
                 assert date is None
+            case 4:
+                assert (
+                    name
+                    == "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)"
+                )
+                assert date is None
+            case 5:
+                assert (
+                    name
+                    == "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)"
+                )
+                assert date == "1962"
 
 
 def test_quad_split() -> None:
@@ -281,22 +301,13 @@ def test_quad_split() -> None:
         "Kaiserliches Auswärtiges Amt des Deutschen Reiches (1875), Veräußerung",
         "Bezug unklar: Paul Grade († 05.04.1894*)",
         "A. Palamidessi (?) (1939), Veräußerung",
-        "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan), Veräußerung",
+        "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)(1962), Veräußerung",
         "Alex(ander) Siebold (1872), Veräußerung",
         'Augusta Kell ("Gulla") Pfeffer (1887 - 1967), Veräußerung',
         "Baboo Mukharji (Muckharjee) (1892), Veräußerung",
+        "British Museum (Dep. of Ethnography) (1893), Veräußerung",
     ]
 
-    # : {
-    # "name": "Baboo Mukharji (Muckharjee)",
-    # "date": "1892",
-    # "role": "Veräußerung",
-    # },
-    # "British Museum (Dep. of Ethnography) (1893), Veräußerung": {
-    # "name": "British Museum (Dep. of Ethnography)",
-    # "date": "1893",
-    # "role": "Veräußerung",
-    # },
     # "Brunhilde Körner (geb. Lessing) (01.04.1949 - 30.04.1973), Sammler*in": {
     # "name": "Brunhilde Körner (geb. Lessing)",
     # "date": "01.04.1949 - 30.04.1973",
@@ -629,11 +640,10 @@ def test_quad_split() -> None:
             case 5:
                 assert prefix is None
                 assert (
-                    name == "Academia Sinica"
-                )  # geschummelt (Nationale Akademie der Wissenschaften, Taiwan)"
-                assert (
-                    date == "Nationale Akademie der Wissenschaften, Taiwan"
-                )  # geschummelt 1962"
+                    name
+                    == "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)"
+                )
+                assert date == "1962"
                 assert role == "Veräußerung"
             case 6:
                 assert prefix is None
@@ -644,6 +654,16 @@ def test_quad_split() -> None:
                 assert prefix is None
                 assert name == 'Augusta Kell ("Gulla") Pfeffer'
                 assert date == "1887 - 1967"
+                assert role == "Veräußerung"
+            case 8:
+                assert prefix is None
+                assert name == "Baboo Mukharji (Muckharjee)"
+                assert date == "1892"
+                assert role == "Veräußerung"
+            case 9:
+                assert prefix is None
+                assert name == "British Museum (Dep. of Ethnography)"
+                assert date == "1893"
                 assert role == "Veräußerung"
 
 

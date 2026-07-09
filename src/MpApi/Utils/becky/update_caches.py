@@ -16,7 +16,7 @@ from MpApi.Utils.becky.cache_ops import (
 )
 from MpApi.Utils.becky.set_fields_Object import (
     _sanitize_multi,
-    _triple_split2,
+    _quad_split,
 )
 
 from MpApi.Utils.Ria import RIA, init_ria
@@ -55,7 +55,8 @@ def process_names(*, beteiligte: str, cache: dict) -> dict:
         return cache  # cell.value=" " or cell.value=""
 
     for count, beteiligte2 in enumerate(beteiligteL, start=1):
-        prefix, name, role, date = _triple_split2(beteiligte)
+        print(f"**************{beteiligte2=}")
+        prefix, name, date, role = _quad_split(beteiligte2)
         # we're counting the names in one cell here, not the lines
         # print(f"{count}:{name} [{role}]")
         # if role not in roles:
