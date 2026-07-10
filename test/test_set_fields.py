@@ -212,6 +212,7 @@ def test_split_off_role() -> None:
         "Claus Schilling (5.7.1871 (?) - 1946)",
         "",
         "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan), Veräußerung",
+        "American Museum of Natural History, New York (1869)",
     ]
 
     for idx, case in enumerate(cases):
@@ -232,6 +233,9 @@ def test_split_off_role() -> None:
                     == "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)"
                 )
                 assert role == "Veräußerung"
+            case 4:
+                assert left == "American Museum of Natural History, New York (1869)"
+                assert role is None
 
 
 def test_split_off_prefix() -> None:
@@ -263,6 +267,7 @@ def test_name_date() -> None:
         "",
         "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)",  # no date
         "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)(1962)",  # no date
+        "American Museum of Natural History, New York (1869)",
     ]
 
     for idx, case in enumerate(cases):
@@ -292,6 +297,9 @@ def test_name_date() -> None:
                     == "Academia Sinica (Nationale Akademie der Wissenschaften, Taiwan)"
                 )
                 assert date == "1962"
+            case 6:
+                assert name == "American Museum of Natural History, New York"
+                assert date == "1869"
 
 
 def test_quad_split() -> None:

@@ -904,6 +904,15 @@ def _split_off_role(string_role: str) -> tuple[str | None, str | None]:
         left = string_role
         role = None
 
+    if role not in roles:
+        if role is not None:
+            print(f"Error: Unknown role ignoring: {role}")
+            if left is not None and role is not None:
+                left = string_role
+            else:
+                left = role
+            role = None
+
     if left == "":
         # treat an empty string as no input
         left = None

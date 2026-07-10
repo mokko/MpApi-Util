@@ -140,7 +140,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         no_records_created += 1
         objId = conf["RIA"].create_item(item=recordM)
         msg = f"Created record {objId} in RIA '{row[0].value}'"
-        logging.error(msg)
+        # logging.error(msg) i dont want to log success
         print(f">> {msg}")
     else:
         print(f">> Not creating record in RIA '{row[0].value}' (since no act)")
