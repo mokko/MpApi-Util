@@ -124,15 +124,16 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     p = Path("debug.object.xml")
     print(f">> Writing record to file '{p}'")
     recordM.toFile(path=p)
-    print(">> Validating xml...")
-    recordM.validate()
-    print(">> Ok")
     print(f">> {missing_info=}")
     if missing_info:
         msg = f"Not creating record in RIA '{row[0].value}' since missing info"
         logging.error(msg)
         print(f">> {msg}")
         return missing_info
+
+    print(">> Validating xml...")
+    recordM.validate()  # dies when data incorrect
+    print(">> Ok")
     if act:
         # we used to count also would-be created records without act
         global no_records_created
@@ -154,22 +155,22 @@ def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int, offset: int) ->
     """
     # should we only log if we actually do something with act=True?
     # to avoid plethora of log files?
-    if act is True:
-        now = datetime.now()
-        datetime_str = now.strftime("%Y%m%d-%H%M%S")
-        log_fn = f"becky{datetime_str}.log"
-        logging.basicConfig(
-            filename=log_fn,
-            level=logging.INFO,
-            format="%(asctime)s - %(levelname)s - %(message)s",
-        )
-        # - %(name)s is currently not necessary
-        logger = logging.getLogger(__name__)
-        logger.info(f"becky started with {act=}, {offset=} and {limit=}")
-        logger.info(f"loading Excel file '{conf['excel_fn']}'")
-    else:
-        logger = logging.getLogger(__name__)
-        logger.addHandler(logging.NullHandler())
+    # if act is True:
+    now = datetime.now()
+    datetime_str = now.strftime("%Y%m%d-%H%M%S")
+    log_fn = f"becky{datetime_str}.log"
+    logging.basicConfig(
+        filename=log_fn,
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+    # - %(name)s is currently not necessary
+    logger = logging.getLogger(__name__)
+    logger.info(f"becky started with {act=}, {offset=} and {limit=}")
+    logger.info(f"loading Excel file '{conf['excel_fn']}'")
+    # else:
+    #    logger = logging.getLogger(__name__)
+    #    logger.addHandler(logging.NullHandler())
 
 
 def log_print_info(msg: str) -> None:

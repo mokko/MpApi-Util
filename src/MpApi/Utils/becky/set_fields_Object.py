@@ -86,6 +86,7 @@ roles = {
     "Gutachter*in": 4378341,
     "Hersteller*in": 4378345,
     "Hersteller & Produzent": 4378346,
+    "Kauf": 4378369,  # Käufer*in
     "Linolschneider*in": 4378391,
     "Maler*in": 4378349,
     "Maler*in des Originals": 4378397,
@@ -129,9 +130,10 @@ erwerbungsarten = {
 
 
 prefix_cache = {
+    "Erwähnung": 4399883,
+    "frühere Zuschreibung": 4399885,
     "Zuordnung unsicher": 4399923,
     "zugeschrieben": 4399922,
-    "Erwähnung": 4399883,
 }
 
 NS = "xmlns='http://www.zetcom.com/ria/ws/module'"
@@ -149,7 +151,7 @@ def set_beteiligte(
     except (ValueError, TypeError):
         return missing_info
 
-    print(f"++++++++++{beteiligteL=}")
+    # print(f"++++++++++{beteiligteL=}")
 
     mRefN = etree.fromstring(
         f"<moduleReference {NS} name='ObjPerAssociationRef' targetModule='Person'/>"

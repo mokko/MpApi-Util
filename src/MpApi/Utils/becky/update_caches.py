@@ -55,7 +55,7 @@ def process_names(*, beteiligte: str, cache: dict) -> dict:
         return cache  # cell.value=" " or cell.value=""
 
     for count, beteiligte2 in enumerate(beteiligteL, start=1):
-        print(f"**************{beteiligte2=}")
+        # print(f"**************{beteiligte2=}")
         prefix, name, date, role = _quad_split(beteiligte2)
         # we're counting the names in one cell here, not the lines
         # print(f"{count}:{name} [{role}]")
