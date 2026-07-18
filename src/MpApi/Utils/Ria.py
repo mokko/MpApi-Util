@@ -715,18 +715,20 @@ def init_ria() -> RIA:
     return client
 
 
-def record_exists(*, ident: str, conf: dict) -> bool:
+def record_exists(*, ident: str, conf: dict) -> int:
     """
-    Check ria if a record with a specific identNr exists. It's not particularly relevant
-    if one or multiple results exist with this identNr.
+    Check ria if a record with a specific identNr exists.
+
+    New: it now returns the number of results to be more similar to
+    record_exists2 and record_exist3.
 
     N.B.
     - This search is not particularly exact. Internally it uses ObjObjectNumberVrt
-    - Typical query, could also be in differet python file.
-    - Currently no pytest
     """
     if ident is None:
         raise ValueError("ident may not be None")
+    if ident == "":
+        raise ValueError("ident may not be empty string")
     q = Search(module="Object", limit=-1, offset=0)
     q.AND()
     q.addCriterion(
@@ -738,12 +740,13 @@ def record_exists(*, ident: str, conf: dict) -> bool:
     q.addField(field="__id")
     q.validate(mode="search")  # raises if not valid
     m = conf["RIA"].mpapi.search2(query=q)
-    if len(m) > 1:
-        raise ValueError("Warning! more than one result in record_exists")
+    # print("************************")
+    # if len(m) > 1:
+    #    raise ValueError("Warning! more than one result in record_exists")
     if m:
-        return True
+        return len(m)
     else:
-        return False
+        return 0
 
 
 def record_exists2(*, ident: str, conf: dict) -> int:

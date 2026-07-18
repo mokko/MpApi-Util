@@ -1,4 +1,4 @@
-from MpApi.Utils.Ria import RIA
+from MpApi.Utils.Ria import RIA, record_exists, record_exists2, record_exists3
 from mpapi.constants import get_credentials
 
 user, pw, baseURL = get_credentials()
@@ -14,7 +14,7 @@ def test_identNr_exists3():
     cases = {
         "V A 1934": {2165},
         "I D 31949 (002 a)": {3825631},
-        "I D 31949 (003)": set(),
+        "I D 31949 (003)": {4122194},
     }
 
     for ident in cases:
@@ -22,19 +22,38 @@ def test_identNr_exists3():
         assert result == cases[ident]
 
 
-def test_record_exists3():
+def test_record_exists() -> None:
+    conf = {
+        "org_unit": "EMAfrika1",
+        "RIA": c,
+    }
+
+    cases = {
+        "III D 1196": 0,  # should see no result
+    }
+    for ident in cases:
+        result = record_exists(ident=ident, conf=conf)
+        assert result == cases[ident]
+        result2 = record_exists3(ident=ident, conf=conf)
+        assert result2 == 1  # only 1 from Leipzig-Rückführung
+
+
+# todo: write test for record.exists2
+
+
+def test_record_exists3() -> None:
     # record_exists2 returns numbers of matches, but not the ID
+    conf = {
+        "RIA": c,
+    }
     cases = {
         "V A 1934": 1,
         "I D 31949 (002 a)": 1,
         "I D 31949 (003)": 1,
     }
     for ident in cases:
-        result = c.record_exists3(ident=ident)
+        result = record_exists3(ident=ident, conf=conf)
         assert result == cases[ident]
-
-
-# todo: write test for record.exists2
 
 
 def test_get_photographerID():
