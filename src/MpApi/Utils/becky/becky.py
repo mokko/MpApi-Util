@@ -140,7 +140,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         no_records_created += 1
         objId = conf["RIA"].create_item(item=recordM)
         msg = f"Created record {objId} in RIA '{row[0].value}'"
-        # logging.error(msg) i dont want to log success
+        logging.info(msg)  # I do want to log success since it's changing the DB
         print(f">> {msg}")
     else:
         print(f">> Not creating record in RIA '{row[0].value}' (since no act)")
@@ -195,11 +195,13 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
         # record_exists2 is Hendryk's algorithm that uses schemata and fortlaufende Nummer
         # if m := record_exists2(ident=ident, conf=conf):
         # record_exists3 omits Bereich and simply uses IdentNr and exact match.
-        if m := record_exists(ident=ident, conf=conf):
+        if m := record_exists3(ident=ident, conf=conf):
             # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
             # nicht eingetragen wurden? Nein. Nur loggen, wenn etwas in RIA verändert wird
             print(f"INFO Record '{ident}' exists already")
         else:
+            if not act:
+                logging.info(f"Would create {idx}: {ident}")
             create_record(row=row, conf=conf, act=act)
             if m > 1:
                 logging.warning(

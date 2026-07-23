@@ -80,6 +80,8 @@ def uta_main(
     print(f">> Getting template from RIA Object {conf['template_id']}")
     conf["templateM"] = conf["RIA"].get_template(ID=conf["template_id"], mtype="Object")
 
+    raise SyntaxError("GET HERE")
+
     for idx, row in enumerate(ws.iter_rows(min_row=conf["excel_row_offset"]), start=2):
         dd(f"{idx=} {offset=}")
         if idx < offset:
@@ -196,7 +198,7 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     print(f"***[{no_records_created}]{idx}: {ident}")
     # record_exists2 is Hendryk's algorithm that uses schemata and fortlaufende Nummer
     # if m := record_exists2(ident=ident, conf=conf):
-    # record_exists3 omits Bereich and simply uses IdentNr and exact match.
+    # new: record_exists3 respects Bereich new and simply uses IdentNr and exact match.
     if m := record_exists3(ident=ident, conf=conf):
         # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
         # nicht eingetragen wurden? Nein. Nur loggen, wenn etwas in RIA verändert wird

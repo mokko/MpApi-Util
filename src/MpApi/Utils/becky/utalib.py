@@ -54,7 +54,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # missing_info = False NOT HERE
     # ident_col = conf["fields"]["identNr"]["identNr"]
 
-    recordM, missing_info = create_xml(conf=conf, row=row)
+    recordM, missing_info = create_xml(conf=conf, row=row, act=act)
     ident = get_ident(conf, row)  # for messages
     print(f"DDD: {ident}")
 
@@ -74,7 +74,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     else:
         print(f">> Not creating record in RIA '{ident}' (since no act)")
 
-    raise Exception("Stop here!")
+    # raise Exception("Stop here!")
 
 
 def dd(msg: str) -> None:
@@ -86,14 +86,14 @@ def dd(msg: str) -> None:
 
 def get_ident(conf: dict, row: list) -> str:
     """
-    Assuming you defined a cluser identNr with the field identNr, this returns the identNr
+    Assuming you defined a cluster identNr with the field identNr, this returns the identNr
     for the current row.
     """
     ident_col = column_index_from_string(conf["fields"]["identNr"]["identNr"]) - 1
     ident = row[ident_col].value  # from Excel as str
     # rprint(f"{ident_col=} {ident=}")
     if ident is None:
-        logging.warning(f"IdentNr is None {idx}; not processing this line")
+        logging.warning(f"IdentNr is None; not processing this line")  # {idx}
         return None
     return ident
 
@@ -188,6 +188,7 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
         # nicht eingetragen wurden? Nein. Nur loggen, wenn etwas in RIA verändert wird
         print(f"INFO Record '{ident}' exists already")
     else:
+        print(f"INFO Record '{ident}' DOES NOT YET exist")  # low priority message
         create_record(row=row, conf=conf, act=act)
         if m > 1:
             logging.warning(
@@ -217,8 +218,6 @@ def prepare_fields(conf: dict) -> None:
                 ]
     # rprint(conf["fields"])
     rprint(conf["fields2"])
-
-    # raise Exception("Stop here!")
 
 
 def create_callback(name: str) -> str:

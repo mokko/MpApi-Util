@@ -805,13 +805,24 @@ def record_exists3(*, ident: str, conf: dict) -> int:
     if ident is None:
         raise ValueError("ident may not be None")
     q = Search(module="Object", limit=-1, offset=0)
-    # q.AND()
+    if "org_unit" in conf:
+        # print (f"*************record_exists3 with org_unit {conf['org_unit']}")
+        q.AND()
     q.addCriterion(
         field="ObjObjectNumberVrt",
         operator="equalsExact",
         value=str(ident),
     )
-    # q.addCriterion(field="__orgUnit", operator="equalsField", value=conf["org_unit"])
+    if "org_unit" in conf:
+        print(f"*************record_exists3 hardwired EMAmArchaologie")
+        q.OR()  # hardwire EM-AmArch in?
+        q.addCriterion(
+            field="__orgUnit", operator="equalsField", value=conf["org_unit"]
+        )
+        q.addCriterion(
+            field="__orgUnit", operator="equalsField", value="EMAmArchaologie"
+        )
+
     q.addField(field="__id")
     q.validate(mode="search")  # raises if not valid
     m = conf["RIA"].mpapi.search2(query=q)

@@ -28,6 +28,20 @@ from rich import print as rprint
 #    set_sachbegriff,
 # )
 
+#
+# A
+#
+
+
+def add_AnzahlTeile(recordM: Module, *, cluster: dict, missing: bool) -> bool:
+    rprint("add_AnzahlTeile in write_xml not yet implemented")
+    return missing
+
+
+def set_AnzahlTeile(recordM: Module, *, cluster: dict, missing: bool) -> bool:
+    rprint("set_AnzahlTeile in write_xml not yet implemented")
+    return missing
+
 
 def add_Aufschrift(record: Module, cluster: dict, missing: bool) -> bool:
     """
@@ -38,6 +52,27 @@ def add_Aufschrift(record: Module, cluster: dict, missing: bool) -> bool:
 
 def set_Aufschrift(record: Module, cluster: dict, missing: bool) -> bool:
     rprint(f"XXXXXXXXXXx{cluster=}")
+    return missing
+
+
+#
+# B
+#
+
+
+def add_BemerkungenSammlungen(recordM: Module, *, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_BemerkungenSammlungen(recordM: Module, *, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_Besitzart(recordM: Module, *, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_Besitzart(recordM: Module, *, cluster: dict, missing: bool) -> bool:
     return missing
 
 
@@ -53,12 +88,51 @@ def set_Beteiligte(record: Module, cluster: dict, missing: bool) -> bool:
     return missing
 
 
+#
+# D
+#
+
+
 def add_Datierung(recordM: Module, cluster: dict, missing: bool) -> bool:
     return missing
 
 
 def set_Datierung(recordM: Module, cluster: dict, missing: bool) -> bool:
     return missing
+
+
+#
+# E
+#
+
+
+def add_ErwerbDatum(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_ErwerbDatum(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_ErwerbNotiz(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_ErwerbNotiz(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_Erwerbungsart(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_Erwerbungsart(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+#
+# I
+#
 
 
 def add_identNr(recordM: Module, cluster: dict, missing: bool) -> bool:
@@ -69,6 +143,11 @@ def set_identNr(recordM: Module, cluster: dict, missing: bool) -> bool:
     return missing
 
 
+#
+# M
+#
+
+
 def add_MaterialTechnik(recordM: Module, cluster: dict, missing: bool) -> bool:
     return missing
 
@@ -77,12 +156,22 @@ def set_MaterialTechnik(recordM: Module, cluster: dict, missing: bool) -> bool:
     return missing
 
 
-def add_weitereNr(recordM: Module, cluster: dict, missing: bool) -> bool:
+#
+# M
+#
+
+
+def add_Objektreferenz(recordM: Module, *, cluster: dict, missing: bool) -> bool:
     return missing
 
 
-def set_weitereNr(recordM: Module, cluster: dict, missing: bool) -> bool:
+def set_Objektreferenz(recordM: Module, *, cluster: dict, missing: bool) -> bool:
     return missing
+
+
+#
+# S
+#
 
 
 def add_Sachbegriff(recordM: Module, cluster: dict, missing: bool) -> bool:
@@ -93,8 +182,28 @@ def set_Sachbegriff(recordM: Module, cluster: dict, missing: bool) -> bool:
     return missing
 
 
+def add_Status(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_Status(recordM: Module, cluster: dict, missing: bool):
+    return missing
+
+
+def add_SystematikArt(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_SystematikArt(recordM: Module, cluster: dict, missing: bool):
+    return missing
+
+
+#
+# T
+#
+
+
 def add_Titel(recordM: Module, cluster: dict, missing: bool) -> bool:
-    missing = True
     return missing
 
 
@@ -103,9 +212,35 @@ def set_Titel(recordM: Module, cluster: dict, missing: bool):
 
 
 #
+# W
+#
+
+
+def add_weitereNr(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def set_weitereNr(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+#
+# Z
+#
+
+
+def set_Zugang(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
+def add_Zugang(recordM: Module, cluster: dict, missing: bool) -> bool:
+    return missing
+
+
 #
 #
-def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
+#
+def create_xml(*, conf: dict, row: tuple, act: bool) -> tuple[Module, bool]:
     """
     We expect a configuration and the current row from the Excel file
     And return a full xml record ready for upload. The template object
@@ -123,7 +258,7 @@ def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
     # fields: label, column, type
 
     for cluster in conf["fields2"]:
-        print(f"DEBUG create records: {cluster=}")
+        print(f"DEBUG write_xml.py create records: {cluster=}")
         for field in conf["fields2"][cluster]:
             if field == "_cb":
                 continue
