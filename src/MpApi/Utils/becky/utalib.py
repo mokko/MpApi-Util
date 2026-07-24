@@ -84,16 +84,19 @@ def dd(msg: str) -> None:
         print(msg)
 
 
-def get_ident(conf: dict, row: list) -> str:
+def get_ident(conf: dict, row: list) -> str | None:
     """
     Assuming you defined a cluster identNr with the field identNr, this returns the identNr
-    for the current row.
+    for the current row. Returns None if cell value is None and if cell is empty ("").
     """
     ident_col = column_index_from_string(conf["fields"]["identNr"]["identNr"]) - 1
     ident = row[ident_col].value  # from Excel as str
     # rprint(f"{ident_col=} {ident=}")
     if ident is None:
-        logging.warning(f"IdentNr is None; not processing this line")  # {idx}
+        logging.warning(f"IdentNr is None; not processing this line")
+        return None
+    if ident == "":
+        logging.warning(f"IdentNr is empty; not processing this line")
         return None
     return ident
 

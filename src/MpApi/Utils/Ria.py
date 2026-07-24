@@ -815,7 +815,7 @@ def record_exists3(*, ident: str, conf: dict) -> int:
     )
     if "org_unit" in conf:
         print(f"*************record_exists3 hardwired EMAmArchaologie")
-        q.OR()  # hardwire EM-AmArch in?
+        q.OR()  # hardwire EM-AmArch with or
         q.addCriterion(
             field="__orgUnit", operator="equalsField", value=conf["org_unit"]
         )

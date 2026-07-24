@@ -1,6 +1,6 @@
 """Higer-level tools for MpApi, the unofficial MuseumPlus Client in Python"""
 
-__version__ = "0.0.10"  # include becky
+__version__ = "0.0.11"  # include uta
 import argparse
 
 from mpapi.client import MpApi
