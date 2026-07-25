@@ -54,7 +54,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # missing_info = False NOT HERE
     # ident_col = conf["fields"]["identNr"]["identNr"]
 
-    recordM, missing_info = create_xml(conf=conf, row=row, act=act)
+    recordM, missing_info = create_xml(conf=conf, row=row)
     ident = get_ident(conf, row)  # for messages
     print(f"DDD: {ident}")
 
@@ -74,7 +74,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     else:
         print(f">> Not creating record in RIA '{ident}' (since no act)")
 
-    # raise Exception("Stop here!")
+    raise Exception("utalib.py: create_record - Stop here!")
 
 
 def dd(msg: str) -> None:
@@ -199,56 +199,86 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
             )
 
 
-def prepare_fields(conf: dict) -> None:
-    """
-    Rewrite the fields so we have less work later. I am not sure when to do this. At this point early in the game
-    It's efficient because we only have to do this part once. But then we will have to do the next part later.
-    If we only do it later, we can do it for indivdual cells and we only have to do it once.
-    """
-    conf["fields2"] = {}
-    for cluster in conf["fields"]:
-        print(f"c:{cluster}")
-        conf["fields2"][cluster] = {}
-        conf["fields2"][cluster]["_cb"] = create_callback(cluster)
-        for field in conf["fields"][cluster]:
-            print(f"    {field}")
-            conf["fields2"][cluster][field] = {}
-            if is_excel_column(conf["fields"][cluster][field]):
-                conf["fields2"][cluster][field]["col"] = conf["fields"][cluster][field]
-            else:
-                conf["fields2"][cluster][field]["constant"] = conf["fields"][cluster][
-                    field
-                ]
-    # rprint(conf["fields"])
-    rprint(conf["fields2"])
-
-
 def create_callback(name: str) -> str:
     """
     We receive the name of field from the configuration toml file and return the
     name of the Python function we want to call.
     """
     (name2, no) = cluster_splitter(name)
-    print(f"{name2=}{no=}")
-    prefix = "set_"  # if no number, default to overwrite template values
-    if no == 1:
-        prefix = "set_"
-    if no > 1:
-        prefix = "add_"
-    new_name = f"{prefix}{name2}"
-    return new_name
+    # print(f"++create callback {name2=}")
+    return name2
 
 
-def cluster_splitter(field: str) -> tuple[str, int]:
+def cluster_splitter(label: str) -> tuple[str, int]:
     """
-    Split off trailing number and return both separately. If number doesn't exist, return field name as is and a 0.
+    for a given cluster label, split off trailing number and return both separately.
+    If number doesn't exist, return field name as is and a 0.
+
+    So technically speaking we have no proper and inproper cluster labels. And the
+    toml config uses improper cluster names. Improper refers to the number at the
+    end that now gets translated to the add/set type.
     """
-    match = re.match(r"(.*?)(\d+)$", field)
+    match = re.match(r"(.*?)(\d+)$", label)
     if match:
-        field2, no = match.groups()
-        return field2, int(no)
+        label2, no = match.groups()
+        return label2, int(no)
     else:
-        return field, 0
+        return label, 0
+
+
+def decide_type(label: str) -> str:
+    """
+    For a given cluster label or name, return the type "add" or "set".
+
+    add adds another xml element with the same name keeping the existing one.
+    set overwrites existing elements of that name and replaces them with given item.
+    """
+    (label2, no) = cluster_splitter(label)
+    # print(f"{name2=}{no=}")
+    if no <= 1:  # can be 0
+        return "set"
+    elif no > 1:
+        return "add"
+
+
+def prepare_fields(conf: dict) -> None:
+    """
+    Rewrite the fields so we have less work later. I am not sure when to do this. At
+    this point early in the game it's efficient because we only have to do this part
+    once. But then we will have to do the next part later. If we only do it later, we
+    can do it for indivdual cells and we only have to do it once.
+
+    Coming back to this months later. Why dont we do the columns and constants and other
+    values here? Doesn't make sense and looks old-school perlish. Aha. At this point,
+    we only have the config file. We cant know the contents of the excel yet. But we
+    need only convert column letter to number. So now we have all the processing in one
+    place.
+    """
+    conf["fields2"] = {}
+    for cluster in conf["fields"]:
+        print(f"c:{cluster}")
+        conf["fields2"][cluster] = {
+            "cb": create_callback(cluster),
+            "type": decide_type(cluster),
+            "fields": {},
+        }
+
+        for field in conf["fields"][cluster]:
+            if is_excel_column(conf["fields"][cluster][field]):
+                atype = "column"
+                value = column_index_from_string(conf["fields"][cluster][field]) - 1
+            else:
+                atype = "constant"
+                value = conf["fields"][cluster][field]
+
+            conf["fields2"][cluster]["fields"][field] = {
+                "type": atype,
+                "value": value,
+            }
+
+    rprint("Debugging prepare_fields")
+    rprint(conf["fields2"])
+    # raise SyntaxError("Stop here")
 
 
 def prepare_template(conf: dict) -> Module:
