@@ -49,6 +49,33 @@ no_records_created = 0
 verbose = 0  # false for off, true for on.
 
 
+def cluster_splitter(label: str) -> tuple[str, int]:
+    """
+    for a given cluster label, split off trailing number and return both separately.
+    If number doesn't exist, return field name as is and a 0.
+
+    So technically speaking we have no proper and inproper cluster labels. And the
+    toml config uses improper cluster names. Improper refers to the number at the
+    end that now gets translated to the add/set type.
+    """
+    match = re.match(r"(.*?)(\d+)$", label)
+    if match:
+        label2, no = match.groups()
+        return label2, int(no)
+    else:
+        return label, 0
+
+
+def create_callback(name: str) -> str:
+    """
+    We receive the name of field from the configuration toml file and return the
+    name of the Python function we want to call.
+    """
+    (name2, no) = cluster_splitter(name)
+    # print(f"++create callback {name2=}")
+    return name2
+
+
 def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     # print(">> Create record")
     # missing_info = False NOT HERE
@@ -74,7 +101,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
     else:
         print(f">> Not creating record in RIA '{ident}' (since no act)")
 
-    raise Exception("utalib.py: create_record - Stop here!")
+    # raise Exception("utalib.py: create_record - Stop here!")
 
 
 def dd(msg: str) -> None:
@@ -84,18 +111,38 @@ def dd(msg: str) -> None:
         print(msg)
 
 
+def decide_type(label: str) -> str:
+    """
+    For a given cluster label or name, return the type "add" or "set".
+
+    add adds another xml element with the same name keeping the existing one.
+    set overwrites existing elements of that name and replaces them with given item.
+    """
+    (label2, no) = cluster_splitter(label)
+    # print(f"{name2=}{no=}")
+    if no <= 1:  # can be 0
+        return "set"
+    elif no > 1:
+        return "add"
+
+
 def get_ident(conf: dict, row: list) -> str | None:
     """
     Assuming you defined a cluster identNr with the field identNr, this returns the identNr
     for the current row. Returns None if cell value is None and if cell is empty ("").
+
+    Do we still need this? Do we want to generalize it?
     """
+
     ident_col = column_index_from_string(conf["fields"]["identNr"]["identNr"]) - 1
     ident = row[ident_col].value  # from Excel as str
     # rprint(f"{ident_col=} {ident=}")
     if ident is None:
+        raise TypeError(f"{ident=} {ident_col}")
         logging.warning(f"IdentNr is None; not processing this line")
         return None
     if ident == "":
+        raise TypeError(f"{ident=} {ident_col}")
         logging.warning(f"IdentNr is empty; not processing this line")
         return None
     return ident
@@ -197,48 +244,6 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
             logging.warning(
                 f"Multiple identNr: More than one IdentNr exists already with this number {ident}"
             )
-
-
-def create_callback(name: str) -> str:
-    """
-    We receive the name of field from the configuration toml file and return the
-    name of the Python function we want to call.
-    """
-    (name2, no) = cluster_splitter(name)
-    # print(f"++create callback {name2=}")
-    return name2
-
-
-def cluster_splitter(label: str) -> tuple[str, int]:
-    """
-    for a given cluster label, split off trailing number and return both separately.
-    If number doesn't exist, return field name as is and a 0.
-
-    So technically speaking we have no proper and inproper cluster labels. And the
-    toml config uses improper cluster names. Improper refers to the number at the
-    end that now gets translated to the add/set type.
-    """
-    match = re.match(r"(.*?)(\d+)$", label)
-    if match:
-        label2, no = match.groups()
-        return label2, int(no)
-    else:
-        return label, 0
-
-
-def decide_type(label: str) -> str:
-    """
-    For a given cluster label or name, return the type "add" or "set".
-
-    add adds another xml element with the same name keeping the existing one.
-    set overwrites existing elements of that name and replaces them with given item.
-    """
-    (label2, no) = cluster_splitter(label)
-    # print(f"{name2=}{no=}")
-    if no <= 1:  # can be 0
-        return "set"
-    elif no > 1:
-        return "add"
 
 
 def prepare_fields(conf: dict) -> None:

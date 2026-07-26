@@ -23,14 +23,16 @@ Usage:
     dont need to explicitedly pass it around. On the other hand, I like to pass it around
     explicitly to show where it gets created and modified.
 
-cluster : "weitereNr"
-    _cb: "set_weitereNr",
-        "Bezeichnung":
-            constant: "Kat.Nr"
-        "weitereNr":
-            col: 8,
-        "Quelle":
-            col: 9,
+cluster :
+    "weitereNr1" : {
+        cb: "weitereNr",
+        type: "set",
+        fields: {
+            "Bezeichnung": {"type":"constant", value:"Andere Nummer"},
+            "weitereNr": {"type":"column", value: 10},
+            "Bemerkung": {"type":"column", value: 11},
+        }
+    }
 """
 
 from copy import deepcopy
@@ -41,6 +43,7 @@ from openpyxl.utils import column_index_from_string
 from rich import print as rprint
 from MpApi.Utils.becky.set_fields_Object import _sanitize
 from MpApi.Utils.identNr import IdentNrFactory
+
 
 # from MpApi.Utils.becky.make_fields (
 #    set_beteiligte,
@@ -68,11 +71,8 @@ def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
         raise TypeError("Template does not have a single record")
 
     recordM = deepcopy(conf["templateM"])  # currently we always begin with a template
+    global missing
     missing = False  # if obligatory info is missing, the record will not be created
-
-    # We can make a cell/cluster object here
-    # cluster: label
-    # fields: label, column, type
 
     for cluster in conf["fields2"]:
         print(f"DEBUG write_xml.py create records: {cluster=}")
@@ -81,9 +81,7 @@ def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
             func = globals()[cb]
         except KeyError:
             raise ValueError(f"Unknown callback '{cb}'")
-        missing = func(
-            recordM, cluster=conf["fields2"][cluster], row=row, missing=missing
-        )
+        func(recordM, cluster=conf["fields2"][cluster], row=row)
     recordM.uploadForm()  # we need that to delete ID
     recordM.sort_elements()
     p = conf["project_dir"] / "debug.object.xml"
@@ -94,6 +92,8 @@ def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
     print(">> Ok")
     print(f">> {missing=}")
     recordM.toFile(path="debug.create_xml.xml")
+    if missing:
+        raise SyntaxError("missing=True Let's stop here")
     return recordM, missing
 
 
@@ -102,16 +102,18 @@ def create_xml(*, conf: dict, row: tuple) -> tuple[Module, bool]:
 #
 
 
-def AnzahlTeile(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None:
+def AnzahlTeile(record: Module, *, cluster: dict, row: tuple) -> None:
     rprint("add_AnzahlTeile in write_xml not yet implemented")
     # return missing
 
 
-def Aufschrift(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None:
+def Aufschrift(record: Module, *, cluster: dict, row: tuple) -> None:
     """
     Assuming we can change missing here and dont need to return it explicitly
     """
-    # return missing
+    rprint("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Aufschrift get here")
+    global missing
+    missing = True  # if we change it here, will it surive return?
 
 
 #
@@ -119,19 +121,17 @@ def Aufschrift(record: Module, *, cluster: dict, row: tuple, missing: bool) -> N
 #
 
 
-def BemerkungenSammlungen(
-    record: Module, *, cluster: dict, row: tuple, missing: bool
-) -> None:
+def BemerkungenSammlungen(record: Module, *, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
 
-def Besitzart(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None:
+def Besitzart(record: Module, *, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
 
-def Beteiligte(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None:
+def Beteiligte(record: Module, *, cluster: dict, row: tuple) -> None:
     """
     Assuming we can change missing here and dont need to return it explicitly
     """
@@ -144,7 +144,7 @@ def Beteiligte(record: Module, *, cluster: dict, row: tuple, missing: bool) -> N
 #
 
 
-def Datierung(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None:
+def Datierung(record: Module, *, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
@@ -154,17 +154,17 @@ def Datierung(record: Module, *, cluster: dict, row: tuple, missing: bool) -> No
 #
 
 
-def ErwerbDatum(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None:
+def ErwerbDatum(record: Module, *, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
 
-def ErwerbNotiz(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None:
+def ErwerbNotiz(record: Module, *, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
 
-def Erwerbungsart(record: Module, *, cluster: dict, row: tuple, missing: bool) -> bool:
+def Erwerbungsart(record: Module, *, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
@@ -174,7 +174,7 @@ def Erwerbungsart(record: Module, *, cluster: dict, row: tuple, missing: bool) -
 #
 
 
-def identNr(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None:
+def identNr(record: Module, *, cluster: dict, row: tuple) -> None:
     """
     We take the str ident and in the rGrp ObjObjectNumberGrp, we create the following fields
     - InventarNrSTxt,
@@ -229,7 +229,7 @@ def identNr(record: Module, *, cluster: dict, row: tuple, missing: bool) -> None
 #
 
 
-def MaterialTechnik(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool:
+def MaterialTechnik(recordM: Module, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
@@ -239,9 +239,7 @@ def MaterialTechnik(recordM: Module, cluster: dict, row: tuple, missing: bool) -
 #
 
 
-def Objektreferenz(
-    recordM: Module, *, cluster: dict, row: tuple, missing: bool
-) -> bool:
+def Objektreferenz(recordM: Module, *, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
@@ -251,17 +249,17 @@ def Objektreferenz(
 #
 
 
-def Sachbegriff(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool:
+def Sachbegriff(recordM: Module, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
 
-def Status(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool:
+def Status(recordM: Module, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
 
-def SystematikArt(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool:
+def SystematikArt(recordM: Module, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
@@ -271,7 +269,7 @@ def SystematikArt(recordM: Module, cluster: dict, row: tuple, missing: bool) -> 
 #
 
 
-def Titel(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool:
+def Titel(recordM: Module, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
@@ -281,7 +279,7 @@ def Titel(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool:
 #
 
 
-def weitereNr(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool:
+def weitereNr(recordM: Module, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
@@ -291,7 +289,7 @@ def weitereNr(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool
 #
 
 
-def Zugang(recordM: Module, cluster: dict, row: tuple, missing: bool) -> bool:
+def Zugang(recordM: Module, cluster: dict, row: tuple) -> None:
     pass
     # return missing
 
