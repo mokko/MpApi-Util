@@ -173,15 +173,6 @@ def init_log(*, act: bool, conf: dict, conf_fn: str, limit: int, offset: int) ->
     #    logger.addHandler(logging.NullHandler())
 
 
-def log_print_info(msg: str) -> None:
-    """
-    log and print info message simultaneously
-    """
-    logger = logging.getLogger(__name__)
-    logger.info(msg)
-    print(f"   {msg}")
-
-
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     ident = row[0].value  # from Excel as str
 

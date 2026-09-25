@@ -1,18 +1,18 @@
-import argparse
+import argparse  # TODO unused: the parser is built in MpApi/Utils/__init__.py
 from datetime import datetime
 import logging
-from lxml import etree  # t y p e : i g n o r e
+from lxml import etree  # t y p e : i g n o r e  # TODO unused: no annotation here needs etree
 
-from mpapi.constants import get_credentials
+from mpapi.constants import get_credentials  # TODO unused: mpapi reads ~/.ria at import time
 from mpapi.module import Module
-from mpapi.search import Search
+from mpapi.search import Search  # TODO unused: lookups go through record_exists3
 
-from MpApi.Utils.Ria import RIA, init_ria, record_exists2, record_exists3
+from MpApi.Utils.Ria import RIA, init_ria, record_exists2, record_exists3  # TODO unused: RIA, and record_exists2 (only named in the comment at per_row)
 from MpApi.Utils.becky.write_xml import create_xml
-from MpApi.Utils.Xls import Xls
-from openpyxl import Workbook, load_workbook, worksheet
+from MpApi.Utils.Xls import Xls  # TODO unused
+from openpyxl import Workbook, load_workbook, worksheet  # TODO unused: Workbook
 from openpyxl.cell.cell import Cell
-from openpyxl.styles.colors import Color
+from openpyxl.styles.colors import Color  # TODO unused: Console handles the markup
 from openpyxl.utils import column_index_from_string
 from pathlib import Path
 import re
@@ -74,7 +74,7 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
         no_records_created += 1
         objId = conf["RIA"].create_item(item=recordM)
         msg = f"Created record {objId} in RIA '{ident}'"
-        logging.error(msg)
+        logging.info(msg)
         print(f">> {msg}")
     else:
         print(f">> Not creating record in RIA '{ident}' (since no act)")
@@ -194,15 +194,6 @@ def is_excel_column(s: str) -> bool:
     if not s.isalpha() or not s.isupper():
         return False
     return len(s) < 3 or s <= "XFD"
-
-
-def log_print_info(msg: str) -> None:
-    """
-    log and print info message simultaneously
-    """
-    logger = logging.getLogger(__name__)
-    logger.info(msg)
-    print(f"   {msg}")
 
 
 def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
