@@ -11,7 +11,7 @@ from MpApi.Utils.Ria import RIA, init_ria, record_exists2, record_exists3  # TOD
 from MpApi.Utils.becky.write_xml import create_xml
 from MpApi.Utils.Xls import Xls  # TODO unused
 from openpyxl import Workbook, load_workbook, worksheet  # TODO unused: Workbook
-from openpyxl.cell.cell import Cell
+from openpyxl.cell.cell import Cell, MergedCell
 from openpyxl.styles.colors import Color  # TODO unused: Console handles the markup
 from openpyxl.utils import column_index_from_string
 from pathlib import Path
@@ -103,7 +103,7 @@ def decide_type(label: str) -> str:
         return "add"
 
 
-def get_ident(conf: dict, row: list) -> str | None:
+def get_ident(conf: dict, row: tuple[Cell | MergedCell, ...]) -> str | None:
     """
     Assuming you defined a cluster identNr with the field identNr, this returns the identNr
     for the current row. Returns None if cell value is None and if cell is empty ("").
@@ -195,7 +195,7 @@ def is_excel_column(s: str) -> bool:
     return len(s) < 3 or s <= "XFD"
 
 
-def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
+def per_row(*, idx: int, row: tuple[Cell | MergedCell, ...], conf: dict, act: bool) -> None:
     # rprint(conf["fields"])
     ident = get_ident(conf, row)  # should it die on no ident? Die early?
 
