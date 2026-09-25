@@ -17,8 +17,16 @@ dependencies = [
 	"openpyxl",
 	"pillow", # to read exif tags
     "requests >=2.6",
+	"rich", # becky prints with rich
 	"tqdm",
+	"tomli-w", # becky caches jobs as toml
 	"typing_extensions",
+	# Neither of these is on PyPI, so they can only be named as direct
+	# references to their repositories. Without them a fresh install succeeds
+	# and then every entry point dies on import: Utils/__init__ imports
+	# AssetUploader, which imports Record.
+	"MpApi @ git+https://github.com/mokko/MpApi",
+	"MpApi.Record @ git+https://github.com/mokko/MpApi-Record",
 ]
 [project.optional-dependencies]
 test = [
