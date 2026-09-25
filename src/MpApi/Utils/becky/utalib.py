@@ -96,12 +96,10 @@ def decide_type(label: str) -> str:
     add adds another xml element with the same name keeping the existing one.
     set overwrites existing elements of that name and replaces them with given item.
     """
-    (label2, no) = cluster_splitter(label)
-    # print(f"{name2=}{no=}")
+    no = cluster_splitter(label)[1]
     if no <= 1:  # can be 0
         return "set"
-    elif no > 1:
-        return "add"
+    return "add"
 
 
 def get_ident(conf: dict, row: tuple[Cell | MergedCell, ...]) -> str | None:
