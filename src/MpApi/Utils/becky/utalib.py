@@ -10,8 +10,9 @@ from mpapi.search import Search  # TODO unused: lookups go through record_exists
 from MpApi.Utils.Ria import RIA, init_ria, record_exists2, record_exists3  # TODO unused: RIA, and record_exists2 (only named in the comment at per_row)
 from MpApi.Utils.becky.write_xml import create_xml
 from MpApi.Utils.Xls import Xls  # TODO unused
-from openpyxl import Workbook, load_workbook, worksheet  # TODO unused: Workbook
+from openpyxl import Workbook, load_workbook  # TODO unused: Workbook
 from openpyxl.cell.cell import Cell, MergedCell
+from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles.colors import Color  # TODO unused: Console handles the markup
 from openpyxl.utils import column_index_from_string
 from pathlib import Path
@@ -125,7 +126,7 @@ def get_ident(conf: dict, row: tuple[Cell | MergedCell, ...]) -> str | None:
     return ident
 
 
-def go_display_record(line_number: int, *, conf: dict, ws: worksheet):
+def go_display_record(line_number: int, *, conf: dict, ws: Worksheet):
     import sys
     from rich.console import Console
 
