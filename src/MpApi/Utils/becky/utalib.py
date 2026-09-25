@@ -61,7 +61,6 @@ def create_record(*, row: tuple, conf: dict, act: bool) -> None:
 
     recordM, missing_info = create_xml(conf=conf, row=row)
     ident = get_ident(conf, row)  # for messages
-    print(f"DDD: {ident}")
 
     # print(recordM)
     if missing_info:
