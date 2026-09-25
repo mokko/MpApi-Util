@@ -1,25 +1,3 @@
-"""
-Script to import records from Excel for Kamerun project
-
-Fields that have to fill in
-- IdentNr
-- Sachbegriff
-- Beteiligte + Rolle
-- Erwerb.Datum
-- Erwerbungsart
-- Erwerb. Nr.
-- Erwerbung von
-- Geogr. Bezug
-- Obj. Referenz A
-fraglich
-- Obj. Referenz B
-- Inventarnotiz
-
-New:
-Workflow where we log errors and dont create record with missing info, but run through
-
-"""
-
 import argparse
 from datetime import datetime
 import logging
