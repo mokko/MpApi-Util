@@ -211,17 +211,18 @@ def per_row(*, idx: int, row: Cell, conf: dict, act: bool) -> None:
     # record_exists2 is Hendryk's algorithm that uses schemata and fortlaufende Nummer
     # if m := record_exists2(ident=ident, conf=conf):
     # record_exists3 omits Bereich and simply uses IdentNr and exact match.
-    if m := record_exists3(ident=ident, conf=conf):
+    n = record_exists3(ident=ident, conf=conf)
+    if n == 0:
+        print(f"INFO Record '{ident}' DOES NOT YET exist")  # low priority message
+        create_record(row=row, conf=conf, act=act)
+    elif n == 1:
         # Wollen wir hier Fehler loggen um Nachzuvollziehen, wo die Infos aus Excel
         # nicht eingetragen wurden? Nein. Nur loggen, wenn etwas in RIA verändert wird
         print(f"INFO Record '{ident}' exists already")
     else:
-        print(f"INFO Record '{ident}' DOES NOT YET exist")  # low priority message
-        create_record(row=row, conf=conf, act=act)
-        if m > 1:
-            logging.warning(
-                f"Multiple identNr: More than one IdentNr exists already with this number {ident}"
-            )
+        logging.warning(
+            f"{n} records already carry IdentNr '{ident}' — not creating another"
+        )
 
 
 def prepare_fields(conf: dict) -> None:
