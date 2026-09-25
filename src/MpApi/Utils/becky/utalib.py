@@ -151,6 +151,11 @@ def go_display_record(line_number: int, *, conf: dict, ws: worksheet):
             else:
                 console.print(f'   [green]{field}[reset]: "{value}" constant')
 
+    # TODO temporary: exits the process so the half-finished display path can be
+    # tried out without running the import. Replace with a plain return, and put
+    # the return at the call site in uta_main, where the mode is chosen — a
+    # function that ends the interpreter cannot be called from a test or from
+    # another tool, and exits 0 as if something had been done.
     sys.exit(0)
     # raise Exception("Stop here")
 
