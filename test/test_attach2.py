@@ -1,3 +1,7 @@
+
+import pytest
+
+pytestmark = pytest.mark.data
 from MpApi.Utils.attach2 import Attacher2
 from pathlib import Path
 

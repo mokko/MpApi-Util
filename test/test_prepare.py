@@ -8,6 +8,8 @@ from MpApi.Utils.BaseApp import ConfigError
 from pathlib import Path
 import pytest
 
+pytestmark = pytest.mark.online
+
 # NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
 
 user, pw, baseURL = get_credentials()

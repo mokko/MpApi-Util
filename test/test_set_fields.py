@@ -30,6 +30,7 @@ import pytest
 # conf_fn = Path(__file__).parents[1] / "sdata" / "becky_conf.toml"
 
 
+@pytest.mark.data
 def test_lookup_name() -> None:
     """
     test this later
@@ -50,6 +51,7 @@ def test_lookup_name() -> None:
         pkId = _lookup_name(name="Serdu", conf=conf)
 
 
+@pytest.mark.data
 def test_lookup_person() -> None:
     conf = {
         "person_cache": "person_cache.toml",
@@ -81,6 +83,7 @@ def test_lookup_person() -> None:
 #
 
 
+@pytest.mark.online
 def test_set_ident() -> None:
     """
     TODO: I should be testing all of the fields that are set
@@ -109,6 +112,7 @@ def test_set_ident() -> None:
     assert InventarNrSTxt == "III C 123"
 
 
+@pytest.mark.online
 def test_set_beteiligte() -> None:
     # test doesn't work yet in a meaningful way
     conf = {
@@ -132,6 +136,7 @@ def test_set_beteiligte() -> None:
     ]/m:value/text()""")[0]
 
 
+@pytest.mark.online
 def test_set_erwerbdatum() -> None:
     # ObjAcquisitionDateGrp
     conf = {

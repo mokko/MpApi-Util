@@ -7,6 +7,8 @@ from MpApi.Utils.Ria import RIA
 from pathlib import Path
 import pytest
 
+pytestmark = pytest.mark.online
+
 # NSMAP: dict = {"m": "http://www.zetcom.com/ria/ws/module"}
 
 

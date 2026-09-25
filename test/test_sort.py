@@ -1,3 +1,7 @@
+
+import pytest
+
+pytestmark = pytest.mark.data
 from mpapi.module import Module
 from pathlib import Path
 

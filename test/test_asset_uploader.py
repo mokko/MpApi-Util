@@ -6,6 +6,10 @@ also might restrict from all too curious eyes.
 
 """
 
+import pytest
+
+pytestmark = pytest.mark.online
+
 from MpApi.Utils.AssetUploader import AssetUploader
 from MpApi.Utils.logic import has_parts
 import os

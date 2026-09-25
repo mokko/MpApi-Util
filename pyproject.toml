@@ -56,3 +56,10 @@ sren = 'MpApi.Utils:sren'
 update_schemas = 'MpApi.Utils:update_schemas'
 up = 'MpApi.Utils:upload' # asset uploader
 uta = 'MpApi.Utils:uta'
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+markers = [
+    "online: needs the RIA instance, which is only reachable from the museum network",
+    "data: needs local files that are not in git (sdata/, recorded fixtures)",
+]

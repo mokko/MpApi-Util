@@ -1,3 +1,7 @@
+
+import pytest
+
+pytestmark = pytest.mark.online
 from MpApi.Utils.becky.update_caches import query_persons
 from MpApi.Utils.Ria import RIA, init_ria
 

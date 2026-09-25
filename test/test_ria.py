@@ -1,3 +1,7 @@
+
+import pytest
+
+pytestmark = pytest.mark.online
 from MpApi.Utils.Ria import RIA, record_exists, record_exists2, record_exists3
 from mpapi.constants import get_credentials
 

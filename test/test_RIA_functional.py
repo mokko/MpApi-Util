@@ -1,3 +1,7 @@
+
+import pytest
+
+pytestmark = pytest.mark.data
 import json
 from MpApi.Utils.Ria import init_ria, RIA, record_exists, record_exists2
 from openpyxl import Workbook, load_workbook, worksheet
